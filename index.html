@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <script>try{var t=localStorage.getItem("caixa-theme");if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Controle de Caixa v4.3</title>
+<title>Controle de Caixa v4.4</title>
 
 <!-- ============================================================
      PWA — Progressive Web App
@@ -33,7 +33,7 @@
 <!--
   ╔══════════════════════════════════════════════════════════════════════╗
   ║           CONTROLE DE CAIXA                                           ║
-  ║           Versão: 4.3 — Resumo do Fechamento de Caixa reorganizado    ║
+  ║           Versão: 4.4 — Cardápio em Cadastros (alimenta as comandas)  ║
   ╠══════════════════════════════════════════════════════════════════════╣
   ║  HISTÓRICO DE VERSÕES                                                ║
   ║  ─────────────────────────────────────────────────────────────────  ║
@@ -44,6 +44,8 @@
   ║         · Melhoria: renderContas usa cache; seção 3.22 documentada   ║
   ║  v3.3 — Seções novas: Planilhas já lançadas (3.23), calendário       ║
   ║         visual de lançamentos com marcação de cartão                 ║
+  ║  v4.4 — Nova tela Cadastros > Cardápio (cadastro/edição de itens,   ║
+  ║         categoria, preço e disponibilidade) usada nas comandas      ║
   ║  v4.3 — Resumo do dia no Fechamento de Caixa em cartões alinhados   ║
   ║  v4.2 — Categoria "Outra Loja" oculta (só aparece se já houver itens)║
   ║  v4.1 — Campo Código removido da tela Fornecedores                  ║
@@ -97,7 +99,8 @@
   ║          sec-funcionarios   Cadastro + pagamentos                    ║
   ║          sec-contas         Contas a Pagar                           ║
   ║          sec-planilhas      Planilhas já lançadas (calendário)       ║
-  ║          sec-comandas       Comandas / Mesas + Cardápio              ║
+  ║          sec-cardapio       Cardápio (cadastro de pratos e bebidas)  ║
+  ║          sec-comandas       Comandas / Mesas                         ║
   ║          sec-configuracoes  Configurações (apenas admin)             ║
   ║     2.3  Mobile             Bottom nav + drawer hamburger            ║
   ║     2.4  Modais globais     Confirmação, Dias lançados, Toast        ║
@@ -3126,7 +3129,7 @@ tbody tr:hover {
           <img src="logo.png" alt="Select Sabor" style="width:44px;height:44px;border-radius:50%;flex-shrink:0;background:#fff;box-shadow:0 0 0 2px rgba(255,255,255,0.18)">
           <div>
             <div class="logo-title">Controle de Caixa</div>
-            <div class="logo-sub">v4.3</div>
+            <div class="logo-sub">v4.4</div>
           </div>
         </div>
         <span id="status-dot" style="display:none;width:8px;height:8px;border-radius:50%;background:#4ADE80;flex-shrink:0;box-shadow:0 0 0 2px rgba(74,222,128,0.2)" title="Conectado"></span>
@@ -3178,6 +3181,9 @@ tbody tr:hover {
     <div class="nav-section-label">Cadastros</div>
     <button class="nav-item" onclick="showSection('fornecedores', this)">
       <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span> Fornecedores
+    </button>
+    <button class="nav-item" id="nav-cardapio" onclick="showSection('cardapio', this)">
+      <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></span> Cardápio
     </button>
 
     <div class="nav-section-label">Lançamentos</div>
@@ -4190,6 +4196,17 @@ tbody tr:hover {
       </div>
     </div>
 
+    <!-- SEÇÃO: CARDÁPIO -->
+    <div id="sec-cardapio" class="section">
+      <div class="page-header">
+        <div>
+          <div class="page-title">📋 Cardápio</div>
+          <div class="page-sub">Cadastre pratos e bebidas. Os itens aparecem para lançar nas comandas das mesas.</div>
+        </div>
+      </div>
+      <div id="cdp-conteudo"></div>
+    </div>
+
     <!-- SEÇÃO: COMANDAS / MESAS -->
     <div id="sec-comandas" class="section">
       <div class="page-header">
@@ -4207,7 +4224,7 @@ tbody tr:hover {
       <div class="cmd-tabs" id="cmd-tabs">
         <button id="cmd-tab-abertas"   onclick="cmdSetTab('abertas')">Mesas abertas</button>
         <button id="cmd-tab-fechadas"  onclick="cmdSetTab('fechadas')">Fechadas hoje</button>
-        <button id="cmd-tab-cardapio"  onclick="cmdSetTab('cardapio')">Cardápio</button>
+        <button id="cmd-tab-cardapio"  onclick="showSection('cardapio', document.getElementById('nav-cardapio'))">Cardápio ↗</button>
       </div>
 
       <div id="cmd-conteudo"></div>
@@ -5118,6 +5135,9 @@ tbody tr:hover {
     <button class="drawer-item" id="di-fornecedores" onclick="drawerNav('fornecedores', this)">
       <span class="drawer-item-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span>Fornecedores
     </button>
+    <button class="drawer-item" id="di-cardapio" onclick="drawerNav('cardapio', this)">
+      <span class="drawer-item-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></span>Cardápio
+    </button>
     <button class="drawer-item" id="di-gastos" onclick="drawerNav('gastos', this)">
       <span class="drawer-item-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>Gastos
     </button>
@@ -5968,7 +5988,7 @@ function setLojaAtiva(id) {
   const refCardapio = _dbRef('cardapio/' + id);
   refCardapio.on('value', snap => {
     _cache.cardapio = snap.val() ? Object.values(snap.val()) : [];
-    if (_currentSection === 'comandas') _refreshCurrentSection();
+    if (_currentSection === 'comandas' || (_currentSection === 'cardapio' && !_cdpEditando())) _refreshCurrentSection();
   });
   _listenersLoja.push(refCardapio);
 
@@ -6002,6 +6022,7 @@ function _refreshCurrentSection() {
       case 'planilhas':      renderPlanilhas();     break;
       case 'cartoes':        renderCartoes();       break;
       case 'comandas':       renderComandas();      break;
+      case 'cardapio':       renderCardapio();      break;
       }
     } finally {
       _rendering = false;
@@ -7484,6 +7505,7 @@ function _showSectionInternal(id, btn) {
     case 'contas':         renderContas();        break;
     case 'planilhas':      renderPlanilhas();     break;
     case 'comandas':       renderComandas();      break;
+    case 'cardapio':       renderCardapio();      break;
     case 'cartoes': {
       // Pré-selecionar mês e ano atual na primeira vez
       const _cm = document.getElementById('cart-mes');
@@ -16440,7 +16462,8 @@ function _syncDrawer(id) {
    3.25 COMANDAS / MESAS (v4.0)
    ============================================================
    Firebase: caixa/comandas/{lojaId}/{comandaId}
-             caixa/cardapio/{lojaId}/{itemId}
+             caixa/cardapio/{lojaId}/{itemId}  ({id,nome,preco,cat,ativo})
+   Cardápio é cadastrado em Cadastros > Cardápio (sec-cardapio, v4.4).
    Fluxo: abrir mesa → lançar itens → fechar conta (dinheiro/pix/cartão)
    As comandas fechadas do dia alimentam o formulário de Novo
    lançamento pelo botão "Puxar vendas das comandas do dia".
@@ -16516,7 +16539,7 @@ function renderComandas() {
       <div class="metric-card"><div class="metric-label">Ticket médio (${fechHoje.length} conta${fechHoje.length === 1 ? '' : 's'})</div><div class="metric-value">${fmt(ticket)}</div></div>`;
   }
 
-  ['abertas', 'fechadas', 'cardapio'].forEach(t => {
+  ['abertas', 'fechadas'].forEach(t => {
     const b = document.getElementById('cmd-tab-' + t);
     if (b) b.classList.toggle('active', t === _cmdTab);
   });
@@ -16524,8 +16547,7 @@ function renderComandas() {
   const box = document.getElementById('cmd-conteudo');
   if (box) {
     if (_cmdTab === 'abertas')       box.innerHTML = _cmdHtmlAbertas(abertas);
-    else if (_cmdTab === 'fechadas') box.innerHTML = _cmdHtmlFechadas(fechHoje);
-    else                             box.innerHTML = _cmdHtmlCardapio();
+    else                             box.innerHTML = _cmdHtmlFechadas(fechHoje);
   }
   _cmdAtualizarModal();
 }
@@ -16575,35 +16597,82 @@ function _cmdHtmlFechadas(fech) {
       </td></tr>`).join('') + `</tbody></table></div></div>`;
 }
 
-function _cmdHtmlCardapio() {
+/* ───────── Cardápio (Cadastros > Cardápio) ───────── */
+
+let _cdpBusca = '';
+let _cdpCatFiltro = '';
+
+function _cdpEditando() {
+  const e = document.activeElement;
+  return !!(e && e.closest && e.closest('#sec-cardapio') && /^(INPUT|SELECT)$/.test(e.tagName));
+}
+
+function renderCardapio() {
+  const box = document.getElementById('cdp-conteudo');
+  if (!box) return;
   const itens = _cmdCardapio();
   const opts = CMD_CATS.map(c => `<option value="${c}">${c}</option>`).join('');
-  let html = `<div class="card">
-    <div class="card-title">Novo item do cardápio</div>
-    <div class="form-grid">
-      <div class="form-group minw-200"><label>Nome</label><input id="cdp-nome" type="text" placeholder="Ex: Prato feito" maxlength="60"></div>
-      <div class="form-group"><label>Preço (R$)</label><input id="cdp-preco" type="number" step="0.01" min="0" placeholder="0,00"></div>
-      <div class="form-group"><label>Categoria</label><select id="cdp-cat">${opts}</select></div>
+  const nIndisp = itens.filter(i => i.ativo === false).length;
+
+  let html = `<div class="metrics-grid">
+      <div class="metric-card"><div class="metric-label">Itens cadastrados</div><div class="metric-value">${itens.length}</div></div>
+      <div class="metric-card"><div class="metric-label">Indisponíveis</div><div class="metric-value">${nIndisp}</div></div>
     </div>
-    <div class="form-actions"><button class="btn btn-primary" onclick="cmdCardapioAdd()">Adicionar ao cardápio</button></div>
-  </div>`;
+    <div class="card mb-5">
+      <div class="card-title">Novo item do cardápio</div>
+      <div class="form-grid">
+        <div class="form-group minw-200"><label>Nome</label><input id="cdp-nome" type="text" placeholder="Ex: Prato feito" maxlength="60" onkeydown="if(event.key==='Enter')cmdCardapioAdd()"></div>
+        <div class="form-group"><label>Preço (R$)</label><input id="cdp-preco" type="number" step="0.01" min="0" placeholder="0,00" onkeydown="if(event.key==='Enter')cmdCardapioAdd()"></div>
+        <div class="form-group"><label>Categoria</label><select id="cdp-cat">${opts}</select></div>
+      </div>
+      <div class="form-actions"><button class="btn btn-primary" onclick="cmdCardapioAdd()">Adicionar ao cardápio</button></div>
+    </div>`;
+
   if (!itens.length) {
-    return html + `<div class="empty"><div class="empty-icon">📋</div>Cardápio vazio. Cadastre os pratos e bebidas para lançar mais rápido nas comandas.</div>`;
+    box.innerHTML = html + `<div class="empty"><div class="empty-icon">📋</div>Cardápio vazio. Cadastre os pratos e bebidas para lançar mais rápido nas comandas.</div>`;
+    return;
   }
+
+  const catsOpts = ['<option value="">Todas as categorias</option>'].concat(CMD_CATS.map(c => `<option value="${c}"${c === _cdpCatFiltro ? ' selected' : ''}>${c}</option>`)).join('');
+  html += `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+      <input type="text" id="cdp-busca" placeholder="Buscar item…" value="${escapeAttr(_cdpBusca)}" oninput="cdpFiltrar()" style="flex:1;min-width:180px">
+      <select id="cdp-filtro-cat" onchange="cdpFiltrar()">${catsOpts}</select>
+    </div>
+    <div id="cdp-lista"></div>`;
+  box.innerHTML = html;
+  _cdpRenderLista();
+}
+
+function cdpFiltrar() {
+  _cdpBusca = (document.getElementById('cdp-busca').value || '').trim();
+  _cdpCatFiltro = document.getElementById('cdp-filtro-cat').value || '';
+  _cdpRenderLista();
+}
+
+function _cdpRenderLista() {
+  const el = document.getElementById('cdp-lista');
+  if (!el) return;
+  const q = _cdpBusca.toLowerCase();
+  const itens = _cmdCardapio().filter(i =>
+    (!q || String(i.nome).toLowerCase().includes(q)) &&
+    (!_cdpCatFiltro || (i.cat || 'Outros') === _cdpCatFiltro));
+  if (!itens.length) { el.innerHTML = `<div class="empty"><div class="empty-icon">🔎</div>Nenhum item encontrado.</div>`; return; }
+  const catOpts = sel => CMD_CATS.map(c => `<option value="${c}"${c === sel ? ' selected' : ''}>${c}</option>`).join('');
+  let html = '';
   CMD_CATS.forEach(cat => {
     const doCat = itens.filter(i => (i.cat || 'Outros') === cat).sort((a, b) => String(a.nome).localeCompare(String(b.nome)));
     if (!doCat.length) return;
-    html += `<div class="cmd-sec-titulo">${cat}</div><div class="card" style="padding:6px 14px"><table class="cmd-itens"><tbody>` +
-      doCat.map(i => `<tr>
-        <td>${escapeHtml(i.nome)}</td>
-        <td class="num" style="width:130px"><input type="number" step="0.01" min="0" value="${(parseFloat(i.preco) || 0).toFixed(2)}" style="width:100px;text-align:right" onchange="cmdCardapioPreco('${i.id}', this.value)"></td>
+    html += `<div class="cmd-sec-titulo">${cat} (${doCat.length})</div><div class="card" style="padding:6px 14px"><div style="overflow-x:auto"><table class="cmd-itens"><tbody>` +
+      doCat.map(i => `<tr style="${i.ativo === false ? 'opacity:.55' : ''}">
+        <td><input type="text" value="${escapeAttr(i.nome)}" maxlength="60" style="width:100%;min-width:140px" onchange="cmdCardapioNome('${i.id}', this.value)"></td>
+        <td style="width:130px"><select onchange="cmdCardapioCat('${i.id}', this.value)">${catOpts(i.cat || 'Outros')}</select></td>
+        <td class="num" style="width:120px"><input type="number" step="0.01" min="0" value="${(parseFloat(i.preco) || 0).toFixed(2)}" style="width:100px;text-align:right" onchange="cmdCardapioPreco('${i.id}', this.value)"></td>
+        <td style="width:110px;text-align:center"><button class="btn btn-secondary" style="padding:5px 10px;font-size:12px" onclick="cmdCardapioAtivo('${i.id}')">${i.ativo === false ? 'Indisponível' : 'Disponível'}</button></td>
         <td style="width:40px;text-align:right"><button class="cmd-x" title="Remover" onclick="cmdCardapioDel('${i.id}')">×</button></td>
-      </tr>`).join('') + `</tbody></table></div>`;
+      </tr>`).join('') + `</tbody></table></div></div>`;
   });
-  return html;
+  el.innerHTML = html;
 }
-
-/* ───────── Cardápio ───────── */
 
 function cmdCardapioAdd() {
   if (_cmdSemLoja()) return;
@@ -16612,16 +16681,39 @@ function cmdCardapioAdd() {
   const cat   = document.getElementById('cdp-cat').value || 'Outros';
   if (!nome) { showToast('Informe o nome do item', false); return; }
   if (isNaN(preco) || preco < 0) { showToast('Informe um preço válido', false); return; }
+  if (_cmdCardapio().some(i => String(i.nome).toLowerCase() === nome.toLowerCase() && (i.cat || 'Outros') === cat)) {
+    showToast('Já existe "' + nome + '" em ' + cat, false); return;
+  }
   const id = 'cdp_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
-  _dbRef('cardapio/' + _lojaAtiva + '/' + id).set({ id, nome, preco: _cmdRound(preco), cat })
-    .then(() => showToast('Item adicionado ao cardápio'))
+  _dbRef('cardapio/' + _lojaAtiva + '/' + id).set({ id, nome, preco: _cmdRound(preco), cat, ativo: true })
+    .then(() => {
+      showToast('Item adicionado ao cardápio');
+      const n = document.getElementById('cdp-nome'), p = document.getElementById('cdp-preco');
+      if (n) { n.value = ''; n.focus(); }
+      if (p) p.value = '';
+    })
     .catch(e => { console.error(e); showToast('Erro ao salvar o item', false); });
+}
+function cmdCardapioNome(id, v) {
+  const nome = String(v || '').trim();
+  if (!nome) { showToast('O nome não pode ficar vazio', false); renderCardapio(); return; }
+  _dbRef('cardapio/' + _lojaAtiva + '/' + id + '/nome').set(nome)
+    .catch(e => { console.error(e); showToast('Erro ao atualizar o nome', false); });
+}
+function cmdCardapioCat(id, v) {
+  _dbRef('cardapio/' + _lojaAtiva + '/' + id + '/cat').set(v || 'Outros')
+    .catch(e => { console.error(e); showToast('Erro ao atualizar a categoria', false); });
 }
 function cmdCardapioPreco(id, v) {
   const preco = parseFloat(v);
-  if (isNaN(preco) || preco < 0) { showToast('Preço inválido', false); renderComandas(); return; }
+  if (isNaN(preco) || preco < 0) { showToast('Preço inválido', false); renderCardapio(); return; }
   _dbRef('cardapio/' + _lojaAtiva + '/' + id + '/preco').set(_cmdRound(preco))
     .catch(e => { console.error(e); showToast('Erro ao atualizar o preço', false); });
+}
+function cmdCardapioAtivo(id) {
+  const it = _cmdCardapio().find(i => i.id === id); if (!it) return;
+  _dbRef('cardapio/' + _lojaAtiva + '/' + id + '/ativo').set(it.ativo === false)
+    .catch(e => { console.error(e); showToast('Erro ao atualizar a disponibilidade', false); });
 }
 function cmdCardapioDel(id) {
   const it = _cmdCardapio().find(i => i.id === id);
@@ -16716,10 +16808,10 @@ function _cmdHtmlModalComanda(c) {
 
   let addHtml = '';
   if (aberta) {
-    const cardapio = _cmdCardapio().slice().sort((a, b) => String(a.nome).localeCompare(String(b.nome)));
+    const cardapio = _cmdCardapio().filter(i => i.ativo !== false).slice().sort((a, b) => String(a.nome).localeCompare(String(b.nome)));
     const chips = cardapio.length ? cardapio.map(i =>
       `<button class="cmd-chip" data-nome="${escapeAttr(String(i.nome).toLowerCase())}" onclick="cmdAddItem('${i.id}')">${escapeHtml(i.nome)}<small>${fmt(parseFloat(i.preco) || 0)}</small></button>`
-    ).join('') : `<span style="font-size:13px;color:var(--text3)">Cardápio vazio — cadastre na aba Cardápio ou lance um item avulso abaixo.</span>`;
+    ).join('') : `<span style="font-size:13px;color:var(--text3)">Cardápio vazio — cadastre em Cadastros › Cardápio ou lance um item avulso abaixo.</span>`;
     addHtml = `<div class="cmd-sec-titulo">Adicionar item</div>
       ${cardapio.length ? `<input type="text" id="cmd-busca" placeholder="Buscar no cardápio…" oninput="cmdFiltrar(this.value)" style="width:100%">` : ''}
       <div class="cmd-chips" id="cmd-chips">${chips}</div>
