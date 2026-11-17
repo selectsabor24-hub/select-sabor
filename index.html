@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <script>try{var t=localStorage.getItem("caixa-theme");if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Controle de Caixa v4.2</title>
+<title>Controle de Caixa v4.3</title>
 
 <!-- ============================================================
      PWA — Progressive Web App
@@ -33,7 +33,7 @@
 <!--
   ╔══════════════════════════════════════════════════════════════════════╗
   ║           CONTROLE DE CAIXA                                           ║
-  ║           Versão: 4.2 — Sem "Outra Loja" em Fornecedores/Lançamento   ║
+  ║           Versão: 4.3 — Resumo do Fechamento de Caixa reorganizado    ║
   ╠══════════════════════════════════════════════════════════════════════╣
   ║  HISTÓRICO DE VERSÕES                                                ║
   ║  ─────────────────────────────────────────────────────────────────  ║
@@ -44,6 +44,7 @@
   ║         · Melhoria: renderContas usa cache; seção 3.22 documentada   ║
   ║  v3.3 — Seções novas: Planilhas já lançadas (3.23), calendário       ║
   ║         visual de lançamentos com marcação de cartão                 ║
+  ║  v4.3 — Resumo do dia no Fechamento de Caixa em cartões alinhados   ║
   ║  v4.2 — Categoria "Outra Loja" oculta (só aparece se já houver itens)║
   ║  v4.1 — Campo Código removido da tela Fornecedores                  ║
   ║  v4.0 — Adaptação para restaurante (unidade única) + novo módulo   ║
@@ -2951,6 +2952,12 @@ tbody tr:hover {
   #dash-loja-nome { display: block; margin-left: 0 !important; margin-top: 2px; }
 }
 
+/* Resumo do Fechamento de Caixa: 5 cartões no desktop, 2 colunas no celular */
+.metrics-grid.fc-resumo-grid { grid-template-columns: repeat(5, minmax(0, 1fr)) !important; gap: 12px; }
+@media (max-width: 1100px) { .metrics-grid.fc-resumo-grid { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; } }
+@media (max-width: 640px)  { .metrics-grid.fc-resumo-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 8px; }
+  .metrics-grid.fc-resumo-grid .metric-card:first-child { grid-column: 1 / -1; } }
+
 /* ============================================================
    COMANDAS / MESAS (v4.0)
    ============================================================ */
@@ -3119,7 +3126,7 @@ tbody tr:hover {
           <img src="logo.png" alt="Select Sabor" style="width:44px;height:44px;border-radius:50%;flex-shrink:0;background:#fff;box-shadow:0 0 0 2px rgba(255,255,255,0.18)">
           <div>
             <div class="logo-title">Controle de Caixa</div>
-            <div class="logo-sub">v4.2</div>
+            <div class="logo-sub">v4.3</div>
           </div>
         </div>
         <span id="status-dot" style="display:none;width:8px;height:8px;border-radius:50%;background:#4ADE80;flex-shrink:0;box-shadow:0 0 0 2px rgba(74,222,128,0.2)" title="Conectado"></span>
@@ -3791,7 +3798,7 @@ tbody tr:hover {
       <div class="page-header">
         <div>
           <div class="page-title">Fechamento de Caixa</div>
-          <div class="page-sub">Feche o dia, bloqueie alterações e gere backup da loja ativa</div>
+          <div class="page-sub">Feche o dia, bloqueie alterações e gere o backup do restaurante</div>
         </div>
       </div>
 
@@ -6127,12 +6134,32 @@ function renderFechamento() {
   const resumoEl = document.getElementById('fc-resumo');
   if (resumoEl) {
     resumoEl.innerHTML = `
-      <div class="stats-grid" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr));margin-bottom:0">
-        <div class="stat-card"><div class="stat-label">Loja ativa</div><div class="stat-value" style="font-size:20px">${escapeHtml(loja?.nome || '-')}</div><div class="stat-hint">${_formatarDataBR(data)}</div></div>
-        <div class="stat-card"><div class="stat-label">Lançamentos</div><div class="stat-value">${resumo.qtd}</div><div class="stat-hint">registro(s) no dia</div></div>
-        <div class="stat-card"><div class="stat-label">Vendas</div><div class="stat-value" style="color:var(--green-mid)">${fmt(resumo.totalVendas)}</div><div class="stat-hint">total de entrada</div></div>
-        <div class="stat-card"><div class="stat-label">Despesas</div><div class="stat-value" style="color:var(--red-mid)">${fmt(resumo.totalDesp)}</div><div class="stat-hint">total de saída</div></div>
-        <div class="stat-card"><div class="stat-label">Lucro</div><div class="stat-value" style="color:${resumo.lucro >= 0 ? 'var(--green-mid)' : 'var(--red-mid)'}">${fmt(resumo.lucro)}</div><div class="stat-hint">resultado do dia</div></div>
+      <div class="metrics-grid fc-resumo-grid" style="margin-bottom:0">
+        <div class="metric-card" style="border-left:3.5px solid var(--accent)">
+          <div class="metric-label">Restaurante</div>
+          <div class="metric-value" style="font-family:'DM Sans',sans-serif;font-size:18px;white-space:normal;word-break:break-word">${escapeHtml(loja?.nome || '-')}</div>
+          <div class="txt-hint txt-xs mt4">Data: ${_formatarDataBR(data)}</div>
+        </div>
+        <div class="metric-card" style="border-left:3.5px solid var(--blue-mid)">
+          <div class="metric-label">Lançamentos</div>
+          <div class="metric-value">${resumo.qtd}</div>
+          <div class="txt-hint txt-xs mt4">${resumo.qtd === 1 ? 'registro feito no dia' : 'registros feitos no dia'}</div>
+        </div>
+        <div class="metric-card" style="border-left:3.5px solid var(--green-mid)">
+          <div class="metric-label">Vendas</div>
+          <div class="metric-value" style="color:var(--green-mid)">${fmt(resumo.totalVendas)}</div>
+          <div class="txt-hint txt-xs mt4">Total de entradas</div>
+        </div>
+        <div class="metric-card" style="border-left:3.5px solid var(--red-mid)">
+          <div class="metric-label">Despesas</div>
+          <div class="metric-value" style="color:var(--red-mid)">${fmt(resumo.totalDesp)}</div>
+          <div class="txt-hint txt-xs mt4">Total de saídas</div>
+        </div>
+        <div class="metric-card" style="border-left:3.5px solid ${resumo.lucro >= 0 ? 'var(--green-mid)' : 'var(--red-mid)'}">
+          <div class="metric-label">Lucro</div>
+          <div class="metric-value" style="color:${resumo.lucro >= 0 ? 'var(--green-mid)' : 'var(--red-mid)'}">${fmt(resumo.lucro)}</div>
+          <div class="txt-hint txt-xs mt4">Vendas menos despesas</div>
+        </div>
       </div>`;
   }
 
