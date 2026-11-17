@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <script>try{var t=localStorage.getItem("caixa-theme");if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Controle de Caixa v4.0</title>
+<title>Controle de Caixa v4.2</title>
 
 <!-- ============================================================
      PWA — Progressive Web App
@@ -33,7 +33,7 @@
 <!--
   ╔══════════════════════════════════════════════════════════════════════╗
   ║           CONTROLE DE CAIXA                                           ║
-  ║           Versão: 4.0 — Adaptação para restaurante + Comandas/Mesas   ║
+  ║           Versão: 4.2 — Sem "Outra Loja" em Fornecedores/Lançamento   ║
   ╠══════════════════════════════════════════════════════════════════════╣
   ║  HISTÓRICO DE VERSÕES                                                ║
   ║  ─────────────────────────────────────────────────────────────────  ║
@@ -44,6 +44,8 @@
   ║         · Melhoria: renderContas usa cache; seção 3.22 documentada   ║
   ║  v3.3 — Seções novas: Planilhas já lançadas (3.23), calendário       ║
   ║         visual de lançamentos com marcação de cartão                 ║
+  ║  v4.2 — Categoria "Outra Loja" oculta (só aparece se já houver itens)║
+  ║  v4.1 — Campo Código removido da tela Fornecedores                  ║
   ║  v4.0 — Adaptação para restaurante (unidade única) + novo módulo   ║
   ║         Comandas / Mesas (3.25): mesas, cardápio, fechamento de     ║
   ║         conta e importação das vendas no Novo lançamento            ║
@@ -3117,7 +3119,7 @@ tbody tr:hover {
           <img src="logo.png" alt="Select Sabor" style="width:44px;height:44px;border-radius:50%;flex-shrink:0;background:#fff;box-shadow:0 0 0 2px rgba(255,255,255,0.18)">
           <div>
             <div class="logo-title">Controle de Caixa</div>
-            <div class="logo-sub">v4.0</div>
+            <div class="logo-sub">v4.2</div>
           </div>
         </div>
         <span id="status-dot" style="display:none;width:8px;height:8px;border-radius:50%;background:#4ADE80;flex-shrink:0;box-shadow:0 0 0 2px rgba(74,222,128,0.2)" title="Conectado"></span>
@@ -3397,10 +3399,6 @@ tbody tr:hover {
       <div class="card">
         <div class="card-title">Adicionar novo</div>
         <div class="inline-form">
-          <div class="form-group" style="max-width:90px">
-            <label>Código</label>
-            <input type="text" id="forn-codigo" placeholder="Ex: #1" class="mono-600">
-          </div>
           <div class="form-group">
             <label>Nome</label>
             <input type="text" id="forn-nome" placeholder="Ex: Nome do fornecedor">
@@ -3412,7 +3410,6 @@ tbody tr:hover {
               <option value="compra">Compra Diversa</option>
               <option value="socio">Conta paga pelo(a) sócio(a)</option>
               <option value="restaurante">Conta do Restaurante</option>
-              <option value="outra_loja">Conta paga para Outra Loja</option>
               <option value="emprestimo">Empréstimo para Aluguel</option>
             </select>
           </div>
@@ -3432,7 +3429,6 @@ tbody tr:hover {
             <option value="compra">Compra Diversa</option>
             <option value="socio">Conta paga pelo(a) sócio(a)</option>
             <option value="restaurante">Conta do Restaurante</option>
-            <option value="outra_loja">Outra Loja</option>
             <option value="emprestimo">Empréstimo para Aluguel</option>
           </select>
           <button onclick="moverFornSelecionados()" style="padding:5px 14px;background:var(--blue-mid);color:#fff;border:none;border-radius:var(--radius-sm);cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500">Mover</button>
@@ -3451,8 +3447,8 @@ tbody tr:hover {
         <div class="section-sep sep-restaurante mt-8">Contas do Restaurante</div>
         <div id="grid-restaurante" class="supplier-grid"></div>
 
-        <div class="section-sep sep-outra-loja mt-8">Contas Pagas para Outra Loja</div>
-        <div id="grid-outra_loja" class="supplier-grid"></div>
+        <div class="section-sep sep-outra-loja mt-8" id="sep-outra_loja" style="display:none">Contas Pagas para Outra Loja</div>
+        <div id="grid-outra_loja" class="supplier-grid" style="display:none"></div>
 
         <div class="section-sep sep-emprestimo mt-8">Empréstimo para Aluguel</div>
         <div id="grid-emprestimo" class="supplier-grid"></div>
@@ -3566,9 +3562,11 @@ tbody tr:hover {
         <div class="cat-total-row" id="cat-total-restaurante"></div>
 
         <!-- Contas pagas para outra loja -->
+        <div id="lanc-outra-loja-wrap" style="display:none">
         <div class="section-sep sep-outra-loja">Contas Pagas para Outra Loja</div>
         <div class="form-grid" id="form-outra-loja-grid"></div>
         <div class="cat-total-row" id="cat-total-outra_loja"></div>
+        </div>
 
         <!-- Empréstimo para Aluguel -->
         <div class="section-sep sep-emprestimo">Empréstimo para Aluguel</div>
@@ -6804,8 +6802,8 @@ function getForn() {
   defaults.forEach(d => { defaultMap[d.id] = d; });
   let alterou = false;
   lista.forEach(f => {
-    if (!f.codigo) {
-      f.codigo = defaultMap[f.id] ? defaultMap[f.id].codigo : ('#' + String(f.id).toUpperCase());
+    if (!f.codigo && defaultMap[f.id]) {
+      f.codigo = defaultMap[f.id].codigo;
       alterou = true;
     }
   });
@@ -7518,20 +7516,13 @@ function buildYearSelects() {
 function adicionarFornecedor() {
   const nome   = document.getElementById('forn-nome').value.trim();
   const cat    = document.getElementById('forn-cat').value;
-  const codigo = document.getElementById('forn-codigo').value.trim();
 
   if (!nome) { showToast('Informe o nome', false); return; }
-  if (!codigo) { showToast('Informe o código (ex: #1)', false); return; }
-
-  // Verifica se código já existe
-  const existente = getForn().find(f => f.codigo === codigo);
-  if (existente) { showToast('Código já usado por: ' + existente.nome, false); return; }
 
   const f = getForn();
-  f.push({ id: 'x' + Date.now(), codigo, nome, cat });
+  f.push({ id: 'x' + Date.now(), codigo: '', nome, cat });
   saveForn(f);
   document.getElementById('forn-nome').value   = '';
-  document.getElementById('forn-codigo').value = '';
   renderFornecedores();
   showToast('Fornecedor adicionado!');
 }
@@ -7574,20 +7565,13 @@ function cancelarEdicaoForn(id) {
 function salvarEdicaoForn(id) {
   const inp    = document.getElementById('fcard-input-' + id);
   const catSel = document.getElementById('fcard-cat-'   + id);
-  const codInp = document.getElementById('fcard-cod-'   + id);
   if (!inp) return;
   const novoNome   = inp.value.trim();
-  const novoCodigo = codInp ? codInp.value.trim() : '';
   if (!novoNome) { showToast('Nome não pode ser vazio', false); return; }
-  if (!novoCodigo) { showToast('Código não pode ser vazio', false); return; }
-  // Verifica duplicata de código (exceto o próprio)
-  const duplicado = getForn().find(f => f.codigo === novoCodigo && f.id !== id);
-  if (duplicado) { showToast('Código já usado por: ' + duplicado.nome, false); return; }
   const forn = getForn();
   const f = forn.find(f => f.id === id);
   if (!f) return;
   f.nome   = novoNome;
-  f.codigo = novoCodigo;
   if (catSel) f.cat = catSel.value;
   saveForn(forn);
   renderFornecedores();
@@ -7616,6 +7600,14 @@ function renderFornecedores() {
     const lista = forn.filter(f => f.cat === cat);
     const el    = document.getElementById('grid-' + cat);
     if (!el) return;
+    // v4.2: "Outra Loja" não faz sentido num restaurante único — só aparece se já houver itens antigos
+    if (cat === 'outra_loja') {
+      const mostrar = lista.length > 0;
+      el.style.display = mostrar ? '' : 'none';
+      const sep = document.getElementById('sep-outra_loja');
+      if (sep) sep.style.display = mostrar ? '' : 'none';
+      if (!mostrar) return;
+    }
 
     if (!lista.length) {
       el.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:0.5rem 0">Nenhum cadastrado ainda.</div>';
@@ -7630,7 +7622,7 @@ function renderFornecedores() {
             <input type="checkbox" id="fcheck-${f.id}" value="${f.id}"
               style="width:15px;height:15px;cursor:pointer;accent-color:var(--blue-mid)"
               onchange="atualizarSelecaoForn()">
-            ${f.codigo ? `<span style="font-family:'DM Mono',monospace;font-size:12px;font-weight:700;color:var(--blue-mid);background:var(--blue-bg);padding:1px 6px;border-radius:4px">${escapeHtml(f.codigo)}</span>` : ''}
+            
             <span class="supplier-name" style="margin:0">${escapeHtml(f.nome)}</span>
           </label>
           <span class="supplier-cat-tag ${f.cat}">${label}</span>
@@ -7644,10 +7636,6 @@ function renderFornecedores() {
           </div>
         </div>
         <div id="fcard-edit-${f.id}" style="display:none">
-          <div class="txt-hint mb4">Código:</div>
-          <input id="fcard-cod-${f.id}" type="text" value="${escapeAttr(f.codigo||'')}"
-            style="width:100%;padding:7px 9px;border:1px solid var(--border2);border-radius:var(--radius-sm);font-family:'DM Mono',monospace;font-size:14px;font-weight:600;margin-bottom:8px"
-            placeholder="#1">
           <div class="txt-hint mb4">Editar nome:</div>
           <input id="fcard-input-${f.id}" type="text" value="${escapeAttr(f.nome)}"
             style="width:100%;padding:7px 9px;border:1px solid var(--border2);border-radius:var(--radius-sm);font-family:'DM Sans',sans-serif;font-size:14px;margin-bottom:8px"
@@ -7659,7 +7647,7 @@ function renderFornecedores() {
             <option value="compra"      ${f.cat==='compra'      ? 'selected':''}>Compra Diversa</option>
             <option value="socio"     ${f.cat==='socio'     ? 'selected':''}>Conta paga pelo(a) sócio(a)</option>
             <option value="restaurante" ${f.cat==='restaurante' ? 'selected':''}>Conta do Restaurante</option>
-            <option value="outra_loja"  ${f.cat==='outra_loja'  ? 'selected':''}>Outra Loja</option>
+            ${f.cat==='outra_loja' ? '<option value="outra_loja" selected>Outra Loja</option>' : ''}
             <option value="emprestimo"  ${f.cat==='emprestimo'  ? 'selected':''}>Empréstimo para Aluguel</option>
           </select>
           <div class="d-flex gap-6">
@@ -7718,6 +7706,8 @@ function buildLancForm() {
   buildFornGrid('socio',     'form-socio-grid');
   buildFornGrid('restaurante', 'form-restaurante-grid');
   buildFornGrid('outra_loja',  'form-outra-loja-grid');
+  const _wrapOL = document.getElementById('lanc-outra-loja-wrap');
+  if (_wrapOL) _wrapOL.style.display = getForn().some(f => f.cat === 'outra_loja') ? '' : 'none';
   buildFornGrid('emprestimo',  'form-emprestimo-grid');
 
   // Funcionários da loja ativa
@@ -7877,7 +7867,7 @@ function buildFornGrid(cat, elId) {
 
   el.innerHTML = lista.map(f => `
     <div class="form-group">
-      <label>${f.codigo ? `<span style="font-family:'DM Mono',monospace;font-size:11px;font-weight:700;color:var(--blue-mid);background:var(--blue-bg);padding:1px 5px;border-radius:3px;margin-right:4px">${escapeHtml(f.codigo)}</span>` : ''}${escapeHtml(f.nome)} (R$)</label>
+      <label>${escapeHtml(f.nome)} (R$)</label>
       <input type="number" id="fv-${f.id}" placeholder="0,00" step="0.01" min="0" oninput="calcTotais()" onblur="_formatarValorInput(this)" onkeydown="_enterProximoInput(event, this); _setaFornGrid(event, this)">
     </div>`).join('');
 }
@@ -8779,7 +8769,7 @@ function _renderGastosCards() {
          onclick="abrirDetalheGastos('${f.id}')">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:4px">
         <div>
-          ${f.codigo ? `<span style="font-family:'DM Mono',monospace;font-size:11px;font-weight:700;color:var(--blue-mid);background:var(--blue-bg);padding:1px 5px;border-radius:3px;margin-right:4px">${escapeHtml(f.codigo)}</span>` : ''}
+          
           <span class="gastos-resumo-nome">${escapeHtml(f.nome)}</span>
         </div>
         <span class="supplier-cat-tag ${f.cat}" style="flex-shrink:0">${f.cat === 'fornecedor' ? 'Forn.' : 'Compra'}</span>
@@ -8823,9 +8813,7 @@ function _renderDetalhe(f) {
 
   // Título com código
   const nomeEl = document.getElementById('gastos-detalhe-nome');
-  nomeEl.innerHTML = f.codigo
-    ? `<span style="font-family:'DM Mono',monospace;font-size:13px;font-weight:700;color:var(--blue-mid);background:var(--blue-bg);padding:2px 7px;border-radius:4px;margin-right:6px">${escapeHtml(f.codigo)}</span>${escapeHtml(f.nome)}`
-    : f.nome;
+  nomeEl.textContent = f.nome;
 
   // Filtros de dia da semana e semana
   const DIAS = ['Todos os dias','Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
@@ -9127,7 +9115,7 @@ function renderComparacao() {
 
           return `<tr style="border-bottom:1px solid var(--border)">
             <td style="padding:10px 14px">
-              ${l.codigo ? `<span style="font-family:'DM Mono',monospace;font-size:10px;font-weight:700;color:var(--blue-mid);background:var(--blue-bg);padding:1px 5px;border-radius:3px;margin-right:4px">${l.codigo}</span>` : ''}
+              
               <span style="font-size:13px;font-weight:500">${escapeHtml(l.nome)}</span>
               <span style="margin-left:4px;font-size:10px;color:var(--text3)">${CATS_LABEL[l.cat] || l.cat}</span>
             </td>
@@ -11930,7 +11918,7 @@ function renderCmv() {
             ${cmvPorForn.map(f => `
               <tr>
                 <td>
-                  ${f.codigo ? `<span style="font-family:'DM Mono',monospace;font-size:10px;font-weight:700;color:var(--blue-mid);background:var(--blue-bg);padding:1px 4px;border-radius:3px;margin-right:4px">${escapeHtml(f.codigo)}</span>` : ''}
+                  
                   ${escapeHtml(f.nome)}
                 </td>
                 <td style="color:var(--red)">${fmt(f.total)}</td>
@@ -14047,8 +14035,9 @@ function _xlsxAbaMes(wb, chave, lncs, fornAtivos) {
     _xlsxSetCell(ws, row, 0, `Dias da Semana ${semN}`, _xlsxCellStyle(COR_HEADER, COR_BRANCO_TXT, true));
     _xlsxSetCell(ws, row, 1, 'Data',                   _xlsxCellStyle(COR_HEADER, COR_BRANCO_TXT, true));
     fornAtivos.forEach((f, ci) => {
-      const cod = (f.codigo || ('#'+f.id)).replace('#','').padStart(2,'0');
-      _xlsxSetCell(ws, row, ci+2, `#${cod} ${f.nome.toUpperCase()}`, _xlsxCellStyle(COR_HEADER, COR_BRANCO_TXT, true));
+      const _c = String(f.codigo || '');
+      const cod = /^#?\d+$/.test(_c) ? _c.replace('#','').padStart(2,'0') : '';
+      _xlsxSetCell(ws, row, ci+2, (cod ? `#${cod} ` : '') + f.nome.toUpperCase(), _xlsxCellStyle(COR_HEADER, COR_BRANCO_TXT, true));
     });
     row++;
 
