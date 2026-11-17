@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <script>try{var t=localStorage.getItem("caixa-theme");if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Controle de Caixa v4.6</title>
+<title>Controle de Caixa v4.7</title>
 
 <!-- ============================================================
      PWA — Progressive Web App
@@ -33,7 +33,7 @@
 <!--
   ╔══════════════════════════════════════════════════════════════════════╗
   ║           CONTROLE DE CAIXA                                           ║
-  ║           Versão: 4.6 — Cardápio completo na hora de lançar a comanda ║
+  ║           Versão: 4.7 — Categorias no topo da tela Cardápio           ║
   ╠══════════════════════════════════════════════════════════════════════╣
   ║  HISTÓRICO DE VERSÕES                                                ║
   ║  ─────────────────────────────────────────────────────────────────  ║
@@ -44,6 +44,7 @@
   ║         · Melhoria: renderContas usa cache; seção 3.22 documentada   ║
   ║  v3.3 — Seções novas: Planilhas já lançadas (3.23), calendário       ║
   ║         visual de lançamentos com marcação de cartão                 ║
+  ║  v4.7 — Cardápio: card Categorias movido para o topo (compacto)     ║
   ║  v4.6 — Comandas: todos os itens do cardápio, por categoria         ║
   ║  v4.5 — Cardápio: cadastrar/remover categorias próprias             ║
   ║  v4.4 — Nova tela Cadastros > Cardápio (cadastro/edição de itens,   ║
@@ -3131,7 +3132,7 @@ tbody tr:hover {
           <img src="logo.png" alt="Select Sabor" style="width:44px;height:44px;border-radius:50%;flex-shrink:0;background:#fff;box-shadow:0 0 0 2px rgba(255,255,255,0.18)">
           <div>
             <div class="logo-title">Controle de Caixa</div>
-            <div class="logo-sub">v4.6</div>
+            <div class="logo-sub">v4.7</div>
           </div>
         </div>
         <span id="status-dot" style="display:none;width:8px;height:8px;border-radius:50%;background:#4ADE80;flex-shrink:0;box-shadow:0 0 0 2px rgba(74,222,128,0.2)" title="Conectado"></span>
@@ -16628,7 +16629,18 @@ function renderCardapio() {
   const opts = cats.map(c => `<option value="${escapeAttr(c)}"${c === _cdpCatSel ? ' selected' : ''}>${escapeHtml(c)}</option>`).join('');
   const nIndisp = itens.filter(i => i.ativo === false).length;
 
-  let html = `<div class="metrics-grid">
+  let html = `<div class="card mb-5">
+      <div class="card-title">Categorias</div>
+      <div class="cmd-chips" style="max-height:none;margin:0 0 12px">${cats.map(c => {
+        const custom = _cdpCatsCustom().find(x => String(x.nome).toLowerCase() === c.toLowerCase());
+        return `<span class="cmd-chip" style="cursor:default">${escapeHtml(c)}${custom ? `<button class="cmd-x" style="margin-left:8px;width:20px;height:20px;font-size:13px" title="Remover categoria" onclick="cdpCatDel('${custom.id}')">×</button>` : ''}</span>`;
+      }).join('')}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <input id="cdp-cat-nova" type="text" placeholder="Nova categoria (ex: Entradas)" maxlength="30" style="flex:1;min-width:180px;max-width:320px" onkeydown="if(event.key==='Enter')cdpCatAdd()">
+        <button class="btn btn-secondary" onclick="cdpCatAdd()">+ Cadastrar categoria</button>
+      </div>
+    </div>
+    <div class="metrics-grid">
       <div class="metric-card"><div class="metric-label">Itens cadastrados</div><div class="metric-value">${itens.length}</div></div>
       <div class="metric-card"><div class="metric-label">Indisponíveis</div><div class="metric-value">${nIndisp}</div></div>
     </div>
@@ -16640,17 +16652,6 @@ function renderCardapio() {
         <div class="form-group"><label>Categoria</label><select id="cdp-cat" onchange="_cdpCatSel=this.value">${opts}</select></div>
       </div>
       <div class="form-actions"><button class="btn btn-primary" onclick="cmdCardapioAdd()">Adicionar ao cardápio</button></div>
-    </div>
-    <div class="card mb-5">
-      <div class="card-title">Categorias</div>
-      <div class="cmd-chips" style="max-height:none;margin:0 0 12px">${cats.map(c => {
-        const custom = _cdpCatsCustom().find(x => String(x.nome).toLowerCase() === c.toLowerCase());
-        return `<span class="cmd-chip" style="cursor:default">${escapeHtml(c)}${custom ? `<button class="cmd-x" style="margin-left:8px;width:20px;height:20px;font-size:13px" title="Remover categoria" onclick="cdpCatDel('${custom.id}')">×</button>` : ''}</span>`;
-      }).join('')}</div>
-      <div class="form-grid">
-        <div class="form-group minw-200"><label>Nova categoria</label><input id="cdp-cat-nova" type="text" placeholder="Ex: Entradas" maxlength="30" onkeydown="if(event.key==='Enter')cdpCatAdd()"></div>
-      </div>
-      <div class="form-actions"><button class="btn btn-secondary" onclick="cdpCatAdd()">+ Cadastrar categoria</button></div>
     </div>`;
 
   if (!itens.length) {
