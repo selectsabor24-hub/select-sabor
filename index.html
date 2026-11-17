@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <script>try{var t=localStorage.getItem("caixa-theme");if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Controle de Caixa v3.5</title>
+<title>Controle de Caixa v3.6</title>
 
 <!-- ============================================================
      PWA — Progressive Web App
@@ -33,7 +33,7 @@
 <!--
   ╔══════════════════════════════════════════════════════════════════════╗
   ║           CONTROLE DE CAIXA                                           ║
-  ║           Versão: 3.5 — Detecção de modo offline                    ║
+  ║           Versão: 3.6 — Botão Sair no rodapé da sidebar                ║
   ╠══════════════════════════════════════════════════════════════════════╣
   ║  HISTÓRICO DE VERSÕES                                                ║
   ║  ─────────────────────────────────────────────────────────────────  ║
@@ -44,6 +44,8 @@
   ║         · Melhoria: renderContas usa cache; seção 3.22 documentada   ║
   ║  v3.3 — Seções novas: Planilhas já lançadas (3.23), calendário       ║
   ║         visual de lançamentos com marcação de cartão                 ║
+  ║  v3.6 — Botão Sair movido para o rodapé da sidebar (abaixo de        ║
+  ║         Configurações)                                               ║
   ║  v3.5 — Detecção de modo offline:                                    ║
   ║         · Banner fixo no topo com animação e acessibilidade          ║
   ║         · window 'offline'/'online' + Firebase .info/connected       ║
@@ -3045,13 +3047,11 @@ tbody tr:hover {
           <img src="logo.png" alt="Select Sabor" style="width:44px;height:44px;border-radius:50%;flex-shrink:0;background:#fff;box-shadow:0 0 0 2px rgba(255,255,255,0.18)">
           <div>
             <div class="logo-title">Controle de Caixa</div>
-            <div class="logo-sub">v3.4</div>
+            <div class="logo-sub">v3.6</div>
           </div>
         </div>
         <span id="status-dot" style="display:none;width:8px;height:8px;border-radius:50%;background:#4ADE80;flex-shrink:0;box-shadow:0 0 0 2px rgba(74,222,128,0.2)" title="Conectado"></span>
       </div>
-      <!-- btn-sair: display controlado por _showStatusBar() via JS após login -->
-      <button onclick="sair()" id="btn-sair" style="display:none;margin-top:10px;background:rgba(255,255,255,0.05);border:1px solid var(--sidebar-border);border-radius:var(--radius-sm);padding:6px 10px;font-size:11px;color:var(--sidebar-text);cursor:pointer;font-family:'DM Sans',sans-serif;width:100%;align-items:center;justify-content:center;gap:6px;transition:background 0.15s" onmouseover="this.style.background='rgba(255,255,255,0.09)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> Sair</button>
       <!-- Seletor de lojas na sidebar -->
       <div id="sidebar-lojas-wrap" style="display:none;margin-top:10px">
         <div id="sidebar-lojas-btns" class="d-flex-col gap-4"></div>
@@ -3143,6 +3143,10 @@ tbody tr:hover {
     <button class="nav-item" id="nav-configuracoes" style="display:none" onclick="showSection('configuracoes', this)">
       <span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span> Configurações
     </button>
+    <!-- btn-sair: rodapé da sidebar (abaixo de Configurações); display controlado por _showStatusBar() via JS após login -->
+    <div style="margin-top:auto;padding-top:12px">
+      <button onclick="sair()" id="btn-sair" style="display:none;margin:0 12px 14px;width:calc(100% - 24px);background:rgba(255,255,255,0.05);border:1px solid var(--sidebar-border);border-radius:var(--radius-sm);padding:6px 10px;font-size:11px;color:var(--sidebar-text);cursor:pointer;font-family:'DM Sans',sans-serif;align-items:center;justify-content:center;gap:6px;transition:background 0.15s" onmouseover="this.style.background='rgba(255,255,255,0.09)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> Sair</button>
+    </div>
   </aside>
 
   <!-- ---- CONTEÚDO PRINCIPAL ---- -->
