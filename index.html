@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <script>try{var t=localStorage.getItem("caixa-theme");if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Controle de Caixa v4.4</title>
+<title>Controle de Caixa v4.5</title>
 
 <!-- ============================================================
      PWA — Progressive Web App
@@ -33,7 +33,7 @@
 <!--
   ╔══════════════════════════════════════════════════════════════════════╗
   ║           CONTROLE DE CAIXA                                           ║
-  ║           Versão: 4.4 — Cardápio em Cadastros (alimenta as comandas)  ║
+  ║           Versão: 4.5 — Categorias do cardápio cadastráveis           ║
   ╠══════════════════════════════════════════════════════════════════════╣
   ║  HISTÓRICO DE VERSÕES                                                ║
   ║  ─────────────────────────────────────────────────────────────────  ║
@@ -44,6 +44,7 @@
   ║         · Melhoria: renderContas usa cache; seção 3.22 documentada   ║
   ║  v3.3 — Seções novas: Planilhas já lançadas (3.23), calendário       ║
   ║         visual de lançamentos com marcação de cartão                 ║
+  ║  v4.5 — Cardápio: cadastrar/remover categorias próprias             ║
   ║  v4.4 — Nova tela Cadastros > Cardápio (cadastro/edição de itens,   ║
   ║         categoria, preço e disponibilidade) usada nas comandas      ║
   ║  v4.3 — Resumo do dia no Fechamento de Caixa em cartões alinhados   ║
@@ -3129,7 +3130,7 @@ tbody tr:hover {
           <img src="logo.png" alt="Select Sabor" style="width:44px;height:44px;border-radius:50%;flex-shrink:0;background:#fff;box-shadow:0 0 0 2px rgba(255,255,255,0.18)">
           <div>
             <div class="logo-title">Controle de Caixa</div>
-            <div class="logo-sub">v4.4</div>
+            <div class="logo-sub">v4.5</div>
           </div>
         </div>
         <span id="status-dot" style="display:none;width:8px;height:8px;border-radius:50%;background:#4ADE80;flex-shrink:0;box-shadow:0 0 0 2px rgba(74,222,128,0.2)" title="Conectado"></span>
@@ -16479,7 +16480,16 @@ function _cmdHoje() {
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 }
 function _cmdLista()    { return _cache.comandas || []; }
-function _cmdCardapio() { return _cache.cardapio || []; }
+function _cmdCardapio() { return (_cache.cardapio || []).filter(i => i.tipo !== 'cat'); }
+/** Categorias: padrão + as cadastradas (gravadas em cardapio/{loja} com tipo:'cat') + as já usadas por itens. */
+function _cdpCatsCustom() { return (_cache.cardapio || []).filter(i => i.tipo === 'cat').sort((a, b) => String(a.id).localeCompare(String(b.id))); }
+function _cdpCats() {
+  const out = CMD_CATS.slice();
+  const tem = n => out.some(c => c.toLowerCase() === String(n).toLowerCase());
+  _cdpCatsCustom().forEach(c => { if (!tem(c.nome)) out.push(c.nome); });
+  _cmdCardapio().forEach(i => { const n = i.cat || 'Outros'; if (!tem(n)) out.push(n); });
+  return out;
+}
 function _cmdGet(id)    { return _cmdLista().find(c => c.id === id) || null; }
 function _cmdItens(c)   { return Object.values((c && c.itens) || {}); }
 function _cmdRef(id)    { return _dbRef('comandas/' + _lojaAtiva + '/' + id); }
@@ -16601,6 +16611,7 @@ function _cmdHtmlFechadas(fech) {
 
 let _cdpBusca = '';
 let _cdpCatFiltro = '';
+let _cdpCatSel = 'Pratos';
 
 function _cdpEditando() {
   const e = document.activeElement;
@@ -16611,7 +16622,9 @@ function renderCardapio() {
   const box = document.getElementById('cdp-conteudo');
   if (!box) return;
   const itens = _cmdCardapio();
-  const opts = CMD_CATS.map(c => `<option value="${c}">${c}</option>`).join('');
+  const cats = _cdpCats();
+  if (!cats.includes(_cdpCatSel)) _cdpCatSel = cats[0];
+  const opts = cats.map(c => `<option value="${escapeAttr(c)}"${c === _cdpCatSel ? ' selected' : ''}>${escapeHtml(c)}</option>`).join('');
   const nIndisp = itens.filter(i => i.ativo === false).length;
 
   let html = `<div class="metrics-grid">
@@ -16623,9 +16636,20 @@ function renderCardapio() {
       <div class="form-grid">
         <div class="form-group minw-200"><label>Nome</label><input id="cdp-nome" type="text" placeholder="Ex: Prato feito" maxlength="60" onkeydown="if(event.key==='Enter')cmdCardapioAdd()"></div>
         <div class="form-group"><label>Preço (R$)</label><input id="cdp-preco" type="number" step="0.01" min="0" placeholder="0,00" onkeydown="if(event.key==='Enter')cmdCardapioAdd()"></div>
-        <div class="form-group"><label>Categoria</label><select id="cdp-cat">${opts}</select></div>
+        <div class="form-group"><label>Categoria</label><select id="cdp-cat" onchange="_cdpCatSel=this.value">${opts}</select></div>
       </div>
       <div class="form-actions"><button class="btn btn-primary" onclick="cmdCardapioAdd()">Adicionar ao cardápio</button></div>
+    </div>
+    <div class="card mb-5">
+      <div class="card-title">Categorias</div>
+      <div class="cmd-chips" style="max-height:none;margin:0 0 12px">${cats.map(c => {
+        const custom = _cdpCatsCustom().find(x => String(x.nome).toLowerCase() === c.toLowerCase());
+        return `<span class="cmd-chip" style="cursor:default">${escapeHtml(c)}${custom ? `<button class="cmd-x" style="margin-left:8px;width:20px;height:20px;font-size:13px" title="Remover categoria" onclick="cdpCatDel('${custom.id}')">×</button>` : ''}</span>`;
+      }).join('')}</div>
+      <div class="form-grid">
+        <div class="form-group minw-200"><label>Nova categoria</label><input id="cdp-cat-nova" type="text" placeholder="Ex: Entradas" maxlength="30" onkeydown="if(event.key==='Enter')cdpCatAdd()"></div>
+      </div>
+      <div class="form-actions"><button class="btn btn-secondary" onclick="cdpCatAdd()">+ Cadastrar categoria</button></div>
     </div>`;
 
   if (!itens.length) {
@@ -16633,7 +16657,7 @@ function renderCardapio() {
     return;
   }
 
-  const catsOpts = ['<option value="">Todas as categorias</option>'].concat(CMD_CATS.map(c => `<option value="${c}"${c === _cdpCatFiltro ? ' selected' : ''}>${c}</option>`)).join('');
+  const catsOpts = ['<option value="">Todas as categorias</option>'].concat(cats.map(c => `<option value="${escapeAttr(c)}"${c === _cdpCatFiltro ? ' selected' : ''}>${escapeHtml(c)}</option>`)).join('');
   html += `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px">
       <input type="text" id="cdp-busca" placeholder="Buscar item…" value="${escapeAttr(_cdpBusca)}" oninput="cdpFiltrar()" style="flex:1;min-width:180px">
       <select id="cdp-filtro-cat" onchange="cdpFiltrar()">${catsOpts}</select>
@@ -16657,12 +16681,13 @@ function _cdpRenderLista() {
     (!q || String(i.nome).toLowerCase().includes(q)) &&
     (!_cdpCatFiltro || (i.cat || 'Outros') === _cdpCatFiltro));
   if (!itens.length) { el.innerHTML = `<div class="empty"><div class="empty-icon">🔎</div>Nenhum item encontrado.</div>`; return; }
-  const catOpts = sel => CMD_CATS.map(c => `<option value="${c}"${c === sel ? ' selected' : ''}>${c}</option>`).join('');
+  const cats = _cdpCats();
+  const catOpts = sel => cats.map(c => `<option value="${escapeAttr(c)}"${c === sel ? ' selected' : ''}>${escapeHtml(c)}</option>`).join('');
   let html = '';
-  CMD_CATS.forEach(cat => {
+  cats.forEach(cat => {
     const doCat = itens.filter(i => (i.cat || 'Outros') === cat).sort((a, b) => String(a.nome).localeCompare(String(b.nome)));
     if (!doCat.length) return;
-    html += `<div class="cmd-sec-titulo">${cat} (${doCat.length})</div><div class="card" style="padding:6px 14px"><div style="overflow-x:auto"><table class="cmd-itens"><tbody>` +
+    html += `<div class="cmd-sec-titulo">${escapeHtml(cat)} (${doCat.length})</div><div class="card" style="padding:6px 14px"><div style="overflow-x:auto"><table class="cmd-itens"><tbody>` +
       doCat.map(i => `<tr style="${i.ativo === false ? 'opacity:.55' : ''}">
         <td><input type="text" value="${escapeAttr(i.nome)}" maxlength="60" style="width:100%;min-width:140px" onchange="cmdCardapioNome('${i.id}', this.value)"></td>
         <td style="width:130px"><select onchange="cmdCardapioCat('${i.id}', this.value)">${catOpts(i.cat || 'Outros')}</select></td>
@@ -16688,11 +16713,36 @@ function cmdCardapioAdd() {
   _dbRef('cardapio/' + _lojaAtiva + '/' + id).set({ id, nome, preco: _cmdRound(preco), cat, ativo: true })
     .then(() => {
       showToast('Item adicionado ao cardápio');
-      const n = document.getElementById('cdp-nome'), p = document.getElementById('cdp-preco');
-      if (n) { n.value = ''; n.focus(); }
-      if (p) p.value = '';
+      renderCardapio();
+      const n = document.getElementById('cdp-nome');
+      if (n) n.focus();
     })
     .catch(e => { console.error(e); showToast('Erro ao salvar o item', false); });
+}
+function cdpCatAdd() {
+  if (_cmdSemLoja()) return;
+  const nome = (document.getElementById('cdp-cat-nova').value || '').trim();
+  if (!nome) { showToast('Informe o nome da categoria', false); return; }
+  if (_cdpCats().some(c => c.toLowerCase() === nome.toLowerCase())) { showToast('A categoria "' + nome + '" já existe', false); return; }
+  const id = 'cat_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+  _dbRef('cardapio/' + _lojaAtiva + '/' + id).set({ id, nome, tipo: 'cat' })
+    .then(() => {
+      showToast('Categoria cadastrada');
+      _cdpCatSel = nome;
+      renderCardapio();
+    })
+    .catch(e => { console.error(e); showToast('Erro ao salvar a categoria', false); });
+}
+function cdpCatDel(id) {
+  const c = _cdpCatsCustom().find(x => x.id === id); if (!c) return;
+  const usados = _cmdCardapio().filter(i => String(i.cat || 'Outros').toLowerCase() === String(c.nome).toLowerCase()).length;
+  if (usados) { showToast('Não dá para remover: ' + usados + ' item(ns) usam "' + c.nome + '". Mude a categoria deles antes.', false); return; }
+  showModal('Remover categoria', `Remover a categoria <strong>${escapeHtml(c.nome)}</strong>?`, [
+    { label: 'Remover', style: 'danger', action: () => {
+        _dbRef('cardapio/' + _lojaAtiva + '/' + id).remove().then(() => renderCardapio()).catch(e => { console.error(e); showToast('Erro ao remover', false); });
+    }},
+    { label: 'Cancelar', style: 'secondary' }
+  ]);
 }
 function cmdCardapioNome(id, v) {
   const nome = String(v || '').trim();
