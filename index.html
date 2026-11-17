@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <script>try{var t=localStorage.getItem("caixa-theme");if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Controle de Caixa v4.5</title>
+<title>Controle de Caixa v4.6</title>
 
 <!-- ============================================================
      PWA — Progressive Web App
@@ -33,7 +33,7 @@
 <!--
   ╔══════════════════════════════════════════════════════════════════════╗
   ║           CONTROLE DE CAIXA                                           ║
-  ║           Versão: 4.5 — Categorias do cardápio cadastráveis           ║
+  ║           Versão: 4.6 — Cardápio completo na hora de lançar a comanda ║
   ╠══════════════════════════════════════════════════════════════════════╣
   ║  HISTÓRICO DE VERSÕES                                                ║
   ║  ─────────────────────────────────────────────────────────────────  ║
@@ -44,6 +44,7 @@
   ║         · Melhoria: renderContas usa cache; seção 3.22 documentada   ║
   ║  v3.3 — Seções novas: Planilhas já lançadas (3.23), calendário       ║
   ║         visual de lançamentos com marcação de cartão                 ║
+  ║  v4.6 — Comandas: todos os itens do cardápio, por categoria         ║
   ║  v4.5 — Cardápio: cadastrar/remover categorias próprias             ║
   ║  v4.4 — Nova tela Cadastros > Cardápio (cadastro/edição de itens,   ║
   ║         categoria, preço e disponibilidade) usada nas comandas      ║
@@ -3130,7 +3131,7 @@ tbody tr:hover {
           <img src="logo.png" alt="Select Sabor" style="width:44px;height:44px;border-radius:50%;flex-shrink:0;background:#fff;box-shadow:0 0 0 2px rgba(255,255,255,0.18)">
           <div>
             <div class="logo-title">Controle de Caixa</div>
-            <div class="logo-sub">v4.5</div>
+            <div class="logo-sub">v4.6</div>
           </div>
         </div>
         <span id="status-dot" style="display:none;width:8px;height:8px;border-radius:50%;background:#4ADE80;flex-shrink:0;box-shadow:0 0 0 2px rgba(74,222,128,0.2)" title="Conectado"></span>
@@ -16858,13 +16859,24 @@ function _cmdHtmlModalComanda(c) {
 
   let addHtml = '';
   if (aberta) {
-    const cardapio = _cmdCardapio().filter(i => i.ativo !== false).slice().sort((a, b) => String(a.nome).localeCompare(String(b.nome)));
-    const chips = cardapio.length ? cardapio.map(i =>
-      `<button class="cmd-chip" data-nome="${escapeAttr(String(i.nome).toLowerCase())}" onclick="cmdAddItem('${i.id}')">${escapeHtml(i.nome)}<small>${fmt(parseFloat(i.preco) || 0)}</small></button>`
-    ).join('') : `<span style="font-size:13px;color:var(--text3)">Cardápio vazio — cadastre em Cadastros › Cardápio ou lance um item avulso abaixo.</span>`;
+    const cardapio = _cmdCardapio().slice().sort((a, b) => String(a.nome).localeCompare(String(b.nome)));
+    const catsUsadas = _cdpCats().filter(cat => cardapio.some(i => (i.cat || 'Outros') === cat));
+    if (_cmdCatFiltro && !catsUsadas.includes(_cmdCatFiltro)) _cmdCatFiltro = '';
+    const chipHtml = i => {
+      const off = i.ativo === false;
+      return `<button class="cmd-chip" data-nome="${escapeAttr(String(i.nome).toLowerCase())}"${off ? ' disabled title="Indisponível no momento" style="opacity:.45;cursor:not-allowed;text-decoration:line-through"' : ''} onclick="cmdAddItem('${i.id}')">${escapeHtml(i.nome)}<small>${off ? 'esgotado' : fmt(parseFloat(i.preco) || 0)}</small></button>`;
+    };
+    const chips = cardapio.length ? catsUsadas.map(cat => {
+      const doCat = cardapio.filter(i => (i.cat || 'Outros') === cat);
+      const oculto = _cmdCatFiltro && _cmdCatFiltro !== cat;
+      return `<div class="cmd-grp" data-cat="${escapeAttr(cat)}"${oculto ? ' style="display:none"' : ''}><div class="cmd-sec-titulo" style="margin:10px 0 4px">${escapeHtml(cat)}</div><div class="cmd-chips" style="max-height:none;overflow:visible;margin-top:0">${doCat.map(chipHtml).join('')}</div></div>`;
+    }).join('') : `<span style="font-size:13px;color:var(--text3)">Cardápio vazio — cadastre em Cadastros › Cardápio ou lance um item avulso abaixo.</span>`;
+    const pills = cardapio.length ? `<div class="cmd-tabs" id="cmd-cat-pills" style="margin:8px 0 0">
+        <button class="${_cmdCatFiltro ? '' : 'active'}" onclick="cmdCatFiltrar('')">Todas</button>${catsUsadas.map(cat => `<button class="${_cmdCatFiltro === cat ? 'active' : ''}" onclick="cmdCatFiltrar(this.getAttribute('data-cat'))" data-cat="${escapeAttr(cat)}">${escapeHtml(cat)}</button>`).join('')}</div>` : '';
     addHtml = `<div class="cmd-sec-titulo">Adicionar item</div>
       ${cardapio.length ? `<input type="text" id="cmd-busca" placeholder="Buscar no cardápio…" oninput="cmdFiltrar(this.value)" style="width:100%">` : ''}
-      <div class="cmd-chips" id="cmd-chips">${chips}</div>
+      ${pills}
+      <div id="cmd-chips" style="max-height:280px;overflow-y:auto">${chips}</div>
       <div class="cmd-sec-titulo">Item avulso</div>
       <div class="cmd-avulso">
         <input type="text" id="cmd-l-nome" placeholder="Descrição" maxlength="60">
@@ -16906,11 +16918,27 @@ function _cmdHtmlModalComanda(c) {
     <div class="cmd-modal-foot">${foot}</div>`;
 }
 
+let _cmdCatFiltro = '';
 function cmdFiltrar(q) {
   q = String(q || '').toLowerCase().trim();
-  document.querySelectorAll('#cmd-chips .cmd-chip').forEach(b => {
-    b.style.display = (!q || (b.getAttribute('data-nome') || '').includes(q)) ? '' : 'none';
+  document.querySelectorAll('#cmd-chips .cmd-grp').forEach(g => {
+    const catOk = !_cmdCatFiltro || g.getAttribute('data-cat') === _cmdCatFiltro;
+    let algum = false;
+    g.querySelectorAll('.cmd-chip').forEach(b => {
+      const ok = !q || (b.getAttribute('data-nome') || '').includes(q);
+      b.style.display = ok ? '' : 'none';
+      if (ok) algum = true;
+    });
+    g.style.display = (catOk && algum) ? '' : 'none';
   });
+}
+function cmdCatFiltrar(cat) {
+  _cmdCatFiltro = cat || '';
+  document.querySelectorAll('#cmd-cat-pills button').forEach(b => {
+    b.classList.toggle('active', (b.getAttribute('data-cat') || '') === _cmdCatFiltro);
+  });
+  const bu = document.getElementById('cmd-busca');
+  cmdFiltrar(bu ? bu.value : '');
 }
 
 /* ───────── Itens da comanda ───────── */
@@ -16925,6 +16953,7 @@ function _cmdAberta() {
 function cmdAddItem(cardId) {
   const c = _cmdAberta(); if (!c) return;
   const it = _cmdCardapio().find(i => i.id === cardId); if (!it) return;
+  if (it.ativo === false) { showToast('"' + it.nome + '" está indisponível no cardápio', false); return; }
   const atual = (c.itens && c.itens[cardId]) ? (parseInt(c.itens[cardId].qtd) || 0) : 0;
   _cmdRef(c.id).child('itens/' + cardId).set({ id: cardId, nome: it.nome, preco: parseFloat(it.preco) || 0, qtd: atual + 1 })
     .catch(e => { console.error(e); showToast('Erro ao lançar o item', false); });
