@@ -400,6 +400,7 @@
 [data-theme="dark"] .section-sep.sep-compras       { background: #2d1f00 !important; border-left-color: #F59E0B !important; color: #FCD34D !important; }
 [data-theme="dark"] .section-sep.sep-sacolao       { background: #14230a !important; border-left-color: #A3E635 !important; color: #BEF264 !important; }
 [data-theme="dark"] .section-sep.sep-acougue       { background: #2d0a14 !important; border-left-color: #FB7185 !important; color: #FDA4AF !important; }
+[data-theme="dark"] .section-sep.sep-supermercado  { background: #082f38 !important; border-left-color: #22D3EE !important; color: #67E8F9 !important; }
 [data-theme="dark"] .section-sep.sep-socio       { background: #2d0a1e !important; border-left-color: #F472B6 !important; color: #F9A8D4 !important; }
 [data-theme="dark"] .section-sep.sep-restaurante   { background: #2d1200 !important; border-left-color: #FB923C !important; color: #FDBA74 !important; }
 [data-theme="dark"] .section-sep.sep-outra-loja    { background: #1e1035 !important; border-left-color: #A78BFA !important; color: #C4B5FD !important; }
@@ -415,6 +416,7 @@
 [data-theme="dark"] .supplier-cat-tag.socio     { background: #2d1f00;  color: #FCD34D; }
 [data-theme="dark"] .supplier-cat-tag.sacolao   { background: #14230a;  color: #BEF264; }
 [data-theme="dark"] .supplier-cat-tag.acougue   { background: #2d0a14;  color: #FDA4AF; }
+[data-theme="dark"] .supplier-cat-tag.supermercado { background: #082f38;  color: #67E8F9; }
 [data-theme="dark"] .supplier-cat-tag.restaurante { background: #1e1035;  color: #C4B5FD; }
 [data-theme="dark"] .supplier-cat-tag.outra_loja  { background: #2d0a1e;  color: #F9A8D4; }
 [data-theme="dark"] .supplier-cat-tag.emprestimo  { background: #2d0a0a;  color: #FCA5A5; }
@@ -828,6 +830,7 @@ body.is-offline #login-screen {
 .section-sep.sep-compras       { background:#FEF3C7; border-left-color:#D97706; color:#78350F; }
 .section-sep.sep-sacolao       { background:#ECFCCB; border-left-color:#65A30D; color:#365314; }
 .section-sep.sep-acougue       { background:#FFE4E6; border-left-color:#E11D48; color:#881337; }
+.section-sep.sep-supermercado  { background:#CFFAFE; border-left-color:#0891B2; color:#164E63; }
 .section-sep.sep-socio       { background:#FCE7F3; border-left-color:#DB2777; color:#831843; }
 .section-sep.sep-restaurante   { background:#FFEDD5; border-left-color:#EA580C; color:#7C2D12; }
 .section-sep.sep-outra-loja    { background:#EDE9FE; border-left-color:#7C3AED; color:#4C1D95; }
@@ -1192,6 +1195,7 @@ tfoot td { padding: 11px 14px; font-weight: 700; border-top: 1.5px solid var(--b
 .supplier-cat-tag.compra     { background: var(--blue-bg);   color: var(--blue); }
 .supplier-cat-tag.sacolao    { background: #ECFCCB; color: #3F6212; }
 .supplier-cat-tag.acougue    { background: #FFE4E6; color: #9F1239; }
+.supplier-cat-tag.supermercado { background: #CFFAFE; color: #155E75; }
 .supplier-cat-tag.socio    { background: #FEF3C7; color: #92400E; }
 .supplier-cat-tag.restaurante{ background: #EDE9FE; color: #5B21B6; }
 .supplier-cat-tag.outra_loja { background: #FCE7F3; color: #9D174D; }
@@ -1241,6 +1245,7 @@ tfoot td { padding: 11px 14px; font-weight: 700; border-top: 1.5px solid var(--b
 .gastos-tab.compra.active     { background: var(--blue-mid);  border-color: var(--blue-mid); }
 .gastos-tab.sacolao.active    { background: #65A30D; border-color: #65A30D; }
 .gastos-tab.acougue.active    { background: #E11D48; border-color: #E11D48; }
+.gastos-tab.supermercado.active { background: #0891B2; border-color: #0891B2; }
 
 .gastos-resumo-grid {
   display: grid;
@@ -3507,6 +3512,7 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
               <option value="compra" data-cat-nome="compra">Compra Diversa</option>
               <option value="sacolao" data-cat-nome="sacolao">Sacolão</option>
               <option value="acougue" data-cat-nome="acougue">Açougue</option>
+              <option value="supermercado" data-cat-nome="supermercado">Supermercado</option>
               <option value="socio" data-cat-nome="socio">Conta paga pelo(a) sócio(a)</option>
               <option value="restaurante" data-cat-nome="restaurante">Conta do Restaurante</option>
               <option value="emprestimo" data-cat-nome="emprestimo">Empréstimo para Aluguel</option>
@@ -3536,6 +3542,7 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
             <option value="compra" data-cat-nome="compra">Compra Diversa</option>
             <option value="sacolao" data-cat-nome="sacolao">Sacolão</option>
             <option value="acougue" data-cat-nome="acougue">Açougue</option>
+            <option value="supermercado" data-cat-nome="supermercado">Supermercado</option>
             <option value="socio" data-cat-nome="socio">Conta paga pelo(a) sócio(a)</option>
             <option value="restaurante" data-cat-nome="restaurante">Conta do Restaurante</option>
             <option value="emprestimo" data-cat-nome="emprestimo">Empréstimo para Aluguel</option>
@@ -3570,6 +3577,13 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
             <span data-cat-nome="acougue">Açougue</span>
           </div>
           <div id="grid-acougue" class="supplier-grid"></div>
+        </div>
+
+        <div data-cat-oculta="supermercado">
+          <div class="section-sep sep-supermercado mt-8" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+            <span data-cat-nome="supermercado">Supermercado</span>
+          </div>
+          <div id="grid-supermercado" class="supplier-grid"></div>
         </div>
 
         <div data-cat-oculta="socio">
@@ -3710,6 +3724,12 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
         <div class="cat-total-row" id="cat-total-acougue"></div>
         </div>
 
+        <div data-cat-oculta="supermercado">
+        <div class="section-sep sep-supermercado" data-cat-nome="supermercado">Supermercado</div>
+        <div class="form-grid" id="form-supermercado-grid"></div>
+        <div class="cat-total-row" id="cat-total-supermercado"></div>
+        </div>
+
         <!-- Contas pagas pelo(a) sócio(a) -->
         <div data-cat-oculta="socio">
         <div class="section-sep sep-socio" data-cat-nome="socio">Contas Pagas pelo(a) Sócio(a)</div>
@@ -3846,6 +3866,7 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
               <option value="compra">Compra</option>
               <option value="sacolao">Sacolão</option>
               <option value="acougue">Açougue</option>
+              <option value="supermercado">Supermercado</option>
               <option value="socio">Sócio(a)</option>
               <option value="restaurante">Restaurante</option>
               <option value="outra_loja">Outra loja</option>
@@ -4033,6 +4054,7 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
         <button class="gastos-tab compra"     onclick="filtrarGastosCat('compra', this)" data-cat-nome="compra">Compras Diversas</button>
         <button class="gastos-tab sacolao"    onclick="filtrarGastosCat('sacolao', this)" data-cat-nome="sacolao">Sacolão</button>
         <button class="gastos-tab acougue"    onclick="filtrarGastosCat('acougue', this)" data-cat-nome="acougue">Açougue</button>
+        <button class="gastos-tab supermercado" onclick="filtrarGastosCat('supermercado', this)" data-cat-nome="supermercado">Supermercado</button>
         <button class="gastos-tab fornecedor" onclick="filtrarGastosCat('socio', this)" data-cat-nome="socio">Sócio(a)</button>
         <button class="gastos-tab compra"     onclick="filtrarGastosCat('restaurante', this)" data-cat-nome="restaurante">Restaurante</button>
         <button class="gastos-tab fornecedor" onclick="filtrarGastosCat('outra_loja', this)" data-cat-nome="outra_loja">Outra Loja</button>
@@ -4121,6 +4143,7 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
               <option value="compra" data-cat-nome="compra">Compras Diversas</option>
               <option value="sacolao" data-cat-nome="sacolao">Sacolão</option>
               <option value="acougue" data-cat-nome="acougue">Açougue</option>
+              <option value="supermercado" data-cat-nome="supermercado">Supermercado</option>
               <option value="socio" data-cat-nome="socio">Sócio(a)</option>
               <option value="restaurante" data-cat-nome="restaurante">Restaurante</option>
               <option value="outra_loja" data-cat-nome="outra_loja">Outra Loja</option>
@@ -5404,6 +5427,7 @@ const CATS_LABEL = {
   compra:      'Compra',
   sacolao:     'Sacolão',
   acougue:     'Açougue',
+  supermercado: 'Supermercado',
   socio:     'Sócio(a)',
   restaurante: 'Restaurante',
   outra_loja:  'Outra loja',
@@ -5415,6 +5439,7 @@ const CATS_COLOR = {
   compra:      '#EA580C',
   sacolao:     '#65A30D',
   acougue:     '#E11D48',
+  supermercado: '#0891B2',
   socio:     '#B91C1C',
   restaurante: '#F97316',
   outra_loja:  '#E11D48',
@@ -5426,6 +5451,7 @@ const CATS_BG = {
   compra:      '#DBEAFE',
   sacolao:     '#ECFCCB',
   acougue:     '#FFE4E6',
+  supermercado: '#CFFAFE',
   socio:     '#FEF3C7',
   restaurante: '#EDE9FE',
   outra_loja:  '#FCE7F3',
@@ -5434,7 +5460,7 @@ const CATS_BG = {
 
 /* Categorias que se comportam como Fornecedores/Compras:
    entram no CMV, em Despesas (Dashboard/Relatório) e em Desp. Total. */
-const CATS_INSUMO_EXTRA = ['sacolao', 'acougue'];
+const CATS_INSUMO_EXTRA = ['sacolao', 'acougue', 'supermercado'];
 
 /* ============================================================
    3.2 FIREBASE — Configuração e credenciais
@@ -6437,7 +6463,7 @@ function imprimirFechamentoDia() {
     + (vendasImportadas ? `<tr><td>Total importado (planilha)</td><td class="n">${fmt(vendasImportadas)}</td></tr>` : '');
 
   // ── Despesas por categoria / fornecedor ─────────────────────────
-  const ordemCats = ['fornecedor', 'compra', 'sacolao', 'acougue', 'socio', 'restaurante', 'outra_loja', 'emprestimo'];
+  const ordemCats = ['fornecedor', 'compra', 'sacolao', 'acougue', 'supermercado', 'socio', 'restaurante', 'outra_loja', 'emprestimo'];
   const porCat = {};
   ordemCats.forEach(c => porCat[c] = []);
   fornList.forEach(f => {
@@ -7932,6 +7958,7 @@ const CAT_PADRAO = {
   compra:      'Compras Diversas',
   sacolao:     'Sacolão',
   acougue:     'Açougue',
+  supermercado: 'Supermercado',
   socio:       'Contas Pagas pelo(a) Sócio(a)',
   restaurante: 'Contas do Restaurante',
   outra_loja:  'Contas Pagas para Outra Loja',
@@ -7985,7 +8012,7 @@ function _catRenderOcultas() {
 
 /** Opções do select de categoria no card do fornecedor (sem as categorias excluídas). */
 function _catOptionsHtml(sel) {
-  const lista = [['fornecedor', 'Fornecedor'], ['compra', 'Compra Diversa'], ['sacolao', 'Sacolão'], ['acougue', 'Açougue'], ['socio', 'Conta paga pelo(a) sócio(a)'],
+  const lista = [['fornecedor', 'Fornecedor'], ['compra', 'Compra Diversa'], ['sacolao', 'Sacolão'], ['acougue', 'Açougue'], ['supermercado', 'Supermercado'], ['socio', 'Conta paga pelo(a) sócio(a)'],
                  ['restaurante', 'Conta do Restaurante'], ['emprestimo', 'Empréstimo para Aluguel']];
   let h = lista.filter(([c]) => !_catOculta(c) || c === sel)
     .map(([c, pad]) => `<option value="${c}"${sel === c ? ' selected' : ''}>${escapeHtml(_catNome(c, pad))}</option>`).join('');
@@ -8185,6 +8212,7 @@ function renderFornecedores() {
     { cat: 'compra',      label: 'Compra Diversa' },
     { cat: 'sacolao',     label: 'Sacolão' },
     { cat: 'acougue',     label: 'Açougue' },
+    { cat: 'supermercado', label: 'Supermercado' },
     { cat: 'socio',     label: 'Conta paga pelo(a) sócio(a)' },
     { cat: 'restaurante', label: 'Conta do Restaurante' },
     { cat: 'outra_loja',  label: 'Conta paga para Outra Loja' },
@@ -8299,6 +8327,7 @@ function buildLancForm() {
   buildFornGrid('compra',      'form-comp-grid');
   buildFornGrid('sacolao',     'form-sacolao-grid');
   buildFornGrid('acougue',     'form-acougue-grid');
+  buildFornGrid('supermercado', 'form-supermercado-grid');
   buildFornGrid('socio',     'form-socio-grid');
   buildFornGrid('restaurante', 'form-restaurante-grid');
   buildFornGrid('outra_loja',  'form-outra-loja-grid');
@@ -9233,7 +9262,7 @@ function _renderRanking() {
 
   // Label da categoria para o cabeçalho
   const catLabels = {
-    todos: 'Todos', fornecedor: _catNome('fornecedor', 'Fornecedores'), compra: _catNome('compra', 'Compras Diversas'), sacolao: _catNome('sacolao', 'Sacolão'), acougue: _catNome('acougue', 'Açougue'),
+    todos: 'Todos', fornecedor: _catNome('fornecedor', 'Fornecedores'), compra: _catNome('compra', 'Compras Diversas'), sacolao: _catNome('sacolao', 'Sacolão'), acougue: _catNome('acougue', 'Açougue'), supermercado: _catNome('supermercado', 'Supermercado'),
     socio: _catNome('socio', 'Sócio(a)'), restaurante: _catNome('restaurante', 'Restaurante'),
     outra_loja: _catNome('outra_loja', 'Outra Loja'), emprestimo: _catNome('emprestimo', 'Empréstimo'),
   };
@@ -11578,7 +11607,7 @@ function _dashRenderGraficos(mensal, forn, t) {
 
   /* ── 2. Despesas por categoria ── */
   const CATS_LABEL_DASH = {
-    fornecedor:_catNome('fornecedor','Fornecedores'), compra:_catNome('compra','Compras Diversas'), sacolao:_catNome('sacolao','Sacolão'), acougue:_catNome('acougue','Açougue'), socio:_catNome('socio','Sócio(a)'),
+    fornecedor:_catNome('fornecedor','Fornecedores'), compra:_catNome('compra','Compras Diversas'), sacolao:_catNome('sacolao','Sacolão'), acougue:_catNome('acougue','Açougue'), supermercado:_catNome('supermercado','Supermercado'), socio:_catNome('socio','Sócio(a)'),
     restaurante:_catNome('restaurante','Restaurante'), outra_loja:_catNome('outra_loja','Outra Loja'), emprestimo:_catNome('emprestimo','Empr\xe9stimo'),
   };
   const despItems = Object.entries(CATS_LABEL_DASH).map(([cat, label]) => ({
@@ -12346,6 +12375,7 @@ function _relBuildCards(data, forn, mapaFunc, totFuncs) {
     { cat: 'compra', title: _catNome('compra', 'Compras Diversas') },
     { cat: 'sacolao', title: _catNome('sacolao', 'Sacolão') },
     { cat: 'acougue', title: _catNome('acougue', 'Açougue') },
+    { cat: 'supermercado', title: _catNome('supermercado', 'Supermercado') },
     { cat: 'socio', title: _catNome('socio', 'Contas pagas pelo(a) sócio(a)') },
     { cat: 'restaurante', title: _catNome('restaurante', 'Contas do Restaurante') },
     { cat: 'outra_loja', title: _catNome('outra_loja', 'Contas pagas para Outra Loja') },
@@ -12458,7 +12488,8 @@ function renderCmv() {
     ['socio', 'restaurante', 'outra_loja', 'emprestimo'].includes(f.cat)).map(f => f.id));
   const IDS_SACOLAO = new Set(forn.filter(f => f.cat === 'sacolao').map(f => f.id));
   const IDS_ACOUGUE = new Set(forn.filter(f => f.cat === 'acougue').map(f => f.id));
-  const IDS_CMV    = new Set([...IDS_FORN, ...IDS_COMPRA, ...IDS_SACOLAO, ...IDS_ACOUGUE]); // custo direto mercadoria
+  const IDS_SUPERMERCADO = new Set(forn.filter(f => f.cat === 'supermercado').map(f => f.id));
+  const IDS_CMV    = new Set([...IDS_FORN, ...IDS_COMPRA, ...IDS_SACOLAO, ...IDS_ACOUGUE, ...IDS_SUPERMERCADO]); // custo direto mercadoria
 
   // ── Receita bruta: canais de venda (excl. restaurante) ──
   const receitaBruta = allData.reduce((s, d) => {
@@ -12486,7 +12517,8 @@ function renderCmv() {
   }, 0);
   const cmvSacolao = _somaIds(IDS_SACOLAO);
   const cmvAcougue = _somaIds(IDS_ACOUGUE);
-  const cmvTotal = cmvForn + cmvCompra + cmvSacolao + cmvAcougue;
+  const cmvSupermercado = _somaIds(IDS_SUPERMERCADO);
+  const cmvTotal = cmvForn + cmvCompra + cmvSacolao + cmvAcougue + cmvSupermercado;
 
   // ── Outras despesas operacionais ──
   const despFuncionarios = allData.reduce((s, d) =>
@@ -12635,6 +12667,7 @@ function renderCmv() {
             <tr><td style="color:var(--red)">− CMV (Compras Diversas)</td><td style="color:var(--red)">${fmt(cmvCompra)}</td></tr>
             ${cmvSacolao > 0 ? `<tr><td style="color:var(--red)">− CMV (${escapeHtml(_catNome('sacolao','Sacolão'))})</td><td style="color:var(--red)">${fmt(cmvSacolao)}</td></tr>` : ''}
             ${cmvAcougue > 0 ? `<tr><td style="color:var(--red)">− CMV (${escapeHtml(_catNome('acougue','Açougue'))})</td><td style="color:var(--red)">${fmt(cmvAcougue)}</td></tr>` : ''}
+            ${cmvSupermercado > 0 ? `<tr><td style="color:var(--red)">− CMV (${escapeHtml(_catNome('supermercado','Supermercado'))})</td><td style="color:var(--red)">${fmt(cmvSupermercado)}</td></tr>` : ''}
             <tr style="border-top:1.5px solid var(--border);font-weight:700"><td>= Lucro Bruto</td><td style="color:${lucroBruto >= 0 ? 'var(--green)' : 'var(--red)'}">${fmt(lucroBruto)}</td></tr>
             <tr style="color:var(--text2)"><td style="padding-left:10px;font-size:12px">Margem Bruta</td><td style="font-size:12px;font-weight:600;color:${semaforo(margemBruta)}">${fmtPct(margemBruta)}</td></tr>
             <tr style="border-top:1px dashed var(--border2)"><td style="color:var(--red)">− Funcionários</td><td style="color:var(--red)">${fmt(despFuncionarios)}</td></tr>
@@ -12710,9 +12743,10 @@ function renderRelatorio() {
   const _somaCatRel = cat => { const ids = new Set(forn.filter(f => f.cat === cat).map(f => f.id)); return data.reduce((s, d) => { let soma = 0; if (d.itens) ids.forEach(id => { soma += parseFloat(d.itens[id]) || 0; }); return s + soma; }, 0); };
   const totSacolaoRel = _somaCatRel('sacolao');
   const totAcougueRel = _somaCatRel('acougue');
+  const totSupermercadoRel = _somaCatRel('supermercado');
 
   // Total Vendas = canais (excl. Restaurante) + Fornecedores + Compras + Funcionários
-  const totVSemRest = totCanaisRel + totFornRel + totCompRel + totSacolaoRel + totAcougueRel + totFuncs;
+  const totVSemRest = totCanaisRel + totFornRel + totCompRel + totSacolaoRel + totAcougueRel + totSupermercadoRel + totFuncs;
 
   const totV  = totVSemRest + totRestauranteRel;
   const totD  = data.reduce((s, d) => s + _recalc(d).saida, 0) + totFuncs;
@@ -12757,7 +12791,7 @@ function renderRelatorio() {
     return s + (parseFloat(v.dinheiro) || 0) + (parseFloat(v.pix) || 0);
   }, 0);
 
-  const totEntradaDinheiro = totFornRel + totCompRel + totSacolaoRel + totAcougueRel + totFuncs;
+  const totEntradaDinheiro = totFornRel + totCompRel + totSacolaoRel + totAcougueRel + totSupermercadoRel + totFuncs;
 
   const vendasRows = [
     // Cartão, iFood, 99Food — cada um na sua linha
@@ -12775,6 +12809,7 @@ function renderRelatorio() {
     <tr style="font-size:12px;color:var(--text3)"><td style="padding-left:16px">↳ Compras Diversas</td><td>${fmt(totCompRel)}</td></tr>
     ${totSacolaoRel > 0 ? `<tr style="font-size:12px;color:var(--text3)"><td style="padding-left:16px">↳ ${escapeHtml(_catNome('sacolao','Sacolão'))}</td><td>${fmt(totSacolaoRel)}</td></tr>` : ''}
     ${totAcougueRel > 0 ? `<tr style="font-size:12px;color:var(--text3)"><td style="padding-left:16px">↳ ${escapeHtml(_catNome('acougue','Açougue'))}</td><td>${fmt(totAcougueRel)}</td></tr>` : ''}
+    ${totSupermercadoRel > 0 ? `<tr style="font-size:12px;color:var(--text3)"><td style="padding-left:16px">↳ ${escapeHtml(_catNome('supermercado','Supermercado'))}</td><td>${fmt(totSupermercadoRel)}</td></tr>` : ''}
     <tr style="font-size:12px;color:var(--text3)"><td style="padding-left:16px">↳ Pag. Funcionários</td><td>${fmt(totFuncs)}</td></tr>` : '',
   ].join('');
 
@@ -13163,6 +13198,7 @@ function imprimirRelatorio() {
     { cat: 'compra', title: _catNome('compra', 'Compras Diversas') },
     { cat: 'sacolao', title: _catNome('sacolao', 'Sacolão') },
     { cat: 'acougue', title: _catNome('acougue', 'Açougue') },
+    { cat: 'supermercado', title: _catNome('supermercado', 'Supermercado') },
     { cat: 'socio', title: _catNome('socio', 'Contas pagas pelo(a) sócio(a)') },
     { cat: 'restaurante', title: _catNome('restaurante', 'Contas do Restaurante') },
     { cat: 'outra_loja', title: _catNome('outra_loja', 'Contas pagas para Outra Loja') },
