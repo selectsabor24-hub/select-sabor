@@ -3844,6 +3844,7 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
           </div>
           <button class="btn btn-primary" onclick="fecharCaixaDia()">🔒 Fechar caixa</button>
           <button class="btn btn-secondary" onclick="reabrirCaixaDia()">🔓 Reabrir</button>
+          <button class="btn btn-secondary" onclick="imprimirFechamentoDia()">🖨 Imprimir / PDF</button>
           <button class="btn btn-secondary" onclick="exportarBackupLoja()">⬇️ Backup JSON</button>
         </div>
       </div>
@@ -6265,6 +6266,197 @@ function _fcSelecionarData(data) {
   const el = document.getElementById('fc-data');
   if (el) el.value = data;
   renderFechamento();
+}
+
+/**
+ * Relatório completo do dia (Fechamento de Caixa) — abre uma pré-visualização
+ * com botão "Imprimir / Salvar PDF". Usa os mesmos cálculos do resumo da tela.
+ */
+function imprimirFechamentoDia() {
+  if (!_lojaAtiva) { showToast('Selecione uma loja primeiro.', false); return; }
+  const data = _fcGarantirData();
+  const loja = getLojaAtiva ? getLojaAtiva() : null;
+  const resumo = _resumoLancamentosDia(data);
+  const fechamento = _caixaFechamento(data);
+  const fornList = getForn();
+  const idsPag = _dashIdsComPagFunc();
+  const E = escapeHtml;
+
+  // ── Vendas por canal ────────────────────────────────────────────
+  const nomeCanal = k => {
+    if (k === 'ifood') return 'iFood';
+    if (k === '_99food') return '99Food';
+    return String((CONFIG.SALES_CHANNELS[k] || k)).replace(/<[^>]*>/g, '').trim();
+  };
+  const vendasCanal = {};
+  let vendasImportadas = 0;
+  resumo.lista.forEach(d => {
+    const v = d.vendas || {};
+    let soma = 0;
+    Object.keys(v).forEach(k => {
+      const x = parseFloat(v[k]) || 0;
+      if (x) { vendasCanal[k] = (vendasCanal[k] || 0) + x; soma += x; }
+    });
+    if (soma === 0 && d.cartaoDinPix) vendasImportadas += parseFloat(d.cartaoDinPix) || 0;
+  });
+  const ordemCanais = Object.keys(CONFIG.SALES_CHANNELS);
+  const canaisUsados = Object.keys(vendasCanal).sort((a, b) => {
+    const ia = ordemCanais.indexOf(a), ib = ordemCanais.indexOf(b);
+    return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+  });
+  const linhasVendas = canaisUsados.map(k => `<tr><td>${E(nomeCanal(k))}</td><td class="n">${fmt(vendasCanal[k])}</td></tr>`).join('')
+    + (vendasImportadas ? `<tr><td>Total importado (planilha)</td><td class="n">${fmt(vendasImportadas)}</td></tr>` : '');
+
+  // ── Despesas por categoria / fornecedor ─────────────────────────
+  const ordemCats = ['fornecedor', 'compra', 'socio', 'restaurante', 'outra_loja', 'emprestimo'];
+  const porCat = {};
+  ordemCats.forEach(c => porCat[c] = []);
+  fornList.forEach(f => {
+    if (!porCat[f.cat]) return;
+    let tot = 0;
+    resumo.lista.forEach(d => { tot += (d.itens && d.itens[f.id]) ? parseFloat(d.itens[f.id]) || 0 : 0; });
+    if (tot) porCat[f.cat].push({ nome: f.nome, valor: tot });
+  });
+  let despImportada = 0;
+  resumo.lista.forEach(d => {
+    const temItens = fornList.some(f => (d.itens && parseFloat(d.itens[f.id])) > 0);
+    if (!temItens) despImportada += (parseFloat(d.despEsq) || 0) + (parseFloat(d.despDir) || 0);
+  });
+  let blocosDesp = '';
+  ordemCats.forEach(c => {
+    const itens = porCat[c];
+    if (!itens.length) return;
+    const sub = itens.reduce((s, i) => s + i.valor, 0);
+    blocosDesp += `<tr class="cat"><td>${E(CATS_LABEL[c] || c)}</td><td class="n">${fmt(sub)}</td></tr>`
+      + itens.map(i => `<tr class="sub"><td>${E(i.nome)}</td><td class="n">${fmt(i.valor)}</td></tr>`).join('');
+  });
+  if (despImportada) blocosDesp += `<tr class="cat"><td>Despesas (total importado)</td><td class="n">${fmt(despImportada)}</td></tr>`;
+
+  // ── Funcionários (passagem / adiantamento) ──────────────────────
+  const nomeFunc = (id, fallback) => ((_cache.funcs || []).find(f => String(f.id) === String(id)) || {}).nome || fallback || id || '-';
+  const mapaFunc = {};
+  const addFunc = (id, nome, pass, adian, obs) => {
+    if (!(pass || adian)) return;
+    if (!mapaFunc[id]) mapaFunc[id] = { nome: nomeFunc(id, nome), pass: 0, adian: 0, obs: [] };
+    mapaFunc[id].pass += pass; mapaFunc[id].adian += adian;
+    if (obs) mapaFunc[id].obs.push(obs);
+  };
+  resumo.lista.forEach(d => {
+    const source = d._funcItensSource;
+    const usar = source === 'funcItens' || (!source && !idsPag.has(String(d.id)));
+    if (!usar) return;
+    Object.keys(d.funcItens || {}).forEach(fid => {
+      const fi = d.funcItens[fid];
+      addFunc(fid, fi.nome, parseFloat(fi.passagem) || 0, parseFloat(fi.adiantamento) || 0, '');
+    });
+  });
+  (_cache.pagamentosFunc || []).filter(p => p.data === data).forEach(p => {
+    if (p.tipo === 'passagem')          addFunc(p.funcId, p.funcNome, parseFloat(p.valor) || 0, 0, p.obs);
+    else if (p.tipo === 'adiantamento') addFunc(p.funcId, p.funcNome, 0, parseFloat(p.valor) || 0, p.obs);
+    else addFunc(p.funcId, p.funcNome, parseFloat(p.passagem) || 0, parseFloat(p.adiantamento) || 0, p.obs);
+  });
+  const funcs = Object.values(mapaFunc);
+  const totFunc = funcs.reduce((s, f) => s + f.pass + f.adian, 0);
+  const linhasFunc = funcs.map(f => `<tr><td>${E(f.nome)}${f.obs.length ? `<div class="obs">${E(f.obs.join(' • '))}</div>` : ''}</td>
+    <td class="n">${f.pass ? fmt(f.pass) : '-'}</td><td class="n">${f.adian ? fmt(f.adian) : '-'}</td><td class="n"><strong>${fmt(f.pass + f.adian)}</strong></td></tr>`).join('');
+
+  // ── Montagem ────────────────────────────────────────────────────
+  const [a, m, d2] = data.split('-').map(Number);
+  const diaSemana = CONFIG.DIAS_SEMANA[new Date(a, m - 1, d2).getDay()] || '';
+  const titulo = `Fechamento de Caixa — ${_formatarDataBR(data)}`;
+  const obs = (document.getElementById('fc-obs')?.value || '').trim() || (fechamento && fechamento.obs) || '';
+  const cor = resumo.lucro >= 0 ? '#15803D' : '#B91C1C';
+  const statusTxt = fechamento
+    ? `🔒 Caixa FECHADO por ${E(fechamento.fechadoPorEmail || '-')} em ${_formatarDataHoraBR(fechamento.fechadoEm)}`
+    : '🔓 Caixa ABERTO (ainda não fechado)';
+
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${E(titulo)}</title>
+  <style>
+    @page { size: A4; margin: 14mm; }
+    * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    body { font-family: 'DM Sans', Arial, sans-serif; color: #111; background: #fff; margin: 0; padding: 24px; font-size: 13px; }
+    h1 { font-size: 22px; margin: 0 0 2px; }
+    .meta { color: #555; font-size: 12px; margin-bottom: 4px; }
+    .status { margin: 12px 0 16px; padding: 10px 14px; border-radius: 8px; font-weight: 700; font-size: 13px;
+              background: ${fechamento ? '#DCFCE7' : '#FEF3C7'}; border: 1px solid ${fechamento ? '#22C55E' : '#F59E0B'}; color: ${fechamento ? '#166534' : '#92400E'}; }
+    .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 18px; }
+    .kpi { border: 1px solid #ddd; border-radius: 8px; padding: 10px 12px; }
+    .kpi .l { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: #666; font-weight: 700; }
+    .kpi .v { font-size: 18px; font-weight: 800; margin-top: 4px; }
+    h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; margin: 18px 0 6px; padding: 6px 10px; background: #F1F5F9; border-left: 4px solid #6378FF; }
+    table { width: 100%; border-collapse: collapse; page-break-inside: avoid; }
+    th { text-align: left; font-size: 10px; text-transform: uppercase; color: #666; padding: 5px 8px; border-bottom: 1.5px solid #ccc; }
+    td { padding: 5px 8px; border-bottom: 1px solid #eee; vertical-align: top; }
+    td.n, th.n { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    tr.cat td { font-weight: 700; background: #FAFAFA; }
+    tr.sub td:first-child { padding-left: 22px; color: #444; }
+    tr.total td { font-weight: 800; border-top: 2px solid #111; border-bottom: none; }
+    .obs { font-size: 11px; color: #666; margin-top: 2px; }
+    .vazio { color: #888; font-style: italic; padding: 6px 8px; }
+    .assin { display: flex; gap: 40px; margin-top: 56px; page-break-inside: avoid; }
+    .assin div { flex: 1; border-top: 1px solid #111; padding-top: 4px; text-align: center; font-size: 11px; color: #444; }
+    .rodape { margin-top: 22px; font-size: 10px; color: #888; }
+  </style></head><body>
+    <h1>${E(titulo)}</h1>
+    <div class="meta">🏪 ${E(loja?.nome || '-')}${diaSemana ? ' · ' + E(diaSemana) : ''} · ${resumo.qtd} ${resumo.qtd === 1 ? 'lançamento' : 'lançamentos'} no dia</div>
+    <div class="status">${statusTxt}${obs ? `<div style="font-weight:400;margin-top:3px">Obs.: ${E(obs)}</div>` : ''}</div>
+
+    <div class="kpis">
+      <div class="kpi"><div class="l">Vendas</div><div class="v" style="color:#15803D">${fmt(resumo.totalVendas)}</div></div>
+      <div class="kpi"><div class="l">Despesas</div><div class="v" style="color:#B91C1C">${fmt(resumo.totalDesp)}</div></div>
+      <div class="kpi"><div class="l">Lucro</div><div class="v" style="color:${cor}">${fmt(resumo.lucro)}</div></div>
+      <div class="kpi"><div class="l">Lançamentos</div><div class="v">${resumo.qtd}</div></div>
+    </div>
+
+    <h2>Vendas por canal</h2>
+    <table><tbody>${linhasVendas || '<tr><td class="vazio">Nenhuma venda registrada.</td></tr>'}
+      <tr class="total"><td>Total de vendas</td><td class="n">${fmt(resumo.totalVendas)}</td></tr></tbody></table>
+
+    <h2>Despesas</h2>
+    <table><tbody>${blocosDesp || '<tr><td class="vazio">Nenhuma despesa de fornecedor/compra/saída registrada.</td></tr>'}</tbody></table>
+
+    <h2>Funcionários — passagens e adiantamentos</h2>
+    ${funcs.length ? `<table><thead><tr><th>Funcionário</th><th class="n">Passagem</th><th class="n">Adiantamento</th><th class="n">Total</th></tr></thead>
+      <tbody>${linhasFunc}<tr class="total"><td colspan="3">Total funcionários</td><td class="n">${fmt(totFunc)}</td></tr></tbody></table>`
+      : '<div class="vazio">Nenhum pagamento a funcionário neste dia.</div>'}
+
+    <h2>Resultado do dia</h2>
+    <table><tbody>
+      <tr><td>Vendas</td><td class="n">${fmt(resumo.totalVendas)}</td></tr>
+      <tr><td>(−) Despesas totais</td><td class="n">${fmt(resumo.totalDesp)}</td></tr>
+      <tr class="total"><td>Lucro do dia</td><td class="n" style="color:${cor}">${fmt(resumo.lucro)}</td></tr>
+    </tbody></table>
+
+    <div class="assin"><div>Responsável pelo caixa</div><div>Conferido por</div></div>
+    <div class="rodape">Gerado em ${new Date().toLocaleString('pt-BR', { dateStyle: 'long', timeStyle: 'short' })}</div>
+  </body></html>`;
+
+  let modal = document.getElementById('fc-print-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'fc-print-modal';
+    modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:#fff;display:flex;flex-direction:column';
+    modal.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-bottom:1px solid #e5e7eb;flex-shrink:0;gap:12px;flex-wrap:wrap">
+        <span id="fc-print-titulo" style="font-size:14px;font-weight:700;color:#111"></span>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <span style="font-size:12px;color:#666">Para PDF: em "Destino" escolha <strong>Salvar como PDF</strong></span>
+          <button id="fc-print-btn" style="padding:7px 18px;background:#6378FF;color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700">🖨 Imprimir / Salvar PDF</button>
+          <button onclick="document.getElementById('fc-print-modal').style.display='none'" style="padding:7px 14px;background:#f3f4f6;color:#374151;border:1px solid #d1d5db;border-radius:6px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600">✕ Fechar</button>
+        </div>
+      </div>
+      <iframe id="fc-print-iframe" style="flex:1;border:none;background:#fff"></iframe>`;
+    document.body.appendChild(modal);
+  }
+  document.getElementById('fc-print-titulo').textContent = titulo;
+  modal.style.display = 'flex';
+  const iframe = document.getElementById('fc-print-iframe');
+  const doc = iframe.contentDocument || iframe.contentWindow.document;
+  doc.open(); doc.write(html); doc.close();
+  document.getElementById('fc-print-btn').onclick = () => {
+    iframe.contentWindow.focus();
+    iframe.contentWindow.print();
+  };
 }
 
 function fecharCaixaDia() {
