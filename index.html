@@ -398,6 +398,8 @@
 [data-theme="dark"] .section-sep.sep-vendas        { background: #0a2e1a !important; border-left-color: #34D468 !important; color: #4ADE80 !important; }
 [data-theme="dark"] .section-sep.sep-fornecedores  { background: #0c1a35 !important; border-left-color: #60A5FA !important; color: #93C5FD !important; }
 [data-theme="dark"] .section-sep.sep-compras       { background: #2d1f00 !important; border-left-color: #F59E0B !important; color: #FCD34D !important; }
+[data-theme="dark"] .section-sep.sep-sacolao       { background: #14230a !important; border-left-color: #A3E635 !important; color: #BEF264 !important; }
+[data-theme="dark"] .section-sep.sep-acougue       { background: #2d0a14 !important; border-left-color: #FB7185 !important; color: #FDA4AF !important; }
 [data-theme="dark"] .section-sep.sep-socio       { background: #2d0a1e !important; border-left-color: #F472B6 !important; color: #F9A8D4 !important; }
 [data-theme="dark"] .section-sep.sep-restaurante   { background: #2d1200 !important; border-left-color: #FB923C !important; color: #FDBA74 !important; }
 [data-theme="dark"] .section-sep.sep-outra-loja    { background: #1e1035 !important; border-left-color: #A78BFA !important; color: #C4B5FD !important; }
@@ -411,6 +413,8 @@
 
 /* ── Tags de categoria de fornecedor ── */
 [data-theme="dark"] .supplier-cat-tag.socio     { background: #2d1f00;  color: #FCD34D; }
+[data-theme="dark"] .supplier-cat-tag.sacolao   { background: #14230a;  color: #BEF264; }
+[data-theme="dark"] .supplier-cat-tag.acougue   { background: #2d0a14;  color: #FDA4AF; }
 [data-theme="dark"] .supplier-cat-tag.restaurante { background: #1e1035;  color: #C4B5FD; }
 [data-theme="dark"] .supplier-cat-tag.outra_loja  { background: #2d0a1e;  color: #F9A8D4; }
 [data-theme="dark"] .supplier-cat-tag.emprestimo  { background: #2d0a0a;  color: #FCA5A5; }
@@ -822,6 +826,8 @@ body.is-offline #login-screen {
 .section-sep.sep-vendas        { background:#DCFCE7; border-left-color:#16A34A; color:#14532D; }
 .section-sep.sep-fornecedores  { background:#DBEAFE; border-left-color:#2563EB; color:#1E3A5F; }
 .section-sep.sep-compras       { background:#FEF3C7; border-left-color:#D97706; color:#78350F; }
+.section-sep.sep-sacolao       { background:#ECFCCB; border-left-color:#65A30D; color:#365314; }
+.section-sep.sep-acougue       { background:#FFE4E6; border-left-color:#E11D48; color:#881337; }
 .section-sep.sep-socio       { background:#FCE7F3; border-left-color:#DB2777; color:#831843; }
 .section-sep.sep-restaurante   { background:#FFEDD5; border-left-color:#EA580C; color:#7C2D12; }
 .section-sep.sep-outra-loja    { background:#EDE9FE; border-left-color:#7C3AED; color:#4C1D95; }
@@ -1184,6 +1190,8 @@ tfoot td { padding: 11px 14px; font-weight: 700; border-top: 1.5px solid var(--b
 }
 .supplier-cat-tag.fornecedor { background: var(--green-bg);  color: var(--green); }
 .supplier-cat-tag.compra     { background: var(--blue-bg);   color: var(--blue); }
+.supplier-cat-tag.sacolao    { background: #ECFCCB; color: #3F6212; }
+.supplier-cat-tag.acougue    { background: #FFE4E6; color: #9F1239; }
 .supplier-cat-tag.socio    { background: #FEF3C7; color: #92400E; }
 .supplier-cat-tag.restaurante{ background: #EDE9FE; color: #5B21B6; }
 .supplier-cat-tag.outra_loja { background: #FCE7F3; color: #9D174D; }
@@ -1231,6 +1239,8 @@ tfoot td { padding: 11px 14px; font-weight: 700; border-top: 1.5px solid var(--b
 .gastos-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
 .gastos-tab.fornecedor.active { background: var(--green-mid); border-color: var(--green-mid); }
 .gastos-tab.compra.active     { background: var(--blue-mid);  border-color: var(--blue-mid); }
+.gastos-tab.sacolao.active    { background: #65A30D; border-color: #65A30D; }
+.gastos-tab.acougue.active    { background: #E11D48; border-color: #E11D48; }
 
 .gastos-resumo-grid {
   display: grid;
@@ -3495,6 +3505,8 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
             <select id="forn-cat">
               <option value="fornecedor" data-cat-nome="fornecedor">Fornecedor</option>
               <option value="compra" data-cat-nome="compra">Compra Diversa</option>
+              <option value="sacolao" data-cat-nome="sacolao">Sacolão</option>
+              <option value="acougue" data-cat-nome="acougue">Açougue</option>
               <option value="socio" data-cat-nome="socio">Conta paga pelo(a) sócio(a)</option>
               <option value="restaurante" data-cat-nome="restaurante">Conta do Restaurante</option>
               <option value="emprestimo" data-cat-nome="emprestimo">Empréstimo para Aluguel</option>
@@ -3522,6 +3534,8 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
           <select id="forn-massa-cat" style="padding:5px 10px;border:1px solid var(--border2);border-radius:var(--radius-sm);font-family:'DM Sans',sans-serif;font-size:13px;background:var(--surface);color:var(--text)">
             <option value="fornecedor" data-cat-nome="fornecedor">Fornecedor</option>
             <option value="compra" data-cat-nome="compra">Compra Diversa</option>
+            <option value="sacolao" data-cat-nome="sacolao">Sacolão</option>
+            <option value="acougue" data-cat-nome="acougue">Açougue</option>
             <option value="socio" data-cat-nome="socio">Conta paga pelo(a) sócio(a)</option>
             <option value="restaurante" data-cat-nome="restaurante">Conta do Restaurante</option>
             <option value="emprestimo" data-cat-nome="emprestimo">Empréstimo para Aluguel</option>
@@ -3542,6 +3556,20 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
             <span data-cat-nome="compra">Compras Diversas</span>
           </div>
           <div id="grid-compra" class="supplier-grid"></div>
+        </div>
+
+        <div data-cat-oculta="sacolao">
+          <div class="section-sep sep-sacolao mt-8" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+            <span data-cat-nome="sacolao">Sacolão</span>
+          </div>
+          <div id="grid-sacolao" class="supplier-grid"></div>
+        </div>
+
+        <div data-cat-oculta="acougue">
+          <div class="section-sep sep-acougue mt-8" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+            <span data-cat-nome="acougue">Açougue</span>
+          </div>
+          <div id="grid-acougue" class="supplier-grid"></div>
         </div>
 
         <div data-cat-oculta="socio">
@@ -3668,6 +3696,18 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
         <div class="section-sep sep-compras" data-cat-nome="compra">Compras Diversas</div>
         <div class="form-grid" id="form-comp-grid"></div>
         <div class="cat-total-row" id="cat-total-compra"></div>
+        </div>
+
+        <div data-cat-oculta="sacolao">
+        <div class="section-sep sep-sacolao" data-cat-nome="sacolao">Sacolão</div>
+        <div class="form-grid" id="form-sacolao-grid"></div>
+        <div class="cat-total-row" id="cat-total-sacolao"></div>
+        </div>
+
+        <div data-cat-oculta="acougue">
+        <div class="section-sep sep-acougue" data-cat-nome="acougue">Açougue</div>
+        <div class="form-grid" id="form-acougue-grid"></div>
+        <div class="cat-total-row" id="cat-total-acougue"></div>
         </div>
 
         <!-- Contas pagas pelo(a) sócio(a) -->
@@ -3804,6 +3844,8 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
               <option value="">Todas</option>
               <option value="fornecedor">Fornecedor</option>
               <option value="compra">Compra</option>
+              <option value="sacolao">Sacolão</option>
+              <option value="acougue">Açougue</option>
               <option value="socio">Sócio(a)</option>
               <option value="restaurante">Restaurante</option>
               <option value="outra_loja">Outra loja</option>
@@ -3989,6 +4031,8 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
         <button class="gastos-tab active"     onclick="filtrarGastosCat('todos', this)">Todos</button>
         <button class="gastos-tab fornecedor" onclick="filtrarGastosCat('fornecedor', this)" data-cat-nome="fornecedor">Fornecedores</button>
         <button class="gastos-tab compra"     onclick="filtrarGastosCat('compra', this)" data-cat-nome="compra">Compras Diversas</button>
+        <button class="gastos-tab sacolao"    onclick="filtrarGastosCat('sacolao', this)" data-cat-nome="sacolao">Sacolão</button>
+        <button class="gastos-tab acougue"    onclick="filtrarGastosCat('acougue', this)" data-cat-nome="acougue">Açougue</button>
         <button class="gastos-tab fornecedor" onclick="filtrarGastosCat('socio', this)" data-cat-nome="socio">Sócio(a)</button>
         <button class="gastos-tab compra"     onclick="filtrarGastosCat('restaurante', this)" data-cat-nome="restaurante">Restaurante</button>
         <button class="gastos-tab fornecedor" onclick="filtrarGastosCat('outra_loja', this)" data-cat-nome="outra_loja">Outra Loja</button>
@@ -4075,6 +4119,8 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
               <option value="todos">Todas</option>
               <option value="fornecedor" data-cat-nome="fornecedor">Fornecedores</option>
               <option value="compra" data-cat-nome="compra">Compras Diversas</option>
+              <option value="sacolao" data-cat-nome="sacolao">Sacolão</option>
+              <option value="acougue" data-cat-nome="acougue">Açougue</option>
               <option value="socio" data-cat-nome="socio">Sócio(a)</option>
               <option value="restaurante" data-cat-nome="restaurante">Restaurante</option>
               <option value="outra_loja" data-cat-nome="outra_loja">Outra Loja</option>
@@ -5347,6 +5393,8 @@ const CONFIG = {
 const CATS_LABEL = {
   fornecedor:  'Fornecedor',
   compra:      'Compra',
+  sacolao:     'Sacolão',
+  acougue:     'Açougue',
   socio:     'Sócio(a)',
   restaurante: 'Restaurante',
   outra_loja:  'Outra loja',
@@ -5356,6 +5404,8 @@ const CATS_LABEL = {
 const CATS_COLOR = {
   fornecedor:  '#DC2626',
   compra:      '#EA580C',
+  sacolao:     '#65A30D',
+  acougue:     '#E11D48',
   socio:     '#B91C1C',
   restaurante: '#F97316',
   outra_loja:  '#E11D48',
@@ -5365,11 +5415,17 @@ const CATS_COLOR = {
 const CATS_BG = {
   fornecedor:  '#DCFCE7',
   compra:      '#DBEAFE',
+  sacolao:     '#ECFCCB',
+  acougue:     '#FFE4E6',
   socio:     '#FEF3C7',
   restaurante: '#EDE9FE',
   outra_loja:  '#FCE7F3',
   emprestimo:  '#FEE2E2',
 };
+
+/* Categorias que se comportam como Fornecedores/Compras:
+   entram no CMV, em Despesas (Dashboard/Relatório) e em Desp. Total. */
+const CATS_INSUMO_EXTRA = ['sacolao', 'acougue'];
 
 /* ============================================================
    3.2 FIREBASE — Configuração e credenciais
@@ -6372,7 +6428,7 @@ function imprimirFechamentoDia() {
     + (vendasImportadas ? `<tr><td>Total importado (planilha)</td><td class="n">${fmt(vendasImportadas)}</td></tr>` : '');
 
   // ── Despesas por categoria / fornecedor ─────────────────────────
-  const ordemCats = ['fornecedor', 'compra', 'socio', 'restaurante', 'outra_loja', 'emprestimo'];
+  const ordemCats = ['fornecedor', 'compra', 'sacolao', 'acougue', 'socio', 'restaurante', 'outra_loja', 'emprestimo'];
   const porCat = {};
   ordemCats.forEach(c => porCat[c] = []);
   fornList.forEach(f => {
@@ -7865,6 +7921,8 @@ function buildYearSelects() {
 const CAT_PADRAO = {
   fornecedor:  'Fornecedores',
   compra:      'Compras Diversas',
+  sacolao:     'Sacolão',
+  acougue:     'Açougue',
   socio:       'Contas Pagas pelo(a) Sócio(a)',
   restaurante: 'Contas do Restaurante',
   outra_loja:  'Contas Pagas para Outra Loja',
@@ -7918,7 +7976,7 @@ function _catRenderOcultas() {
 
 /** Opções do select de categoria no card do fornecedor (sem as categorias excluídas). */
 function _catOptionsHtml(sel) {
-  const lista = [['fornecedor', 'Fornecedor'], ['compra', 'Compra Diversa'], ['socio', 'Conta paga pelo(a) sócio(a)'],
+  const lista = [['fornecedor', 'Fornecedor'], ['compra', 'Compra Diversa'], ['sacolao', 'Sacolão'], ['acougue', 'Açougue'], ['socio', 'Conta paga pelo(a) sócio(a)'],
                  ['restaurante', 'Conta do Restaurante'], ['emprestimo', 'Empréstimo para Aluguel']];
   let h = lista.filter(([c]) => !_catOculta(c) || c === sel)
     .map(([c, pad]) => `<option value="${c}"${sel === c ? ' selected' : ''}>${escapeHtml(_catNome(c, pad))}</option>`).join('');
@@ -8116,6 +8174,8 @@ function renderFornecedores() {
   const CATS = [
     { cat: 'fornecedor',  label: 'Fornecedor' },
     { cat: 'compra',      label: 'Compra Diversa' },
+    { cat: 'sacolao',     label: 'Sacolão' },
+    { cat: 'acougue',     label: 'Açougue' },
     { cat: 'socio',     label: 'Conta paga pelo(a) sócio(a)' },
     { cat: 'restaurante', label: 'Conta do Restaurante' },
     { cat: 'outra_loja',  label: 'Conta paga para Outra Loja' },
@@ -8228,6 +8288,8 @@ function buildLancForm() {
   // Cada categoria de despesa
   buildFornGrid('fornecedor',  'form-forn-grid');
   buildFornGrid('compra',      'form-comp-grid');
+  buildFornGrid('sacolao',     'form-sacolao-grid');
+  buildFornGrid('acougue',     'form-acougue-grid');
   buildFornGrid('socio',     'form-socio-grid');
   buildFornGrid('restaurante', 'form-restaurante-grid');
   buildFornGrid('outra_loja',  'form-outra-loja-grid');
@@ -8413,7 +8475,7 @@ function _setCatTotal(elId, valor) {
 
 /** Recalcula e exibe os totais de vendas e despesas em tempo real. */
 function calcTotais() {
-  const CATS_ENTRADA = new Set(['fornecedor', 'compra']);
+  const CATS_ENTRADA = new Set(['fornecedor', 'compra', ...CATS_INSUMO_EXTRA]);
   const CATS_SAIDA   = new Set(['socio', 'restaurante', 'outra_loja', 'emprestimo']);
 
   // Canais de venda (cartao, pix, ifood, 99food...)
@@ -8561,7 +8623,7 @@ function salvarLancamento() {
 
   // Calcular totais para exibir no modal
   const forn = getForn();
-  const _CATS_ENTRADA = new Set(['fornecedor', 'compra']);
+  const _CATS_ENTRADA = new Set(['fornecedor', 'compra', ...CATS_INSUMO_EXTRA]);
   const _CATS_SAIDA   = new Set(['socio', 'restaurante', 'outra_loja', 'emprestimo']);
   let _totalCanais = 0;
   Object.keys(CONFIG.SALES_CHANNELS).forEach(key => {
@@ -8773,7 +8835,7 @@ function _confirmarSalvarLancamento() {
 
   // Categorias que são pagas com o dinheiro que ENTROU na loja
   // → entram na somatória de entrada (junto com os canais de venda)
-  const CATS_ENTRADA = new Set(['fornecedor', 'compra']);
+  const CATS_ENTRADA = new Set(['fornecedor', 'compra', ...CATS_INSUMO_EXTRA]);
   // Categorias que representam saída real de caixa (dinheiro que foi para fora)
   const CATS_SAIDA   = new Set(['socio', 'restaurante', 'outra_loja', 'emprestimo']);
 
@@ -9162,7 +9224,7 @@ function _renderRanking() {
 
   // Label da categoria para o cabeçalho
   const catLabels = {
-    todos: 'Todos', fornecedor: _catNome('fornecedor', 'Fornecedores'), compra: _catNome('compra', 'Compras Diversas'),
+    todos: 'Todos', fornecedor: _catNome('fornecedor', 'Fornecedores'), compra: _catNome('compra', 'Compras Diversas'), sacolao: _catNome('sacolao', 'Sacolão'), acougue: _catNome('acougue', 'Açougue'),
     socio: _catNome('socio', 'Sócio(a)'), restaurante: _catNome('restaurante', 'Restaurante'),
     outra_loja: _catNome('outra_loja', 'Outra Loja'), emprestimo: _catNome('emprestimo', 'Empréstimo'),
   };
@@ -9314,7 +9376,7 @@ function _renderGastosCards() {
           
           <span class="gastos-resumo-nome">${escapeHtml(f.nome)}</span>
         </div>
-        <span class="supplier-cat-tag ${f.cat}" style="flex-shrink:0">${f.cat === 'fornecedor' ? 'Forn.' : 'Compra'}</span>
+        <span class="supplier-cat-tag ${f.cat}" style="flex-shrink:0">${f.cat === 'fornecedor' ? 'Forn.' : (f.cat === 'compra' ? 'Compra' : (CATS_LABEL[f.cat] || 'Compra'))}</span>
       </div>
       <div class="gastos-resumo-total">${fmt(f.total)}</div>
       <div class="gastos-resumo-qtd">${f.pagamentos.length} pagamento${f.pagamentos.length !== 1 ? 's' : ''}</div>
@@ -11103,7 +11165,7 @@ function _dashFiltrarDados(all, modo) {
    Faturamento = soma dos canais de venda
    Despesas    = fornecedores + compras + demais saídas + funcionários
    Lucro       = Faturamento − Despesas                                  */
-const _DASH_CATS_INSUMO = ['fornecedor', 'compra'];
+const _DASH_CATS_INSUMO = ['fornecedor', 'compra', ...CATS_INSUMO_EXTRA];
 const _DASH_CATS_OUTRAS = ['socio', 'restaurante', 'outra_loja', 'emprestimo'];
 
 /** IDs de lançamentos cujos pagamentos de funcionários já estão em pagamentos_func (evita contar 2x). */
@@ -11507,7 +11569,7 @@ function _dashRenderGraficos(mensal, forn, t) {
 
   /* ── 2. Despesas por categoria ── */
   const CATS_LABEL_DASH = {
-    fornecedor:_catNome('fornecedor','Fornecedores'), compra:_catNome('compra','Compras Diversas'), socio:_catNome('socio','Sócio(a)'),
+    fornecedor:_catNome('fornecedor','Fornecedores'), compra:_catNome('compra','Compras Diversas'), sacolao:_catNome('sacolao','Sacolão'), acougue:_catNome('acougue','Açougue'), socio:_catNome('socio','Sócio(a)'),
     restaurante:_catNome('restaurante','Restaurante'), outra_loja:_catNome('outra_loja','Outra Loja'), emprestimo:_catNome('emprestimo','Empr\xe9stimo'),
   };
   const despItems = Object.entries(CATS_LABEL_DASH).map(([cat, label]) => ({
@@ -12249,7 +12311,7 @@ function _relCalcFuncionarios(data, mes, ano) {
 
 /* ── Subfunção 2: todos os totais financeiros do relatório ── */
 function _relCalcTotais(data, forn) {
-  const REL_CATS_SAIDA = new Set(['fornecedor','compra','socio','restaurante','outra_loja','emprestimo']);
+  const REL_CATS_SAIDA = new Set(['fornecedor','compra', ...CATS_INSUMO_EXTRA,'socio','restaurante','outra_loja','emprestimo']);
   function _recalc(d) {
     const canais = Object.values(d.vendas || {}).reduce((s, v) => s + (parseFloat(v)||0), 0);
     let itensSaida = 0;
@@ -12273,6 +12335,8 @@ function _relBuildCards(data, forn, mapaFunc, totFuncs) {
   const CATS_REL = [
     { cat: 'fornecedor', title: _catNome('fornecedor', 'Fornecedores') },
     { cat: 'compra', title: _catNome('compra', 'Compras Diversas') },
+    { cat: 'sacolao', title: _catNome('sacolao', 'Sacolão') },
+    { cat: 'acougue', title: _catNome('acougue', 'Açougue') },
     { cat: 'socio', title: _catNome('socio', 'Contas pagas pelo(a) sócio(a)') },
     { cat: 'restaurante', title: _catNome('restaurante', 'Contas do Restaurante') },
     { cat: 'outra_loja', title: _catNome('outra_loja', 'Contas pagas para Outra Loja') },
@@ -12383,7 +12447,9 @@ function renderCmv() {
   const IDS_COMPRA = new Set(forn.filter(f => f.cat === 'compra').map(f => f.id));
   const IDS_SAIDA  = new Set(forn.filter(f =>
     ['socio', 'restaurante', 'outra_loja', 'emprestimo'].includes(f.cat)).map(f => f.id));
-  const IDS_CMV    = new Set([...IDS_FORN, ...IDS_COMPRA]); // custo direto mercadoria
+  const IDS_SACOLAO = new Set(forn.filter(f => f.cat === 'sacolao').map(f => f.id));
+  const IDS_ACOUGUE = new Set(forn.filter(f => f.cat === 'acougue').map(f => f.id));
+  const IDS_CMV    = new Set([...IDS_FORN, ...IDS_COMPRA, ...IDS_SACOLAO, ...IDS_ACOUGUE]); // custo direto mercadoria
 
   // ── Receita bruta: canais de venda (excl. restaurante) ──
   const receitaBruta = allData.reduce((s, d) => {
@@ -12404,7 +12470,14 @@ function renderCmv() {
     if (d.itens) IDS_COMPRA.forEach(id => { soma += parseFloat(d.itens[id]) || 0; });
     return s + soma;
   }, 0);
-  const cmvTotal = cmvForn + cmvCompra;
+  const _somaIds = ids => allData.reduce((s, d) => {
+    let soma = 0;
+    if (d.itens) ids.forEach(id => { soma += parseFloat(d.itens[id]) || 0; });
+    return s + soma;
+  }, 0);
+  const cmvSacolao = _somaIds(IDS_SACOLAO);
+  const cmvAcougue = _somaIds(IDS_ACOUGUE);
+  const cmvTotal = cmvForn + cmvCompra + cmvSacolao + cmvAcougue;
 
   // ── Outras despesas operacionais ──
   const despFuncionarios = allData.reduce((s, d) =>
@@ -12551,6 +12624,8 @@ function renderCmv() {
             ${receitaRestaurante > 0 ? `<tr style="font-size:12px;color:var(--text3)"><td style="padding-left:16px">↳ Restaurante (separado)</td><td>${fmt(receitaRestaurante)}</td></tr>` : ''}
             <tr style="border-top:1px dashed var(--border2)"><td style="color:var(--red)">− CMV (Fornecedores)</td><td style="color:var(--red)">${fmt(cmvForn)}</td></tr>
             <tr><td style="color:var(--red)">− CMV (Compras Diversas)</td><td style="color:var(--red)">${fmt(cmvCompra)}</td></tr>
+            ${cmvSacolao > 0 ? `<tr><td style="color:var(--red)">− CMV (${escapeHtml(_catNome('sacolao','Sacolão'))})</td><td style="color:var(--red)">${fmt(cmvSacolao)}</td></tr>` : ''}
+            ${cmvAcougue > 0 ? `<tr><td style="color:var(--red)">− CMV (${escapeHtml(_catNome('acougue','Açougue'))})</td><td style="color:var(--red)">${fmt(cmvAcougue)}</td></tr>` : ''}
             <tr style="border-top:1.5px solid var(--border);font-weight:700"><td>= Lucro Bruto</td><td style="color:${lucroBruto >= 0 ? 'var(--green)' : 'var(--red)'}">${fmt(lucroBruto)}</td></tr>
             <tr style="color:var(--text2)"><td style="padding-left:10px;font-size:12px">Margem Bruta</td><td style="font-size:12px;font-weight:600;color:${semaforo(margemBruta)}">${fmtPct(margemBruta)}</td></tr>
             <tr style="border-top:1px dashed var(--border2)"><td style="color:var(--red)">− Funcionários</td><td style="color:var(--red)">${fmt(despFuncionarios)}</td></tr>
@@ -12623,9 +12698,12 @@ function renderRelatorio() {
   const _IDS_REL_COMP = new Set(forn.filter(f => f.cat === 'compra').map(f => f.id));
   const totFornRel  = data.reduce((s, d) => { let soma = 0; if (d.itens) _IDS_REL_FORN.forEach(id => { soma += parseFloat(d.itens[id]) || 0; }); return s + soma; }, 0);
   const totCompRel  = data.reduce((s, d) => { let soma = 0; if (d.itens) _IDS_REL_COMP.forEach(id => { soma += parseFloat(d.itens[id]) || 0; }); return s + soma; }, 0);
+  const _somaCatRel = cat => { const ids = new Set(forn.filter(f => f.cat === cat).map(f => f.id)); return data.reduce((s, d) => { let soma = 0; if (d.itens) ids.forEach(id => { soma += parseFloat(d.itens[id]) || 0; }); return s + soma; }, 0); };
+  const totSacolaoRel = _somaCatRel('sacolao');
+  const totAcougueRel = _somaCatRel('acougue');
 
   // Total Vendas = canais (excl. Restaurante) + Fornecedores + Compras + Funcionários
-  const totVSemRest = totCanaisRel + totFornRel + totCompRel + totFuncs;
+  const totVSemRest = totCanaisRel + totFornRel + totCompRel + totSacolaoRel + totAcougueRel + totFuncs;
 
   const totV  = totVSemRest + totRestauranteRel;
   const totD  = data.reduce((s, d) => s + _recalc(d).saida, 0) + totFuncs;
@@ -12635,7 +12713,7 @@ function renderRelatorio() {
     s + Object.values(d.vendas || {}).reduce((ss, v) => ss + (parseFloat(v)||0), 0), 0);
 
   // Campos de resumo — calculados por categoria de fornecedor
-  const _IDS_RESUMO_ESQ  = new Set(forn.filter(f => f.cat === 'fornecedor' || f.cat === 'compra').map(f => f.id));
+  const _IDS_RESUMO_ESQ  = new Set(forn.filter(f => ['fornecedor', 'compra', ...CATS_INSUMO_EXTRA].includes(f.cat)).map(f => f.id));
   const _IDS_RESUMO_DIR  = new Set(forn.filter(f => f.cat === 'socio' || f.cat === 'restaurante' || f.cat === 'outra_loja').map(f => f.id));
   const relDespEsq = data.reduce((s, d) => {
     let soma = 0;
@@ -12670,7 +12748,7 @@ function renderRelatorio() {
     return s + (parseFloat(v.dinheiro) || 0) + (parseFloat(v.pix) || 0);
   }, 0);
 
-  const totEntradaDinheiro = totFornRel + totCompRel + totFuncs;
+  const totEntradaDinheiro = totFornRel + totCompRel + totSacolaoRel + totAcougueRel + totFuncs;
 
   const vendasRows = [
     // Cartão, iFood, 99Food — cada um na sua linha
@@ -12686,6 +12764,8 @@ function renderRelatorio() {
     totEntradaDinheiro > 0 ? `<tr style="border-top:1.5px dashed var(--border2)"><td style="font-weight:600;color:var(--green)">💵 Entrada de Dinheiro</td><td style="color:var(--green);font-weight:600">${fmt(totEntradaDinheiro)}</td></tr>
     <tr style="font-size:12px;color:var(--text3)"><td style="padding-left:16px">↳ Fornecedores</td><td>${fmt(totFornRel)}</td></tr>
     <tr style="font-size:12px;color:var(--text3)"><td style="padding-left:16px">↳ Compras Diversas</td><td>${fmt(totCompRel)}</td></tr>
+    ${totSacolaoRel > 0 ? `<tr style="font-size:12px;color:var(--text3)"><td style="padding-left:16px">↳ ${escapeHtml(_catNome('sacolao','Sacolão'))}</td><td>${fmt(totSacolaoRel)}</td></tr>` : ''}
+    ${totAcougueRel > 0 ? `<tr style="font-size:12px;color:var(--text3)"><td style="padding-left:16px">↳ ${escapeHtml(_catNome('acougue','Açougue'))}</td><td>${fmt(totAcougueRel)}</td></tr>` : ''}
     <tr style="font-size:12px;color:var(--text3)"><td style="padding-left:16px">↳ Pag. Funcionários</td><td>${fmt(totFuncs)}</td></tr>` : '',
   ].join('');
 
@@ -12964,7 +13044,7 @@ function imprimirRelatorio() {
 
   // Todas as categorias de fornecedor são despesas (saída de dinheiro da loja)
   const IMP_CATS_ENTRADA = new Set([]); // nenhuma categoria de fornecedor é "entrada"
-  const IMP_CATS_SAIDA   = new Set(['fornecedor', 'compra', 'socio', 'restaurante', 'outra_loja', 'emprestimo']);
+  const IMP_CATS_SAIDA   = new Set(['fornecedor', 'compra', ...CATS_INSUMO_EXTRA, 'socio', 'restaurante', 'outra_loja', 'emprestimo']);
 
   // Monta mapa de funcionarios combinando pagamentos novos + funcItens antigos
   const _mapaFuncImp = {};
@@ -13021,16 +13101,22 @@ function imprimirRelatorio() {
     if (d.itens) _IDS_COMP_16_33.forEach(id => { soma += parseFloat(d.itens[id]) || 0; });
     return s + soma;
   }, 0);
+  const _IDS_IMP_EXTRA = new Set(forn.filter(f => CATS_INSUMO_EXTRA.includes(f.cat)).map(f => f.id));
+  const totExtraIns = data.reduce((s, d) => {
+    let soma = 0;
+    if (d.itens) _IDS_IMP_EXTRA.forEach(id => { soma += parseFloat(d.itens[id]) || 0; });
+    return s + soma;
+  }, 0);
 
   // Total Vendas = canais + fornecedores (#01–#15) + compras (#16–#33) + funcionários
   // (tudo que foi pago com dinheiro que entrou na loja)
-  const totV  = totCanais + totFornecedores + totCompras + _totFuncs;
+  const totV  = totCanais + totFornecedores + totCompras + totExtraIns + _totFuncs;
   const totD  = data.reduce((s, d) => s + _recalcImp(d).saida,   0) + _totFuncs;
   const lucro = totV - totD;
   const diasLancados = new Set(data.filter(d => (d.totalVendas||0)+(d.totalDesp||0) > 0).map(d => d.data)).size;
 
   // ── Campos do resumo — por categoria de fornecedor ──────────────────────
-  const _IDS_IMP_01_33 = new Set(forn.filter(f => f.cat === 'fornecedor' || f.cat === 'compra').map(f => f.id));
+  const _IDS_IMP_01_33 = new Set(forn.filter(f => ['fornecedor', 'compra', ...CATS_INSUMO_EXTRA].includes(f.cat)).map(f => f.id));
   const _IDS_IMP_SAIDA = new Set(forn.filter(f =>
     f.cat === 'socio' || f.cat === 'restaurante' || f.cat === 'outra_loja'
   ).map(f => f.id));
@@ -13066,6 +13152,8 @@ function imprimirRelatorio() {
   const CATS_REL = [
     { cat: 'fornecedor', title: _catNome('fornecedor', 'Fornecedores') },
     { cat: 'compra', title: _catNome('compra', 'Compras Diversas') },
+    { cat: 'sacolao', title: _catNome('sacolao', 'Sacolão') },
+    { cat: 'acougue', title: _catNome('acougue', 'Açougue') },
     { cat: 'socio', title: _catNome('socio', 'Contas pagas pelo(a) sócio(a)') },
     { cat: 'restaurante', title: _catNome('restaurante', 'Contas do Restaurante') },
     { cat: 'outra_loja', title: _catNome('outra_loja', 'Contas pagas para Outra Loja') },
@@ -13308,7 +13396,7 @@ function imprimirRelatorio() {
       <div class="card">
         <div class="card-title">Vendas por Canal</div>
         <table>
-          <tbody>${vendasRows || '<tr><td colspan="2" style="color:#5A5652">Sem dados</td></tr>'}${(totFornecedores + totCompras + _totFuncs) > 0 ? `<tr style="border-top:1.5px dashed #ccc"><td style="font-weight:600">💵 Entrada de Dinheiro</td><td class="num green">${fmt(totFornecedores + totCompras + _totFuncs)}</td></tr>` : ''}</tbody>
+          <tbody>${vendasRows || '<tr><td colspan="2" style="color:#5A5652">Sem dados</td></tr>'}${(totFornecedores + totCompras + totExtraIns + _totFuncs) > 0 ? `<tr style="border-top:1.5px dashed #ccc"><td style="font-weight:600">💵 Entrada de Dinheiro</td><td class="num green">${fmt(totFornecedores + totCompras + totExtraIns + _totFuncs)}</td></tr>` : ''}</tbody>
           <tfoot><tr><td>Total</td><td class="num green">${fmt(totV)}</td></tr></tfoot>
         </table>
       </div>
@@ -19032,7 +19120,7 @@ const ModalDias = (() => {
       reg.itens[inp.dataset.item] = parseFloat(inp.value) || 0;
     });
 
-    const EDIT_CATS_ENTRADA = new Set(['fornecedor', 'compra']);
+    const EDIT_CATS_ENTRADA = new Set(['fornecedor', 'compra', ...CATS_INSUMO_EXTRA]);
     const EDIT_CATS_SAIDA   = new Set(['socio', 'restaurante', 'outra_loja', 'emprestimo']);
     const canaisEdit = Object.values(reg.vendas || {}).reduce((s, v) => s + (parseFloat(v)||0), 0);
     let itensEntradaEdit = 0, itensSaidaEdit = 0;
