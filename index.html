@@ -3507,6 +3507,11 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
           </div>
         </div>
 
+        <div style="margin:-4px 0 12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <button type="button" class="btn btn-secondary btn-md" onclick="sugerirFornRestaurante()">🍽 Adicionar itens padrão de restaurante</button>
+          <span class="txt-hint txt-xs">Preenche as categorias com fornecedores e contas comuns de restaurante (você pode renomear ou excluir depois)</span>
+        </div>
+
         <!-- Categorias excluídas (com opção de restaurar) -->
         <div id="cat-ocultas-bar" style="display:none;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px;font-size:12px;color:var(--text2)"></div>
 
@@ -8002,6 +8007,56 @@ function catExcluir(cat) {
 }
 
 function catRestaurar(cat) { _catSalvar(cat, { oculta: false }); }
+
+/* ============================================================
+   ITENS PADRÃO DE RESTAURANTE
+   ------------------------------------------------------------
+   Pré-cadastra fornecedores/contas típicos de restaurante nas
+   categorias. Só adiciona o que ainda não existe (mesmo nome na
+   mesma categoria) e não recria nada sozinho: roda apenas quando
+   o botão é clicado.
+   ============================================================ */
+const FORN_PADRAO_RESTAURANTE = {
+  fornecedor: ['Hortifruti', 'Açougue / Carnes', 'Peixes e Frutos do Mar', 'Frios e Laticínios',
+               'Padaria / Pães', 'Mercearia / Atacado', 'Bebidas (refrigerante, cerveja, suco)', 'Gelo'],
+  compra:     ['Descartáveis e Embalagens', 'Material de Limpeza', 'Gás de Cozinha',
+               'Utensílios e Louças', 'Material de Escritório', 'Uniformes'],
+  restaurante:['Energia Elétrica', 'Água e Esgoto', 'Internet e Telefone', 'Contabilidade',
+               'Manutenção de Equipamentos', 'Dedetização', 'Taxas de Cartão / Delivery', 'Marketing e Divulgação'],
+};
+
+function sugerirFornRestaurante() {
+  const norm = t => String(t || '').trim().toLowerCase();
+  const atual = getForn();
+  const novos = [];
+  Object.keys(FORN_PADRAO_RESTAURANTE).forEach(cat => {
+    FORN_PADRAO_RESTAURANTE[cat].forEach(nome => {
+      if (!atual.some(f => f.cat === cat && norm(f.nome) === norm(nome))) novos.push({ cat, nome });
+    });
+  });
+  if (!novos.length) { showToast('Os itens padrão de restaurante já estão cadastrados.'); return; }
+
+  const porCat = {};
+  novos.forEach(n => { (porCat[n.cat] = porCat[n.cat] || []).push(n.nome); });
+  const resumo = Object.keys(porCat).map(cat =>
+    `<div style="margin-top:8px"><strong>${escapeHtml(_catNome(cat))}</strong> (${porCat[cat].length})<br>` +
+    `<span style="font-size:12px;color:var(--text2)">${porCat[cat].map(escapeHtml).join(' · ')}</span></div>`).join('');
+
+  showModal('Adicionar itens padrão de restaurante?',
+    `Serão cadastrados <strong>${novos.length}</strong> itens que ainda não existem:${resumo}` +
+    `<div class="txt-hint" style="margin-top:10px">Depois você pode editar o nome, mover de categoria ou excluir qualquer item.</div>`,
+    [
+      { label: 'Adicionar', style: 'primary', action: () => {
+          const lista = getForn();
+          const base = Date.now();
+          novos.forEach((n, i) => lista.push({ id: 'x' + (base + i), codigo: '', nome: n.nome, cat: n.cat }));
+          saveForn(lista);
+          renderFornecedores();
+          showToast(novos.length + ' itens adicionados!');
+      }},
+      { label: 'Cancelar', style: 'secondary' }
+    ]);
+}
 
 /** Adiciona um novo fornecedor/compra. */
 function adicionarFornecedor() {
