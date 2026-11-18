@@ -16969,7 +16969,6 @@ function imprimirRelatorioComandas() {
   const dataEl = document.getElementById('cmd-rel-data');
   if (dataEl && !dataEl.value) dataEl.value = hoje;
   const data = (dataEl && dataEl.value) || hoje;
-  const ehHoje = data === hoje;
   const loja = getLojaAtiva ? getLojaAtiva() : null;
   const E = escapeHtml;
 
@@ -16977,8 +16976,6 @@ function imprimirRelatorioComandas() {
   const fechadas = lista.filter(c => c.status === 'fechada' && c.data === data)
     .sort((a, b) => String(a.fechadaEm).localeCompare(String(b.fechadaEm)));
   const canceladas = lista.filter(c => c.status === 'cancelada' && _cmdDiaAbertura(c) === data);
-  const abertas = ehHoje ? lista.filter(c => c.status === 'aberta')
-    .sort((a, b) => String(a.abertaEm).localeCompare(String(b.abertaEm))) : [];
 
   // ── Totais ──
   const num = v => parseFloat(v) || 0;
@@ -16990,7 +16987,6 @@ function imprimirRelatorioComandas() {
   const descontos = fechadas.reduce((s, c) => s + num(c.desconto), 0);
   const pag = { dinheiro: 0, pix: 0, cartao: 0 };
   fechadas.forEach(c => { const p = c.pagamentos || {}; pag.dinheiro += num(p.dinheiro); pag.pix += num(p.pix); pag.cartao += num(p.cartao); });
-  const emAberto = abertas.reduce((s, c) => s + _cmdTotais(c).total, 0);
 
   // ── Itens vendidos ──
   const mapaItens = {};
@@ -17024,14 +17020,6 @@ function imprimirRelatorioComandas() {
     <td class="n"><strong>${fmt(num(c.total))}</strong></td></tr>`).join('');
   const linhasItens = itens.map(i => `<tr><td>${E(i.nome)}</td><td class="n">${i.qtd}</td><td class="n">${fmt(i.valor)}</td></tr>`).join('');
   const linhasGar = garcons.map(g => `<tr><td>${E(g.nome)}</td><td class="n">${g.contas}</td><td class="n">${fmt(g.total)}</td></tr>`).join('');
-  const linhasAbertas = abertas.map(c => {
-    const t = _cmdTotais(c);
-    const nIt = _cmdItens(c).reduce((s, i) => s + (parseInt(i.qtd) || 0), 0);
-    return `<tr><td><strong>${E(_cmdRotulo(c))}</strong><div class="obs">${E(_cmdIdentTexto(c))}</div></td>
-      <td>${E(c.garcom || '-')}</td><td class="nw">desde ${_cmdHora(c.abertaEm)} (${_cmdDuracao(_cmdMinutos(c))})</td>
-      <td class="n">${nIt}</td><td class="n"><strong>${fmt(t.total)}</strong></td></tr>`;
-  }).join('');
-
   const [a, m, d2] = data.split('-').map(Number);
   const diaSemana = CONFIG.DIAS_SEMANA[new Date(a, m - 1, d2).getDay()] || '';
   const titulo = `Relatório de Comandas — ${_formatarDataBR(data)}`;
@@ -17061,13 +17049,13 @@ function imprimirRelatorioComandas() {
     .rodape { margin-top: 22px; font-size: 10px; color: #888; }
   </style></head><body>
     <h1>${E(titulo)}</h1>
-    <div class="meta">🏪 ${E(loja?.nome || '-')}${diaSemana ? ' · ' + E(diaSemana) : ''}${ehHoje ? ' · posição em ' + _cmdHora(new Date().toISOString()) : ''}</div>
+    <div class="meta">🏪 ${E(loja?.nome || '-')}${diaSemana ? ' · ' + E(diaSemana) : ''}</div>
 
     <div class="kpis">
       <div class="kpi"><div class="l">Contas fechadas</div><div class="v">${fechadas.length}</div></div>
       <div class="kpi"><div class="l">Vendido</div><div class="v" style="color:#15803D">${fmt(vendido)}</div></div>
       <div class="kpi"><div class="l">Ticket médio</div><div class="v">${fmt(ticket)}</div></div>
-      <div class="kpi"><div class="l">${ehHoje ? 'Em aberto agora' : 'Pessoas atendidas'}</div><div class="v">${ehHoje ? fmt(emAberto) : pessoas}</div></div>
+      <div class="kpi"><div class="l">Pessoas atendidas</div><div class="v">${pessoas}</div></div>
     </div>
 
     <h2>Formas de pagamento</h2>
@@ -17091,11 +17079,6 @@ function imprimirRelatorioComandas() {
 
     ${garcons.length && !(garcons.length === 1 && garcons[0].nome === 'Sem garçom') ? `<h2>Vendas por garçom</h2>
     <table><thead><tr><th>Garçom</th><th class="n">Contas</th><th class="n">Total</th></tr></thead><tbody>${linhasGar}</tbody></table>` : ''}
-
-    ${ehHoje ? `<h2>Mesas abertas agora</h2>
-    ${abertas.length ? `<table><thead><tr><th>Mesa</th><th>Garçom</th><th>Aberta</th><th class="n">Itens</th><th class="n">Parcial</th></tr></thead>
-      <tbody>${linhasAbertas}<tr class="total"><td colspan="4">Total em aberto</td><td class="n">${fmt(emAberto)}</td></tr></tbody></table>`
-      : '<div class="vazio">Nenhuma mesa aberta.</div>'}` : ''}
 
     ${canceladas.length ? `<div class="obs" style="margin-top:14px">Comandas canceladas no dia: ${canceladas.length}</div>` : ''}
     <div class="rodape">Gerado em ${new Date().toLocaleString('pt-BR', { dateStyle: 'long', timeStyle: 'short' })}</div>
