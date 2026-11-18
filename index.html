@@ -3311,9 +3311,17 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
           <button id="theme-toggle" onclick="toggleTheme()" title="Alternar tema claro/escuro" style="padding:6px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;font-family:'DM Sans',sans-serif">🌙 Tema</button>
           <!-- Modo de filtro -->
           <div style="display:flex;border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;font-size:12px;font-weight:600">
+            <button id="dash-modo-dia" onclick="dashSetModo('dia')" class="btn-ghost-sm">Por dia</button>
             <button id="dash-modo-mes" onclick="dashSetModo('mes')" class="btn-ghost-dark">Por mês</button>
             <button id="dash-modo-ano" onclick="dashSetModo('ano')" class="btn-ghost-sm">Por ano</button>
             <button id="dash-modo-periodo" onclick="dashSetModo('periodo')" class="btn-ghost-sm">Por período</button>
+          </div>
+          <!-- Filtro por dia -->
+          <div id="dash-filtro-dia" style="display:none;gap:6px;align-items:center">
+            <button onclick="dashDiaMover(-1)" title="Dia anterior" style="padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text2);font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer">‹</button>
+            <input type="date" id="dash-data-dia" onchange="dashDiaSync()" class="input-sm">
+            <button onclick="dashDiaMover(1)" title="Próximo dia" style="padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text2);font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer">›</button>
+            <button onclick="dashDiaHoje()" style="padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text2);font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer">Hoje</button>
           </div>
           <!-- Seletores de mês/ano -->
           <div id="dash-filtro-mes" style="display:flex;gap:8px;align-items:center">
@@ -4239,7 +4247,9 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
           <div class="page-title">🍽 Comandas / Mesas</div>
           <div class="page-sub">Abra a mesa, lance os pedidos e feche a conta. As vendas pagas alimentam o caixa do dia.</div>
         </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <input type="date" id="cmd-rel-data" class="input-sm" title="Data do relatório (vazio = hoje)">
+          <button class="btn btn-secondary btn-md" onclick="imprimirRelatorioComandas()">🖨 Imprimir / PDF</button>
           <button class="btn btn-primary btn-md" onclick="cmdNova()">+ Nova comanda</button>
         </div>
       </div>
@@ -10637,8 +10647,22 @@ let _dashChartInstances = [];
 // Guarda o modo ativo do dashboard de forma confiável (não depende de cor de botão)
 let _dashModo = 'mes';
 
+// "Por dia" reutiliza o modo 'periodo' (de = até = dia escolhido), então
+// todos os gráficos/totais do Dashboard funcionam sem alteração.
+let _dashDeAteDoDia = false; // true quando dash-data-de/ate foram preenchidos pelo "Por dia"
+
 function dashSetModo(modo) {
-  _dashModo = modo; // registra o modo escolhido
+  const ehDia = modo === 'dia';
+  _dashModo = ehDia ? 'periodo' : modo; // registra o modo escolhido
+  // Saindo do "Por dia": limpa as datas que ele preencheu, para não vazarem no "Por período"
+  if (!ehDia && _dashDeAteDoDia) {
+    const deEl = document.getElementById('dash-data-de'), ateEl = document.getElementById('dash-data-ate');
+    if (deEl) deEl.value = '';
+    if (ateEl) ateEl.value = '';
+    _dashDeAteDoDia = false;
+  }
+  const btnDia     = document.getElementById('dash-modo-dia');
+  const filtroDia  = document.getElementById('dash-filtro-dia');
   const btnMes     = document.getElementById('dash-modo-mes');
   const btnAno     = document.getElementById('dash-modo-ano');
   const btnPeriodo = document.getElementById('dash-modo-periodo');
@@ -10656,14 +10680,18 @@ function dashSetModo(modo) {
     btn.style.background = '';
     btn.style.color = '';
   };
+  _setSel(btnDia,     ehDia);
   _setSel(btnMes,     modo === 'mes');
   _setSel(btnAno,     modo === 'ano');
   _setSel(btnPeriodo, modo === 'periodo');
 
   // Mostra o filtro do modo escolhido, esconde os outros
-  [filtroMes, filtroAno, filtroPer].forEach(f => { if(f) f.style.display='none'; });
+  [filtroDia, filtroMes, filtroAno, filtroPer].forEach(f => { if(f) f.style.display='none'; });
 
-  if (modo === 'mes') {
+  if (ehDia) {
+    if (filtroDia) filtroDia.style.display = 'flex';
+    dashDiaSync(false); // preenche com hoje (se vazio) e sincroniza de/até; o render vem no fim
+  } else if (modo === 'mes') {
     if (filtroMes) filtroMes.style.display = 'flex';
   } else if (modo === 'ano') {
     if (filtroAno) filtroAno.style.display = 'flex';
@@ -10682,6 +10710,32 @@ function dashSetModo(modo) {
     if (filtroPer) filtroPer.style.display = 'flex';
   }
   renderDashboard();
+}
+
+/** Sincroniza o dia escolhido com o intervalo de/até usado pelo modo período. */
+function dashDiaSync(render = true) {
+  const el = document.getElementById('dash-data-dia');
+  if (!el) return;
+  if (!el.value) el.value = hojeLocalISO();
+  const deEl = document.getElementById('dash-data-de'), ateEl = document.getElementById('dash-data-ate');
+  if (deEl)  deEl.value  = el.value;
+  if (ateEl) ateEl.value = el.value;
+  _dashDeAteDoDia = true;
+  if (render) renderDashboard();
+}
+function dashDiaMover(delta) {
+  const el = document.getElementById('dash-data-dia');
+  if (!el) return;
+  const [y, m, d] = (el.value || hojeLocalISO()).split('-').map(Number);
+  const dt = new Date(y, m - 1, d + delta);
+  const pad = n => String(n).padStart(2, '0');
+  el.value = `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`;
+  dashDiaSync();
+}
+function dashDiaHoje() {
+  const el = document.getElementById('dash-data-dia');
+  if (el) el.value = hojeLocalISO();
+  dashDiaSync();
 }
 
 function dashLimparPeriodo() {
@@ -10778,7 +10832,12 @@ function _dashFiltrarDados(all, modo) {
     });
     prevData = [];
     const fmtDate = s => s ? s.split('-').reverse().join('/') : '?';
-    labelPeriodo = (de && ate) ? `${fmtDate(de)} a ${fmtDate(ate)}`
+    const _diaUnico = (de && ate && de === ate) ? (() => {
+      const [yy, mm, dd] = de.split('-').map(Number);
+      return `${CONFIG.DIAS_SEMANA[new Date(yy, mm - 1, dd).getDay()] || ''}, ${fmtDate(de)}`;
+    })() : '';
+    labelPeriodo = _diaUnico ? _diaUnico
+                 : (de && ate) ? `${fmtDate(de)} a ${fmtDate(ate)}`
                  : de  ? `A partir de ${fmtDate(de)}`
                  : `Até ${fmtDate(ate)}`;
   } else if (modo === 'ano') {
@@ -16898,6 +16957,176 @@ function renderComandas() {
     else                             box.innerHTML = _cmdHtmlFechadas(fechHoje);
   }
   _cmdAtualizarModal();
+}
+
+/**
+ * Relatório de Comandas / Mesas — pré-visualização com "Imprimir / Salvar PDF".
+ * Usa a data escolhida ao lado do botão (padrão: hoje).
+ */
+function imprimirRelatorioComandas() {
+  if (!_lojaAtiva) { showToast('Aguarde o carregamento do restaurante', false); return; }
+  const hoje = _cmdHoje();
+  const dataEl = document.getElementById('cmd-rel-data');
+  if (dataEl && !dataEl.value) dataEl.value = hoje;
+  const data = (dataEl && dataEl.value) || hoje;
+  const ehHoje = data === hoje;
+  const loja = getLojaAtiva ? getLojaAtiva() : null;
+  const E = escapeHtml;
+
+  const lista = _cmdLista();
+  const fechadas = lista.filter(c => c.status === 'fechada' && c.data === data)
+    .sort((a, b) => String(a.fechadaEm).localeCompare(String(b.fechadaEm)));
+  const canceladas = lista.filter(c => c.status === 'cancelada' && _cmdDiaAbertura(c) === data);
+  const abertas = ehHoje ? lista.filter(c => c.status === 'aberta')
+    .sort((a, b) => String(a.abertaEm).localeCompare(String(b.abertaEm))) : [];
+
+  // ── Totais ──
+  const num = v => parseFloat(v) || 0;
+  const vendido = fechadas.reduce((s, c) => s + num(c.total), 0);
+  const ticket = fechadas.length ? vendido / fechadas.length : 0;
+  const pessoas = fechadas.reduce((s, c) => s + (parseInt(c.pessoas) || 0), 0);
+  const subtotal = fechadas.reduce((s, c) => s + num(c.subtotal), 0);
+  const servico = fechadas.reduce((s, c) => s + num(c.servico), 0);
+  const descontos = fechadas.reduce((s, c) => s + num(c.desconto), 0);
+  const pag = { dinheiro: 0, pix: 0, cartao: 0 };
+  fechadas.forEach(c => { const p = c.pagamentos || {}; pag.dinheiro += num(p.dinheiro); pag.pix += num(p.pix); pag.cartao += num(p.cartao); });
+  const emAberto = abertas.reduce((s, c) => s + _cmdTotais(c).total, 0);
+
+  // ── Itens vendidos ──
+  const mapaItens = {};
+  fechadas.forEach(c => _cmdItens(c).forEach(i => {
+    const nome = i.nome || '(sem nome)';
+    const q = parseInt(i.qtd) || 0;
+    if (!q) return;
+    if (!mapaItens[nome]) mapaItens[nome] = { nome, qtd: 0, valor: 0 };
+    mapaItens[nome].qtd += q;
+    mapaItens[nome].valor += num(i.preco) * q;
+  }));
+  const itens = Object.values(mapaItens).sort((a, b) => b.qtd - a.qtd || b.valor - a.valor);
+  const totalItensQtd = itens.reduce((s, i) => s + i.qtd, 0);
+
+  // ── Por garçom ──
+  const mapaGar = {};
+  fechadas.forEach(c => {
+    const g = (c.garcom || '').trim() || 'Sem garçom';
+    if (!mapaGar[g]) mapaGar[g] = { nome: g, contas: 0, total: 0 };
+    mapaGar[g].contas++; mapaGar[g].total += num(c.total);
+  });
+  const garcons = Object.values(mapaGar).sort((a, b) => b.total - a.total);
+
+  // ── HTML das tabelas ──
+  const linhasContas = fechadas.map(c => `<tr>
+    <td class="nw">${_cmdHora(c.abertaEm)} → ${_cmdHora(c.fechadaEm)}</td>
+    <td><strong>${E(_cmdRotulo(c))}</strong><div class="obs">${E(_cmdIdentTexto(c))}</div></td>
+    <td>${E(c.garcom || '-')}</td>
+    <td class="n">${c.pessoas ? E(c.pessoas) : '-'}</td>
+    <td class="peq">${E(_cmdFormaTexto(c.pagamentos))}</td>
+    <td class="n"><strong>${fmt(num(c.total))}</strong></td></tr>`).join('');
+  const linhasItens = itens.map(i => `<tr><td>${E(i.nome)}</td><td class="n">${i.qtd}</td><td class="n">${fmt(i.valor)}</td></tr>`).join('');
+  const linhasGar = garcons.map(g => `<tr><td>${E(g.nome)}</td><td class="n">${g.contas}</td><td class="n">${fmt(g.total)}</td></tr>`).join('');
+  const linhasAbertas = abertas.map(c => {
+    const t = _cmdTotais(c);
+    const nIt = _cmdItens(c).reduce((s, i) => s + (parseInt(i.qtd) || 0), 0);
+    return `<tr><td><strong>${E(_cmdRotulo(c))}</strong><div class="obs">${E(_cmdIdentTexto(c))}</div></td>
+      <td>${E(c.garcom || '-')}</td><td class="nw">desde ${_cmdHora(c.abertaEm)} (${_cmdDuracao(_cmdMinutos(c))})</td>
+      <td class="n">${nIt}</td><td class="n"><strong>${fmt(t.total)}</strong></td></tr>`;
+  }).join('');
+
+  const [a, m, d2] = data.split('-').map(Number);
+  const diaSemana = CONFIG.DIAS_SEMANA[new Date(a, m - 1, d2).getDay()] || '';
+  const titulo = `Relatório de Comandas — ${_formatarDataBR(data)}`;
+
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${E(titulo)}</title>
+  <style>
+    @page { size: A4; margin: 14mm; }
+    * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    body { font-family: 'DM Sans', Arial, sans-serif; color: #111; background: #fff; margin: 0; padding: 24px; font-size: 13px; }
+    h1 { font-size: 22px; margin: 0 0 2px; }
+    .meta { color: #555; font-size: 12px; margin-bottom: 14px; }
+    .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 8px; }
+    .kpi { border: 1px solid #ddd; border-radius: 8px; padding: 10px 12px; }
+    .kpi .l { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: #666; font-weight: 700; }
+    .kpi .v { font-size: 18px; font-weight: 800; margin-top: 4px; }
+    h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; margin: 18px 0 6px; padding: 6px 10px; background: #F1F5F9; border-left: 4px solid #6378FF; }
+    table { width: 100%; border-collapse: collapse; }
+    tr { page-break-inside: avoid; }
+    th { text-align: left; font-size: 10px; text-transform: uppercase; color: #666; padding: 5px 8px; border-bottom: 1.5px solid #ccc; }
+    td { padding: 5px 8px; border-bottom: 1px solid #eee; vertical-align: top; }
+    td.n, th.n { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    td.nw { white-space: nowrap; }
+    td.peq { font-size: 11px; color: #444; }
+    tr.total td { font-weight: 800; border-top: 2px solid #111; border-bottom: none; }
+    .obs { font-size: 11px; color: #666; margin-top: 1px; }
+    .vazio { color: #888; font-style: italic; padding: 6px 8px; }
+    .rodape { margin-top: 22px; font-size: 10px; color: #888; }
+  </style></head><body>
+    <h1>${E(titulo)}</h1>
+    <div class="meta">🏪 ${E(loja?.nome || '-')}${diaSemana ? ' · ' + E(diaSemana) : ''}${ehHoje ? ' · posição em ' + _cmdHora(new Date().toISOString()) : ''}</div>
+
+    <div class="kpis">
+      <div class="kpi"><div class="l">Contas fechadas</div><div class="v">${fechadas.length}</div></div>
+      <div class="kpi"><div class="l">Vendido</div><div class="v" style="color:#15803D">${fmt(vendido)}</div></div>
+      <div class="kpi"><div class="l">Ticket médio</div><div class="v">${fmt(ticket)}</div></div>
+      <div class="kpi"><div class="l">${ehHoje ? 'Em aberto agora' : 'Pessoas atendidas'}</div><div class="v">${ehHoje ? fmt(emAberto) : pessoas}</div></div>
+    </div>
+
+    <h2>Formas de pagamento</h2>
+    <table><tbody>
+      <tr><td>💵 Dinheiro</td><td class="n">${fmt(pag.dinheiro)}</td></tr>
+      <tr><td>Pix</td><td class="n">${fmt(pag.pix)}</td></tr>
+      <tr><td>💳 Cartão</td><td class="n">${fmt(pag.cartao)}</td></tr>
+      <tr class="total"><td>Total recebido</td><td class="n">${fmt(pag.dinheiro + pag.pix + pag.cartao)}</td></tr>
+    </tbody></table>
+    ${fechadas.length ? `<div class="obs" style="margin-top:6px">Subtotal ${fmt(subtotal)} + serviço ${fmt(servico)} − descontos ${fmt(descontos)} = ${fmt(vendido)}${pessoas ? ` · ${pessoas} pessoa(s) atendida(s)` : ''}</div>` : ''}
+
+    <h2>Contas fechadas</h2>
+    ${fechadas.length ? `<table><thead><tr><th>Hora</th><th>Mesa / Atendimento</th><th>Garçom</th><th class="n">Pessoas</th><th>Pagamento</th><th class="n">Total</th></tr></thead>
+      <tbody>${linhasContas}<tr class="total"><td colspan="5">Total (${fechadas.length} conta${fechadas.length === 1 ? '' : 's'})</td><td class="n">${fmt(vendido)}</td></tr></tbody></table>`
+      : '<div class="vazio">Nenhuma conta fechada neste dia.</div>'}
+
+    <h2>Itens vendidos</h2>
+    ${itens.length ? `<table><thead><tr><th>Item</th><th class="n">Qtd</th><th class="n">Valor</th></tr></thead>
+      <tbody>${linhasItens}<tr class="total"><td>Total de itens</td><td class="n">${totalItensQtd}</td><td class="n">${fmt(subtotal || itens.reduce((s, i) => s + i.valor, 0))}</td></tr></tbody></table>`
+      : '<div class="vazio">Nenhum item vendido neste dia.</div>'}
+
+    ${garcons.length && !(garcons.length === 1 && garcons[0].nome === 'Sem garçom') ? `<h2>Vendas por garçom</h2>
+    <table><thead><tr><th>Garçom</th><th class="n">Contas</th><th class="n">Total</th></tr></thead><tbody>${linhasGar}</tbody></table>` : ''}
+
+    ${ehHoje ? `<h2>Mesas abertas agora</h2>
+    ${abertas.length ? `<table><thead><tr><th>Mesa</th><th>Garçom</th><th>Aberta</th><th class="n">Itens</th><th class="n">Parcial</th></tr></thead>
+      <tbody>${linhasAbertas}<tr class="total"><td colspan="4">Total em aberto</td><td class="n">${fmt(emAberto)}</td></tr></tbody></table>`
+      : '<div class="vazio">Nenhuma mesa aberta.</div>'}` : ''}
+
+    ${canceladas.length ? `<div class="obs" style="margin-top:14px">Comandas canceladas no dia: ${canceladas.length}</div>` : ''}
+    <div class="rodape">Gerado em ${new Date().toLocaleString('pt-BR', { dateStyle: 'long', timeStyle: 'short' })}</div>
+  </body></html>`;
+
+  let modal = document.getElementById('cmd-print-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'cmd-print-modal';
+    modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:#fff;display:flex;flex-direction:column';
+    modal.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-bottom:1px solid #e5e7eb;flex-shrink:0;gap:12px;flex-wrap:wrap">
+        <span id="cmd-print-titulo" style="font-size:14px;font-weight:700;color:#111"></span>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <span style="font-size:12px;color:#666">Para PDF: em "Destino" escolha <strong>Salvar como PDF</strong></span>
+          <button id="cmd-print-btn" style="padding:7px 18px;background:#6378FF;color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700">🖨 Imprimir / Salvar PDF</button>
+          <button onclick="document.getElementById('cmd-print-modal').style.display='none'" style="padding:7px 14px;background:#f3f4f6;color:#374151;border:1px solid #d1d5db;border-radius:6px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600">✕ Fechar</button>
+        </div>
+      </div>
+      <iframe id="cmd-print-iframe" style="flex:1;border:none;background:#fff"></iframe>`;
+    document.body.appendChild(modal);
+  }
+  document.getElementById('cmd-print-titulo').textContent = titulo;
+  modal.style.display = 'flex';
+  const iframe = document.getElementById('cmd-print-iframe');
+  const doc = iframe.contentDocument || iframe.contentWindow.document;
+  doc.open(); doc.write(html); doc.close();
+  document.getElementById('cmd-print-btn').onclick = () => {
+    iframe.contentWindow.focus();
+    iframe.contentWindow.print();
+  };
 }
 
 function _cmdHtmlAbertas(abertas) {
