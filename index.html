@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <script>try{var t=localStorage.getItem("caixa-theme");if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Controle de Caixa v4.7</title>
+<title>Controle de Caixa v4.8</title>
 
 <!-- ============================================================
      PWA — Progressive Web App
@@ -33,7 +33,7 @@
 <!--
   ╔══════════════════════════════════════════════════════════════════════╗
   ║           CONTROLE DE CAIXA                                           ║
-  ║           Versão: 4.7 — Categorias no topo da tela Cardápio           ║
+  ║           Versão: 4.8 — Dashboard 100% com dados do restaurante       ║
   ╠══════════════════════════════════════════════════════════════════════╣
   ║  HISTÓRICO DE VERSÕES                                                ║
   ║  ─────────────────────────────────────────────────────────────────  ║
@@ -44,6 +44,9 @@
   ║         · Melhoria: renderContas usa cache; seção 3.22 documentada   ║
   ║  v3.3 — Seções novas: Planilhas já lançadas (3.23), calendário       ║
   ║         visual de lançamentos com marcação de cartão                 ║
+  ║  v4.8 — Dashboard: cards recalculados só com dados lançados         ║
+  ║         (faturamento, despesas, CMV, comandas, delivery) e textos   ║
+  ║         voltados para restaurante                                   ║
   ║  v4.7 — Cardápio: card Categorias movido para o topo (compacto)     ║
   ║  v4.6 — Comandas: todos os itens do cardápio, por categoria         ║
   ║  v4.5 — Cardápio: cadastrar/remover categorias próprias             ║
@@ -3132,7 +3135,7 @@ tbody tr:hover {
           <img src="logo.png" alt="Select Sabor" style="width:44px;height:44px;border-radius:50%;flex-shrink:0;background:#fff;box-shadow:0 0 0 2px rgba(255,255,255,0.18)">
           <div>
             <div class="logo-title">Controle de Caixa</div>
-            <div class="logo-sub">v4.7</div>
+            <div class="logo-sub">v4.8</div>
           </div>
         </div>
         <span id="status-dot" style="display:none;width:8px;height:8px;border-radius:50%;background:#4ADE80;flex-shrink:0;box-shadow:0 0 0 2px rgba(74,222,128,0.2)" title="Conectado"></span>
@@ -6565,8 +6568,10 @@ function _atualizarResumoDia() {
   const entry = (_cache.data || []).find(d => d.data === hojeStr);
 
   const fmtR = v => 'R$ ' + (parseFloat(v) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const vendas  = parseFloat((entry || {}).totalVendas) || 0;
-  const desp    = parseFloat((entry || {}).totalDesp)   || 0;
+  // Mesma conta do Dashboard: vendas dos canais − despesas lançadas
+  const _rDia   = entry ? _dashCalcDia(entry, getForn(), _dashIdsComPagFunc()) : null;
+  const vendas  = _rDia ? _rDia.vendas   : 0;
+  const desp    = _rDia ? _rDia.despesas : 0;
   const lucro   = vendas - desp;
 
   const diasSem = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
@@ -10559,156 +10564,204 @@ function _dashFiltrarDados(all, modo) {
   return { mensal, prevData, labelPeriodo, mes, ano, mesPrev, anoPrev };
 }
 
-/* ── Subfunção 2: todos os cálculos numéricos do dashboard ── */
-function _dashCalcTotais(mensal, prevData, modo, mes, ano) {
-  const DASH_CATS_ENTRADA = new Set(['fornecedor', 'compra']);
-  const DASH_CATS_SAIDA   = new Set(['socio', 'restaurante', 'outra_loja', 'emprestimo']);
-  const _fornList = getForn();
+/* ── Subfunção 2: todos os cálculos numéricos do dashboard ──
+   Mesma conta do Relatório mensal, só com dados lançados:
+   Faturamento = soma dos canais de venda
+   Despesas    = fornecedores + compras + demais saídas + funcionários
+   Lucro       = Faturamento − Despesas                                  */
+const _DASH_CATS_INSUMO = ['fornecedor', 'compra'];
+const _DASH_CATS_OUTRAS = ['socio', 'restaurante', 'outra_loja', 'emprestimo'];
 
-  function _recalcEntry(d) {
-    const canais = Object.values(d.vendas || {}).reduce((s, v) => s + (parseFloat(v)||0), 0);
-    let itensEntrada = 0, itensSaida = 0;
-    _fornList.forEach(f => {
-      const v = (d.itens && d.itens[f.id]) ? parseFloat(d.itens[f.id]) || 0 : 0;
-      if (DASH_CATS_ENTRADA.has(f.cat)) itensEntrada += v;
-      else if (DASH_CATS_SAIDA.has(f.cat)) itensSaida += v;
-    });
-    const funcsEmbutidos = Object.values(d.funcItens || {}).reduce((s, fi) => s + (fi.passagem||0) + (fi.adiantamento||0), 0);
-    return { entrada: canais + itensEntrada + funcsEmbutidos, saida: itensSaida };
+/** IDs de lançamentos cujos pagamentos de funcionários já estão em pagamentos_func (evita contar 2x). */
+function _dashIdsComPagFunc() {
+  return new Set((_cache.pagamentosFunc || []).filter(p => p._lancamentoId).map(p => String(p._lancamentoId)));
+}
+
+/** Calcula o resultado de UM lançamento (dia). */
+function _dashCalcDia(d, fornList, idsPagFunc) {
+  const v = d.vendas || {};
+  let vendas = Object.values(v).reduce((s, x) => s + (parseFloat(x) || 0), 0);
+  if (vendas === 0 && d.cartaoDinPix) vendas = parseFloat(d.cartaoDinPix) || 0; // planilha importada só com total
+
+  let insumos = 0, outras = 0;
+  fornList.forEach(f => {
+    const x = (d.itens && d.itens[f.id]) ? parseFloat(d.itens[f.id]) || 0 : 0;
+    if (_DASH_CATS_INSUMO.includes(f.cat)) insumos += x;
+    else if (_DASH_CATS_OUTRAS.includes(f.cat)) outras += x;
+  });
+  if (insumos === 0 && outras === 0) { // planilha importada só com totais
+    insumos = parseFloat(d.despEsq) || 0;
+    outras  = parseFloat(d.despDir) || 0;
   }
 
-  // Pagamentos de funcionários externos (sistema novo)
-  let totFuncsExt = 0;
+  const source = d._funcItensSource;
+  const usarFuncItens = source === 'funcItens' || (!source && !idsPagFunc.has(String(d.id)));
+  const funcs = usarFuncItens
+    ? Object.values(d.funcItens || {}).reduce((s, fi) => s + (parseFloat(fi.passagem) || 0) + (parseFloat(fi.adiantamento) || 0), 0)
+    : 0;
+
+  const despesas = insumos + outras + funcs;
+  return { vendas, insumos, outras, funcs, despesas, lucro: vendas - despesas };
+}
+
+function _dashCalcTotais(mensal, prevData, modo, mes, ano) {
+  const fornList  = getForn();
+  const idsPag    = _dashIdsComPagFunc();
+
+  // Predicados de período (atual e anterior)
+  let noPeriodo, noPrev = null;
   if (modo === 'periodo') {
     const de  = document.getElementById('dash-data-de')?.value || '';
     const ate = document.getElementById('dash-data-ate')?.value || '';
-    totFuncsExt = (_cache.pagamentosFunc || []).filter(p => {
-      if (!p.data) return false;
-      if (de  && p.data < de)  return false;
-      if (ate && p.data > ate) return false;
-      return true;
-    }).reduce((s, p) => s + (p.valor || 0), 0);
+    noPeriodo = ds => !!ds && !(de && ds < de) && !(ate && ds > ate);
   } else if (modo === 'ano') {
-    totFuncsExt = (_cache.pagamentosFunc || [])
-      .filter(p => p.data && p.data.startsWith(ano + '-'))
-      .reduce((s, p) => s + (p.valor || 0), 0);
+    const prevAno = String(parseInt(ano) - 1);
+    noPeriodo = ds => !!ds && ds.startsWith(ano + '-');
+    noPrev    = ds => !!ds && ds.startsWith(prevAno + '-');
   } else {
-    totFuncsExt = (_cache.pagamentosFunc || [])
-      .filter(p => p.data && p.data.startsWith(ano + '-' + mes))
-      .reduce((s, p) => s + (p.valor || 0), 0);
+    const mPrev = parseInt(mes) - 1;
+    const aPrev = mPrev < 1 ? String(parseInt(ano) - 1) : ano;
+    const pPrev = (mPrev < 1 ? '12' : String(mPrev).padStart(2, '0'));
+    noPeriodo = ds => !!ds && ds.startsWith(ano + '-' + mes);
+    noPrev    = ds => !!ds && ds.startsWith(aPrev + '-' + pPrev);
   }
 
-  // IDs por categoria: socio + restaurante + outra_loja = Saída de Cartão
-  const IDS_SAIDA_CARTAO = new Set(getForn().filter(f =>
-    f.cat === 'socio' || f.cat === 'restaurante' || f.cat === 'outra_loja'
-  ).map(f => f.id));
-  const IDS_01_33 = new Set(getForn().filter(f =>
-    f.cat === 'fornecedor' || f.cat === 'compra').map(f => f.id));
+  // Pagamentos de funcionários lançados fora do caixa (tela Funcionários)
+  const somaPagFunc = pred => pred
+    ? (_cache.pagamentosFunc || []).filter(p => pred(p.data)).reduce((s, p) => s + (parseFloat(p.valor) || 0), 0)
+    : 0;
+  const totFuncsExt = somaPagFunc(noPeriodo);
+  const prevFuncsExt = somaPagFunc(noPrev);
 
-  const saidaCartao = mensal.reduce((s, d) => {
-    let soma = 0;
-    if (d.itens) IDS_SAIDA_CARTAO.forEach(id => { soma += parseFloat(d.itens[id]) || 0; });
-    if (soma === 0 && d.despDir) soma = d.despDir;
-    return s + soma;
-  }, 0);
-  const despMesPlanilha = mensal.reduce((s, d) => {
-    let soma = 0;
-    if (d.itens) IDS_01_33.forEach(id => { soma += parseFloat(d.itens[id]) || 0; });
-    if (soma === 0 && d.despEsq) soma = d.despEsq;
-    return s + soma;
-  }, 0);
+  // Totais do período atual
+  const dias = mensal.map(d => ({ d, r: _dashCalcDia(d, fornList, idsPag) }));
+  const soma = k => dias.reduce((s, x) => s + x.r[k], 0);
+  const faturamento = soma('vendas');
+  const insumos     = soma('insumos');
+  const outras      = soma('outras');
+  const totFuncsEmb = soma('funcs');
+  const funcionarios = totFuncsEmb + totFuncsExt;
+  const despesas    = insumos + outras + funcionarios;
+  const lucro       = faturamento - despesas;
 
-  const totFuncsEmb = mensal.reduce((s, d) =>
-    s + Object.values(d.funcItens || {}).reduce((ss, fi) => ss + (fi.passagem||0) + (fi.adiantamento||0), 0), 0);
-  const totGeral     = despMesPlanilha + totFuncsEmb + totFuncsExt + saidaCartao;
-  const totRestaurante = mensal.reduce((s, d) => s + (d.vendas?.restaurante || 0), 0);
-  const cartaoDinPix = mensal.reduce((s, d) => {
-    const v = d.vendas || {};
-    const soma = (v.dinheiro||0) + (v.cartao||0) + (v.pix||0) + (v.ifood||0) + (v._99food||0);
-    if (soma === 0 && d.cartaoDinPix) return s + d.cartaoDinPix;
-    return s + soma;
-  }, 0);
-  const entradaMes   = despMesPlanilha + cartaoDinPix + totFuncsEmb + totFuncsExt;
-  const lucroMes     = entradaMes - totGeral;
-  const totIfood     = mensal.reduce((s, d) => s + (d.vendas?.ifood   || 0), 0);
-  const tot99food    = mensal.reduce((s, d) => s + (d.vendas?._99food || 0), 0);
-  const diasLancados = new Set(mensal.filter(d => (d.totalVendas||0) + (d.totalDesp||0) > 0).map(d => d.data)).size;
-  const ticket       = diasLancados > 0 ? entradaMes / diasLancados : 0;
-  const sorted       = [...mensal].sort((a, b) => a.data.localeCompare(b.data));
+  // Canais de venda (valores reais lançados)
+  const canal = k => mensal.reduce((s, d) => s + (parseFloat(d.vendas?.[k]) || 0), 0);
+  const totIfood = canal('ifood'), tot99food = canal('_99food');
+  const delivery = totIfood + tot99food;
+  const totRestaurante = canal('restaurante');
+  const salaoBalcao = totRestaurante + canal('dinheiro') + canal('pix') + canal('cartao');
+  const cartaoDinPix = salaoBalcao - totRestaurante + delivery; // compat
 
-  const prevV = prevData.reduce((s, d) => s + _recalcEntry(d).entrada, 0);
-  const prevD = prevData.reduce((s, d) => s + _recalcEntry(d).saida,   0);
+  const diasLanc = dias.filter(x => x.r.vendas + x.r.despesas > 0);
+  const diasLancados = new Set(diasLanc.map(x => x.d.data)).size;
+  const ticket = diasLancados > 0 ? faturamento / diasLancados : 0; // faturamento médio por dia lançado
+
+  // Dias enriquecidos com os valores recalculados (gráfico por dia e modal de dias)
+  const sorted = dias
+    .map(x => ({ ...x.d, totalVendas: x.r.vendas, totalDesp: x.r.despesas, lucro: x.r.lucro }))
+    .sort((a, b) => String(a.data).localeCompare(String(b.data)));
+
+  // Período anterior (mesma conta)
+  const prevDias = prevData.map(d => _dashCalcDia(d, fornList, idsPag));
+  const prevV = prevDias.reduce((s, r) => s + r.vendas, 0);
+  const prevD = prevDias.reduce((s, r) => s + r.despesas, 0) + prevFuncsExt;
   const prevL = prevV - prevD;
-  const totV  = mensal.reduce((s, d) => s + _recalcEntry(d).entrada, 0) + totFuncsExt;
-  const totD  = mensal.reduce((s, d) => s + _recalcEntry(d).saida,   0);
-  const diffV = prevV > 0 ? ((entradaMes - prevV) / prevV * 100).toFixed(1) : null;
-  const diffD = prevD > 0 ? ((totGeral   - prevD) / prevD * 100).toFixed(1) : null;
-  const diffL = prevL !== 0 ? ((lucroMes - prevL) / Math.abs(prevL) * 100).toFixed(1) : null;
-  const vendasPts = sorted.map(d => _recalcEntry(d).entrada);
-  const lucroPts  = sorted.map(d => _recalcEntry(d).entrada - _recalcEntry(d).saida);
+  const diffV = prevV > 0 ? ((faturamento - prevV) / prevV * 100).toFixed(1) : null;
+  const diffD = prevD > 0 ? ((despesas    - prevD) / prevD * 100).toFixed(1) : null;
+  const diffL = prevL !== 0 ? ((lucro - prevL) / Math.abs(prevL) * 100).toFixed(1) : null;
+  const vendasPts = sorted.map(d => d.totalVendas);
+  const lucroPts  = sorted.map(d => d.lucro);
+
+  // Comandas fechadas no período (salão): quantidade, ticket médio e prato mais vendido
+  const cmdFech = (_cache.comandas || []).filter(c => c.status === 'fechada' && noPeriodo(c.data));
+  const cmdTotal = cmdFech.reduce((s, c) => s + (parseFloat(c.total) || 0), 0);
+  const porItem = {};
+  cmdFech.forEach(c => Object.values(c.itens || {}).forEach(i => {
+    const nome = String(i.nome || '').trim(); if (!nome) return;
+    const q = parseInt(i.qtd) || 0; if (q <= 0) return;
+    porItem[nome] = (porItem[nome] || 0) + q;
+  }));
+  const topItem = Object.entries(porItem).sort((a, b) => b[1] - a[1])[0] || null;
+  const comandas = {
+    n: cmdFech.length,
+    total: cmdTotal,
+    ticket: cmdFech.length ? cmdTotal / cmdFech.length : 0,
+    topItem: topItem ? { nome: topItem[0], qtd: topItem[1] } : null,
+  };
+  const cmvPct = faturamento > 0 ? (insumos / faturamento * 100) : 0;
 
   return {
-    totV, totD, totGeral, entradaMes, lucroMes, saidaCartao, despMesPlanilha,
+    // Novos (restaurante)
+    faturamento, despesas, lucro, insumos, outras, funcionarios, delivery, salaoBalcao, comandas, cmvPct,
+    // Compatibilidade com o restante do dashboard (metas, comparativos, gráficos)
+    totV: faturamento, totD: despesas, totGeral: despesas, entradaMes: faturamento, lucroMes: lucro,
+    saidaCartao: outras, despMesPlanilha: insumos,
     totFuncsEmb, totFuncsExt, totRestaurante, cartaoDinPix, totIfood, tot99food,
-    diasLancados, ticket, sorted, prevV, prevD, prevL, diffV, diffD, diffL,
-    vendasPts, lucroPts,
+    diasLancados, ticket, sorted, prevV, prevD, prevL, diffV, diffD, diffL, vendasPts, lucroPts,
   };
 }
 
-/* ── Subfunção 3: renderiza os cards de métricas ── */
+/* ── Subfunção 3: renderiza os cards de métricas (dados reais do restaurante) ── */
 function _dashRenderMetrics(t, labelSufixo) {
+  const pct = (v, base) => base > 0 ? (v / base * 100).toFixed(1).replace('.', ',') + '%' : '0%';
+  const c = t.comandas;
   document.getElementById('dash-metrics').innerHTML =
     _dashMetricCard({
       accent: '#16A34A',
       iconHtml: `<svg viewBox="0 0 40 40" width="28" height="28" xmlns="http://www.w3.org/2000/svg"><rect width="40" height="40" rx="10" fill="#16A34A"/><polyline points="8,24 16,15 22,20 32,10" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><polyline points="26,10 32,10 32,16" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
-      label: `Vendas ${labelSufixo}`, value: fmt(t.entradaMes), valueClass: 'green',
-      extra: _dashMetricDiff(t.diffV, false)
+      label: `Faturamento ${labelSufixo}`, value: fmt(t.faturamento), valueClass: 'green',
+      extra: _dashMetricDiff(t.diffV, false),
+      subText: 'Todas as vendas lançadas'
     }) +
     _dashMetricCard({
       accent: '#DC2626',
       iconHtml: `<svg viewBox="0 0 40 40" width="28" height="28" xmlns="http://www.w3.org/2000/svg"><rect width="40" height="40" rx="10" fill="#DC2626"/><polyline points="8,14 16,23 22,18 32,28" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><polyline points="26,28 32,28 32,22" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
-      label: `Despesas ${labelSufixo}`, value: fmt(t.totGeral), valueClass: 'red',
-      extra: _dashMetricDiff(t.diffD, true)
+      label: `Despesas ${labelSufixo}`, value: fmt(t.despesas), valueClass: 'red',
+      extra: _dashMetricDiff(t.diffD, true),
+      subText: 'Insumos + funcionários + outras saídas'
     }) +
     _dashMetricCard({
-      accent: t.lucroMes >= 0 ? '#16A34A' : '#DC2626',
+      accent: t.lucro >= 0 ? '#16A34A' : '#DC2626',
       iconHtml: `<svg viewBox="0 0 40 40" width="28" height="28" xmlns="http://www.w3.org/2000/svg"><rect width="40" height="40" rx="10" fill="${t.lucroMes >= 0 ? '#16A34A' : '#DC2626'}"/><line x1="20" y1="8" x2="20" y2="32" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/><path d="M26 13h-8.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H14" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/></svg>`,
-      label: 'Lucro / Déficit', value: fmt(t.lucroMes), valueClass: t.lucroMes >= 0 ? 'green' : 'red',
-      extra: _dashMetricDiff(t.diffL, false)
+      label: 'Lucro / Déficit', value: fmt(t.lucro), valueClass: t.lucro >= 0 ? 'green' : 'red',
+      extra: _dashMetricDiff(t.diffL, false),
+      subText: 'Faturamento − despesas'
     }) +
     _dashMetricCard({
       accent: '#2563EB',
       iconHtml: `<svg viewBox="0 0 40 40" width="28" height="28" xmlns="http://www.w3.org/2000/svg"><rect width="40" height="40" rx="10" fill="#2563EB"/><rect x="10" y="12" width="20" height="18" rx="3" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/><line x1="15" y1="9" x2="15" y2="15" stroke="#fff" stroke-width="2" stroke-linecap="round"/><line x1="25" y1="9" x2="25" y2="15" stroke="#fff" stroke-width="2" stroke-linecap="round"/><line x1="10" y1="21" x2="30" y2="21" stroke="#fff" stroke-width="2" stroke-linecap="round"/><circle cx="16" cy="26" r="1.5" fill="#fff"/><circle cx="20" cy="26" r="1.5" fill="#fff"/><circle cx="24" cy="26" r="1.5" fill="#fff"/></svg>`,
-      label: 'Dias lançados', value: t.diasLancados,
+      label: 'Dias com movimento', value: t.diasLancados,
       subText: `<span style="color:var(--accent);font-weight:600">↗ ver detalhes</span>`,
       onClick: `ModalDias.abrir(_dashMensalCache, _dashLabelCache)`
     }) +
     _dashMetricCard({
       accent: '#7C3AED',
       iconHtml: `<svg viewBox="0 0 40 40" width="28" height="28" xmlns="http://www.w3.org/2000/svg"><rect width="40" height="40" rx="10" fill="#7C3AED"/><line x1="20" y1="30" x2="20" y2="18" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/><line x1="27" y1="30" x2="27" y2="10" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/><line x1="13" y1="30" x2="13" y2="23" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/></svg>`,
-      label: 'Média vendas/dia', value: fmt(t.ticket), subText: 'por dia lançado'
+      label: 'Faturamento médio/dia', value: fmt(t.ticket), subText: 'por dia com movimento'
+    }) +
+    _dashMetricCard({
+      accent: '#7C3AED',
+      iconHtml: `<svg viewBox="0 0 40 40" width="28" height="28" xmlns="http://www.w3.org/2000/svg"><rect width="40" height="40" rx="10" fill="#7C3AED"/><path d="M13 10v8a3 3 0 0 0 3 3h0V30M16 10v8M19 10v8a3 3 0 0 1-3 3" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M27 30V10c-3 2-4 6-4 9v3h4" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+      label: `Comandas fechadas ${labelSufixo}`, value: c.n,
+      subText: c.n ? `Ticket médio: ${fmt(c.ticket)} por comanda` : 'Nenhuma comanda fechada'
     }) +
     _dashMetricCard({
       accent: '#EA1D2C',
       iconHtml: `<svg viewBox="0 0 40 40" width="28" height="28" xmlns="http://www.w3.org/2000/svg"><rect width="40" height="40" rx="10" fill="#EA1D2C"/><text x="20" y="26" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="13" fill="#fff" letter-spacing="-0.5">iFood</text></svg>`,
-      label: `iFood ${labelSufixo}`, value: fmt(t.totIfood), subText: 'vendas iFood'
-    }) +
-    _dashMetricCard({
-      accent: '#E67E00',
-      iconHtml: `<svg viewBox="0 0 40 40" width="28" height="28" xmlns="http://www.w3.org/2000/svg"><rect width="40" height="40" rx="10" fill="#E67E00"/><text x="20" y="19" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="16" fill="#000">99</text><text x="20" y="31" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="10" fill="#000">Food</text></svg>`,
-      label: `99Food ${labelSufixo}`, value: fmt(t.tot99food), subText: 'vendas 99Food'
+      label: `Delivery ${labelSufixo}`, value: fmt(t.delivery),
+      subText: `iFood ${fmt(t.totIfood)} · 99Food ${fmt(t.tot99food)}`
     }) +
     _dashMetricCard({
       accent: '#0E7490',
       iconHtml: `<svg viewBox="0 0 40 40" width="28" height="28" xmlns="http://www.w3.org/2000/svg"><rect width="40" height="40" rx="10" fill="#0E7490"/><path d="M12 28 Q14 18 20 16 Q26 18 28 28" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/><path d="M16 28 Q17 22 20 21 Q23 22 24 28" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/><line x1="12" y1="28" x2="28" y2="28" stroke="#fff" stroke-width="2" stroke-linecap="round"/><line x1="20" y1="16" x2="20" y2="13" stroke="#fff" stroke-width="2" stroke-linecap="round"/><circle cx="20" cy="12" r="1.5" fill="#fff"/></svg>`,
-      label: `Restaurante ${labelSufixo}`, value: fmt(t.totRestaurante), valueClass: 'teal',
-      subText: 'vendas separadas do total geral'
+      label: `Salão e balcão ${labelSufixo}`, value: fmt(t.salaoBalcao), valueClass: 'teal',
+      subText: `Dinheiro, Pix, Cartão e Restaurante · ${pct(t.salaoBalcao, t.faturamento)} do faturamento`
     }) +
     _dashMetricCard({
       accent: '#B45309',
       iconHtml: `<svg viewBox="0 0 40 40" width="28" height="28" xmlns="http://www.w3.org/2000/svg"><rect width="40" height="40" rx="10" fill="#B45309"/><circle cx="20" cy="14" r="5" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/><path d="M10 32c0-5.523 4.477-10 10-10s10 4.477 10 10" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/><line x1="20" y1="24" x2="20" y2="28" stroke="#fff" stroke-width="2" stroke-linecap="round"/><line x1="17" y1="26" x2="23" y2="26" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg>`,
-      label: `Funcionários ${labelSufixo}`, value: fmt(t.totFuncsEmb + t.totFuncsExt), valueClass: 'red',
-      subText: `Embutidos: ${fmt(t.totFuncsEmb)} · Externos: ${fmt(t.totFuncsExt)}`
+      label: `Funcionários ${labelSufixo}`, value: fmt(t.funcionarios), valueClass: 'red',
+      subText: `No caixa: ${fmt(t.totFuncsEmb)} · Pagamentos: ${fmt(t.totFuncsExt)}`
     });
 }
 
@@ -10718,9 +10771,9 @@ function _dashRenderKPIsPremium(t, mensal, modo, mes, ano) {
   if (!wrap) return;
 
   // 1) MARGEM DE LUCRO (%) — quanto sobra de cada real que entra
-  const margem = t.entradaMes > 0 ? (t.lucroMes / t.entradaMes * 100) : 0;
+  const margem = t.faturamento > 0 ? (t.lucro / t.faturamento * 100) : 0;
   const margemCor = margem >= 20 ? '#16A34A' : margem >= 8 ? '#D97706' : '#DC2626';
-  const margemMsg = margem >= 20 ? 'Saudável' : margem >= 8 ? 'Atenção' : margem > 0 ? 'Apertada' : 'Prejuízo';
+  const margemMsg = t.faturamento <= 0 ? 'Sem vendas no período' : margem >= 20 ? 'Saudável' : margem >= 8 ? 'Atenção' : margem > 0 ? 'Apertada' : 'Prejuízo';
 
   // 2) PROJEÇÃO DE FECHAMENTO DO MÊS (só no modo mensal)
   let projecaoHtml = '';
@@ -10730,7 +10783,7 @@ function _dashRenderKPIsPremium(t, mensal, modo, mes, ano) {
     const diasNoMes = new Date(parseInt(ano), parseInt(mes), 0).getDate();
     if (ehMesAtual && t.diasLancados > 0) {
       const diaHoje = hoje.getDate();
-      const mediaDia = t.entradaMes / t.diasLancados;
+      const mediaDia = t.faturamento / t.diasLancados;
       const projecao = mediaDia * diasNoMes;
       projecaoHtml = _kpiCard({
         cor: '#2563EB', icone: '📈', titulo: 'Projeção do mês',
@@ -10740,16 +10793,16 @@ function _dashRenderKPIsPremium(t, mensal, modo, mes, ano) {
     } else {
       // Mês fechado ou passado: mostra o total mesmo
       projecaoHtml = _kpiCard({
-        cor: '#2563EB', icone: '📊', titulo: 'Total de vendas',
-        valor: fmt(t.entradaMes),
-        sub: `${t.diasLancados} dia(s) lançado(s)`
+        cor: '#2563EB', icone: '📊', titulo: 'Faturamento do mês',
+        valor: fmt(t.faturamento),
+        sub: `${t.diasLancados} dia(s) com movimento`
       });
     }
   } else {
     projecaoHtml = _kpiCard({
-      cor: '#2563EB', icone: '📊', titulo: 'Total de vendas',
-      valor: fmt(t.entradaMes),
-      sub: `${t.diasLancados} dia(s) no período`
+      cor: '#2563EB', icone: '📊', titulo: 'Faturamento do período',
+      valor: fmt(t.faturamento),
+      sub: `${t.diasLancados} dia(s) com movimento`
     });
   }
 
@@ -10799,10 +10852,26 @@ function _dashRenderKPIsPremium(t, mensal, modo, mes, ano) {
     sub: margemMsg
   });
 
+  // 5) CMV — quanto do faturamento vira custo de mercadoria (fornecedores + compras)
+  const cmvCor = t.faturamento <= 0 ? '#64748B' : t.cmvPct <= 35 ? '#16A34A' : t.cmvPct <= 45 ? '#D97706' : '#DC2626';
+  const cmvHtml = _kpiCard({
+    cor: cmvCor, icone: '🧾', titulo: 'CMV (custo da mercadoria)',
+    valor: t.faturamento > 0 ? t.cmvPct.toFixed(1).replace('.', ',') + '%' : '—',
+    sub: t.faturamento > 0 ? `${fmt(t.insumos)} em fornecedores e compras` : 'sem vendas no período'
+  });
+
+  // 6) PRATO MAIS VENDIDO (comandas fechadas)
+  const top = t.comandas.topItem;
+  const topHtml = _kpiCard({
+    cor: '#EA580C', icone: '🍽', titulo: 'Item mais vendido',
+    valor: top ? top.nome : '—',
+    sub: top ? `${top.qtd} unidade(s) nas comandas` : 'sem comandas fechadas'
+  });
+
   wrap.style.display = 'block';
   wrap.innerHTML = `
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px" class="kpis-premium-grid">
-      ${margemHtml}${projecaoHtml}${melhorDiaHtml}${ritmoHtml}
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px" class="kpis-premium-grid">
+      ${margemHtml}${projecaoHtml}${cmvHtml}${melhorDiaHtml}${ritmoHtml}${topHtml}
     </div>`;
 }
 
@@ -10814,47 +10883,49 @@ function _kpiCard({ cor, icone, titulo, valor, sub }) {
         <span style="font-size:20px">${icone}</span>
         <span style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.4px">${titulo}</span>
       </div>
-      <div style="font-size:24px;font-weight:800;color:${cor};line-height:1.1;font-family:'DM Mono',monospace">${valor}</div>
+      <div title="${String(valor).replace(/<[^>]+>/g,'').replace(/"/g,'&quot;')}" style="font-size:24px;font-weight:800;color:${cor};line-height:1.1;font-family:'DM Mono',monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${valor}</div>
       <div style="font-size:12px;color:var(--text3);margin-top:4px">${sub}</div>
     </div>`;
 }
 
-/* ── Subfunção 4: renderiza a barra colorida de resumo ── */
-function _dashRenderResumoBar(t) {
+/* ── Subfunção 4: renderiza a barra colorida de resumo (restaurante) ── */
+function _dashRenderResumoBar(t, labelSufixo) {
   const el = document.getElementById('dash-resumo-bar');
   if (!el) return;
+  const suf = labelSufixo || 'no mês';
+  const pct = v => t.faturamento > 0 ? (v / t.faturamento * 100).toFixed(1).replace('.', ',') + '% do faturamento' : 'sem vendas no período';
   el.style.display = 'block';
   el.innerHTML = `
     <div class="dash-resumo-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:1.25rem">
+      <div style="background:#065F46;color:#fff;border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow-sm)">
+        <div class="label-caps-opaque">Faturamento ${suf}</div>
+        <div class="mono-val-lg">${fmt(t.faturamento)}</div>
+        <div class="txt-opacity mt3">Salão, balcão e delivery (iFood e 99Food)</div>
+      </div>
       <div style="background:#991B1B;color:#fff;border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow-sm)">
-        <div class="label-caps-opaque">Despesas no Mês da Planilha</div>
-        <div class="mono-val-lg">${fmt(t.despMesPlanilha + t.totFuncsEmb + t.totFuncsExt)}</div>
-        <div class="txt-opacity mt3">Fornecedores (#01–#15) + Compras (#16–#33) + Funcionários</div>
+        <div class="label-caps-opaque">Compras de insumos</div>
+        <div class="mono-val-lg">${fmt(t.insumos)}</div>
+        <div class="txt-opacity mt3">Fornecedores + compras diversas · ${pct(t.insumos)}</div>
       </div>
       <div style="background:#92400E;color:#fff;border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow-sm)">
-        <div class="label-caps-opaque">Saída de Cartão</div>
-        <div class="mono-val-lg">${fmt(t.saidaCartao)}</div>
-        <div class="txt-opacity mt3">Sócio(a) + Restaurante + Outra Loja</div>
+        <div class="label-caps-opaque">Funcionários</div>
+        <div class="mono-val-lg">${fmt(t.funcionarios)}</div>
+        <div class="txt-opacity mt3">Passagens, adiantamentos e pagamentos · ${pct(t.funcionarios)}</div>
       </div>
       <div style="background:#4C1D95;color:#fff;border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow-sm)">
-        <div class="label-caps-opaque">Total Geral Despesas</div>
-        <div class="mono-val-lg">${fmt(t.totGeral)}</div>
-        <div class="txt-opacity mt3">Despesas (#01–#33) + Saída de Cartão (#34–#76)</div>
+        <div class="label-caps-opaque">Outras saídas</div>
+        <div class="mono-val-lg">${fmt(t.outras)}</div>
+        <div class="txt-opacity mt3">Contas do restaurante, sócio(a), empréstimo e outras</div>
       </div>
       <div style="background:#1E40AF;color:#fff;border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow-sm)">
-        <div class="label-caps-opaque">Cartão, Dinheiro e Pix</div>
-        <div class="mono-val-lg">${fmt(t.cartaoDinPix)}</div>
-        <div class="txt-opacity mt3">Dinheiro + Cartão + Pix + iFood + 99Food (excl. Restaurante)</div>
+        <div class="label-caps-opaque">Total de despesas</div>
+        <div class="mono-val-lg">${fmt(t.despesas)}</div>
+        <div class="txt-opacity mt3">Insumos + funcionários + outras saídas · ${pct(t.despesas)}</div>
       </div>
-      <div style="background:#065F46;color:#fff;border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow-sm)">
-        <div class="label-caps-opaque">Entrada no Mês</div>
-        <div class="mono-val-lg">${fmt(t.entradaMes)}</div>
-        <div class="txt-opacity mt3">Total geral de vendas (incluindo iFood)</div>
-      </div>
-      <div style="background:${t.lucroMes >= 0 ? '#14532D' : '#7F1D1D'};color:#fff;border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow-sm);border:2px solid ${t.lucroMes >= 0 ? '#4ADE80' : '#FCA5A5'}">
-        <div class="label-caps-opaque">Lucro no Mês</div>
-        <div style="font-size:22px;font-weight:700;font-family:'DM Mono',monospace">${t.lucroMes >= 0 ? '+' : ''}${fmt(t.lucroMes)}</div>
-        <div class="txt-opacity mt3">Entrada no Mês − Total Geral Despesas</div>
+      <div style="background:${t.lucro >= 0 ? '#14532D' : '#7F1D1D'};color:#fff;border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow-sm);border:2px solid ${t.lucro >= 0 ? '#4ADE80' : '#FCA5A5'}">
+        <div class="label-caps-opaque">${t.lucro >= 0 ? 'Lucro' : 'Prejuízo'} ${suf}</div>
+        <div style="font-size:22px;font-weight:700;font-family:'DM Mono',monospace">${t.lucro >= 0 ? '+' : ''}${fmt(t.lucro)}</div>
+        <div class="txt-opacity mt3">Faturamento − total de despesas</div>
       </div>
     </div>`;
 }
@@ -11418,13 +11489,13 @@ function renderDashboard() {
   const labelSufixo = modo === 'periodo' ? 'no período' : modo === 'ano' ? 'no ano' : 'no mês';
 
   // Cachear para uso no modal de dias lançados
-  window._dashMensalCache = mensal.filter(d => (d.totalVendas||0) + (d.totalDesp||0) > 0);
+  window._dashMensalCache = t.sorted.filter(d => (d.totalVendas||0) + (d.totalDesp||0) > 0);
   window._dashLabelCache  = labelPeriodo;
 
   _dashRenderMetrics(t, labelSufixo);
   _dashRenderKPIsPremium(t, mensal, modo, mes, ano);
   _dashRenderMetas(t, labelPeriodo, mes, ano, modo);
-  _dashRenderResumoBar(t);
+  _dashRenderResumoBar(t, labelSufixo);
   _dashRenderGraficos(mensal, forn, t);
   _dashRenderComparativo(all, forn, mensal, t, mesPrev, anoPrev);
   _dashRenderComparativoLojas(t, labelPeriodo, mes, ano, modo);
@@ -11561,10 +11632,10 @@ function _dashRender6Meses(all, forn) {
   }
 
   const hoje = new Date();
-  const CATS_ENTRADA = new Set(['fornecedor', 'compra']);
-  const CATS_SAIDA   = new Set(['socio', 'restaurante', 'outra_loja', 'emprestimo']);
+  const fornList = getForn();
+  const idsPag = _dashIdsComPagFunc();
 
-  // Montar os últimos 6 meses
+  // Montar os últimos 6 meses (mesma conta dos cards: vendas − despesas lançadas)
   const meses = [];
   for (let i = 5; i >= 0; i--) {
     const d = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
@@ -11573,21 +11644,12 @@ function _dashRender6Meses(all, forn) {
     const prefix = ano + '-' + mes;
     const label = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][d.getMonth()];
 
-    const lancsMes = all.filter(d => d.data && d.data.startsWith(prefix));
-
-    const fat = lancsMes.reduce((s, lanc) => {
-      const canais = Object.values(lanc.vendas || {}).reduce((ss, v) => ss + (parseFloat(v) || 0), 0);
-      const itensEntrada = forn.filter(f => CATS_ENTRADA.has(f.cat))
-        .reduce((ss, f) => ss + (parseFloat(lanc.itens?.[f.id]) || 0), 0);
-      const funcs = Object.values(lanc.funcItens || {})
-        .reduce((ss, fi) => ss + (fi.passagem || 0) + (fi.adiantamento || 0), 0);
-      return s + canais + itensEntrada + funcs;
-    }, 0);
-
-    const desp = lancsMes.reduce((s, lanc) => {
-      return s + forn.filter(f => CATS_SAIDA.has(f.cat))
-        .reduce((ss, f) => ss + (parseFloat(lanc.itens?.[f.id]) || 0), 0);
-    }, 0);
+    const calc = all.filter(x => x.data && x.data.startsWith(prefix)).map(x => _dashCalcDia(x, fornList, idsPag));
+    const pagExt = (_cache.pagamentosFunc || [])
+      .filter(p => p.data && p.data.startsWith(prefix))
+      .reduce((s, p) => s + (parseFloat(p.valor) || 0), 0);
+    const fat  = calc.reduce((s, r) => s + r.vendas, 0);
+    const desp = calc.reduce((s, r) => s + r.despesas, 0) + pagExt;
 
     meses.push({ label, fat, desp });
   }
