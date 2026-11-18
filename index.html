@@ -2552,6 +2552,79 @@ table { max-width: 100%; }
   .metrics-grid { grid-template-columns: 1fr 1fr !important; }
   .metric-value { font-size: clamp(14px, 5vw, 20px) !important; }
 }
+
+/* ============================================================
+   11) RESPONSIVIDADE GERAL — qualquer tamanho de tela
+   ------------------------------------------------------------
+   a) altura real da tela (dvh) em vez de 100vh
+   b) coluna principal nunca estica além da tela
+   c) filtros viram grade que quebra linha sozinha
+   d) menu "Mais opções" escondido de verdade quando fechado
+   ============================================================ */
+
+/* a) Usa a área realmente visível (barra do navegador / gestos do Android) */
+@supports (height: 100dvh) {
+  body, .app-shell { min-height: 100dvh; }
+  .sidebar { height: 100dvh; }
+}
+
+@media (max-width: 700px) {
+
+  /* b) "1fr" sozinho estica quando algum filho é largo; minmax(0,1fr) não */
+  .app-shell { grid-template-columns: minmax(0, 1fr); }
+  .main { min-width: 0; max-width: 100%; }
+  .card, .section { min-width: 0; }
+  select, input { max-width: 100%; text-overflow: ellipsis; }
+
+  /* c) Filtros: grade que se ajusta (1, 2 ou 3 colunas conforme a largura) */
+  .filter-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr));
+    gap: 10px;
+    align-items: end;
+  }
+  .filter-row .form-group {
+    min-width: 0; width: 100%; flex: none; margin: 0;
+  }
+  .filter-row input,
+  .filter-row select {
+    width: 100% !important; min-width: 0; box-sizing: border-box;
+  }
+  /* Busca, botões de modo e "Limpar" ocupam a linha toda */
+  .filter-row .form-group[style*="min-width:180px"],
+  .filter-row .form-group[style*="min-width:220px"],
+  .filter-row > .form-group.self-end,
+  #hist-filtro-periodo { grid-column: 1 / -1; }
+  #hist-filtro-periodo > .form-group { flex: 1; min-width: 0; }
+  .filter-row > .form-group.self-end > div[style*="display:flex"] > button { flex: 1; }
+  .filter-row > .form-group.self-end > .btn { width: 100%; }
+  .filter-row > .form-group.self-end > label { display: none; }
+
+  /* Cabeçalhos de página e linhas de botões quebram linha em vez de cortar */
+  .page-header { flex-wrap: wrap; }
+}
+
+/* d) Menu "Mais opções" (celular): fica fora da tela quando fechado,
+      encosta no rodapé quando aberto e nunca passa da altura visível */
+@media (max-width: 600px) {
+  .mobile-drawer {
+    bottom: 0;
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+    max-height: calc(100vh - 76px - env(safe-area-inset-top, 0px));
+    transform: translateY(calc(100% + 48px));
+    visibility: hidden;
+    transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1), visibility 0s linear 0.3s;
+  }
+  @supports (height: 100dvh) {
+    .mobile-drawer { max-height: calc(100dvh - 76px - env(safe-area-inset-top, 0px)); }
+  }
+  .mobile-drawer.open {
+    transform: translateY(0);
+    visibility: visible;
+    transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1), visibility 0s;
+  }
+  .mobile-drawer { overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+}
 </style>
 
 
