@@ -8334,6 +8334,9 @@ function _confirmarSalvarLancamento() {
     totalDesp,
     lucro: totalVendas - totalDesp,
   };
+  // Mantém o controle das comandas já lançadas neste dia (lançamento automático)
+  const _lancAnt = window._editandoLancId ? getData().find(d => String(d.id) === String(window._editandoLancId)) : null;
+  if (_lancAnt && Array.isArray(_lancAnt._cmdIds)) entry._cmdIds = _lancAnt._cmdIds.slice();
 
   const all = getData();
   console.log('[Lançamento] Antes de salvar — registros no cache:', all.length, '| loja:', _lojaAtiva, '| db:', !!db);
@@ -16913,6 +16916,7 @@ function cmdCriar() {
   if (!mesa) { showToast('Informe a mesa', false); return; }
   const dup = _cmdLista().find(c => c.status === 'aberta' && String(c.mesa).toLowerCase() === mesa.toLowerCase());
   if (dup) { showToast('A mesa ' + mesa + ' já tem uma comanda aberta', false); cmdAbrir(dup.id); return; }
+  if (!_cmdGarantirCaixaAberto(_cmdHoje())) return; // caixa fechado → reabre (admin) ou avisa
   const id = 'cmd_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
   const c = { id, mesa, pessoas, garcom, status: 'aberta', abertaEm: new Date().toISOString(), servicoPct: 10, desconto: 0 };
   // Põe no cache antes de gravar para o modal abrir já com a comanda (o listener do Firebase sobrescreve depois)
@@ -17138,7 +17142,7 @@ function cmdConfirmarPagamento() {
   if (pago + 0.001 < t.total) { showToast('O valor pago é menor que o total da conta', false); return; }
   if (troco > p.dinheiro + 0.001) { showToast('O troco só pode sair do valor pago em dinheiro', false); return; }
   const hoje = _cmdHoje();
-  if (typeof _bloquearSeCaixaFechado === 'function' && _bloquearSeCaixaFechado(hoje, 'fechar comanda')) return;
+  if (!_cmdGarantirCaixaAberto(hoje)) return;
   const pagamentos = {
     dinheiro: _cmdRound(Math.max(0, p.dinheiro - Math.max(0, troco))),
     pix: _cmdRound(p.pix),
@@ -17148,8 +17152,10 @@ function cmdConfirmarPagamento() {
     status: 'fechada', fechadaEm: new Date().toISOString(), data: hoje,
     total: t.total, subtotal: t.sub, servico: t.serv, desconto: t.desc,
     pagamentos, troco: Math.max(0, troco),
-  }).then(() => showToast('Conta da mesa ' + c.mesa + ' fechada: ' + fmt(t.total)))
-    .catch(e => { console.error(e); showToast('Erro ao fechar a conta', false); });
+  }).then(() => {
+    _cmdLancAplicar({ id: c.id, data: hoje, pagamentos }, +1); // lança no caixa do dia automaticamente
+    showToast('Conta da mesa ' + c.mesa + ' fechada: ' + fmt(t.total));
+  }).catch(e => { console.error(e); showToast('Erro ao fechar a conta', false); });
   cmdFecharModal();
 }
 
@@ -17170,9 +17176,94 @@ function cmdReabrir(id) {
   if (c.status === 'fechada' && typeof _bloquearSeCaixaFechado === 'function' && c.data && _bloquearSeCaixaFechado(c.data, 'reabrir comanda')) return;
   const dup = _cmdLista().find(x => x.id !== id && x.status === 'aberta' && String(x.mesa).toLowerCase() === String(c.mesa).toLowerCase());
   if (dup) { showToast('A mesa ' + c.mesa + ' já tem outra comanda aberta', false); return; }
+  const _antes = c.status === 'fechada' ? { id: c.id, data: c.data, pagamentos: c.pagamentos } : null;
   _cmdRef(id).update({ status: 'aberta', fechadaEm: null, data: null, pagamentos: null, troco: null, total: null, subtotal: null, servico: null, canceladaEm: null })
-    .then(() => { showToast('Comanda reaberta'); _cmdAbrirModal({ modo: 'comanda', id }); })
+    .then(() => { if (_antes) _cmdLancAplicar(_antes, -1); showToast('Comanda reaberta'); _cmdAbrirModal({ modo: 'comanda', id }); })
     .catch(e => { console.error(e); showToast('Erro ao reabrir', false); });
+}
+
+/* ───────── Caixa aberto + lançamento automático a partir das comandas ───────── */
+
+/**
+ * Garante que o caixa da data esteja aberto antes de mexer em comandas.
+ * Se estiver fechado: administrador → reabre automaticamente (fica na auditoria);
+ * demais usuários → avisa e não deixa seguir. Retorna true se pode continuar.
+ */
+function _cmdGarantirCaixaAberto(data) {
+  if (typeof _caixaEstaFechado !== 'function' || !_caixaEstaFechado(data)) return true;
+  const u = _usuarioAtualInfo();
+  if (!u.admin) {
+    showToast('O caixa de ' + _formatarDataBR(data) + ' está fechado. Peça a um administrador para reabrir.', false);
+    return false;
+  }
+  const key = _fcKey(data);
+  const marcar = st => (_cache.fechamentosCaixa || []).forEach(f => { if (String(f.data) === key) f.status = st; });
+  marcar('aberto'); // libera já; se a gravação falhar, volta para fechado
+  _dbRef('fechamentos_caixa/' + _lojaAtiva + '/' + key).update({
+    status: 'aberto', reabertoEm: new Date().toISOString(),
+    reabertoPorUid: u.uid, reabertoPorEmail: u.email, reabertoAutomatico: true
+  }).then(() => {
+    _registrarAuditoria('reabriu_caixa', data, { data, automatico: true, motivo: 'comanda' });
+    showToast('Caixa de ' + _formatarDataBR(data) + ' reaberto automaticamente.');
+    if (typeof renderFechamento === 'function' && document.getElementById('fc-data')) renderFechamento();
+    if (typeof _atualizarAvisoCaixaFechadoLancamento === 'function') _atualizarAvisoCaixaFechadoLancamento();
+  }).catch(err => {
+    marcar('fechado');
+    console.error(err);
+    showToast('Erro ao reabrir o caixa: ' + err.message, false);
+  });
+  return true;
+}
+
+/**
+ * Soma (sinal = +1) ou desfaz (sinal = -1) a venda de UMA comanda no lançamento do dia.
+ * - Se não existir lançamento nessa data, cria um automaticamente.
+ * - Guarda em _cmdIds quais comandas já entraram, para nunca contar duas vezes.
+ * - Valores digitados à mão no lançamento são preservados (só mexe na parte da comanda).
+ * cmd = { id, data, pagamentos: { dinheiro, pix, cartao } }
+ */
+function _cmdLancAplicar(cmd, sinal) {
+  if (!cmd || !cmd.id || !cmd.data || !_lojaAtiva) return;
+  const pg = cmd.pagamentos || {};
+  const val = { dinheiro: +pg.dinheiro || 0, pix: +pg.pix || 0, cartao: +pg.cartao || 0 };
+  const soma = val.dinheiro + val.pix + val.cartao;
+  const all = getData();
+  const doDia = all.filter(d => d.data === cmd.data);
+  let entry = doDia.find(d => Array.isArray(d._cmdIds)) || doDia[0] || null;
+  let criou = false;
+
+  if (sinal > 0) {
+    if (!entry) {
+      const nomeDia = CONFIG.DIAS_SEMANA[new Date(+cmd.data.slice(0, 4), +cmd.data.slice(5, 7) - 1, +cmd.data.slice(8, 10)).getDay()];
+      const vendas = {};
+      Object.keys(CONFIG.SALES_CHANNELS).forEach(k => { vendas[k] = 0; });
+      entry = {
+        id: 'lanc_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+        data: cmd.data, dia: nomeDia, vendas, itens: {}, funcItens: {}, _funcItensSource: 'funcItens',
+        totalVendas: 0, totalDesp: 0, lucro: 0, _cmdIds: [],
+      };
+      all.push(entry);
+      criou = true;
+    } else if (!Array.isArray(entry._cmdIds)) {
+      // Lançamento feito à mão antes deste recurso: as comandas que já estavam fechadas
+      // são consideradas já lançadas (evita contar em dobro quem usou "Puxar vendas").
+      entry._cmdIds = _cmdLista().filter(c => c.status === 'fechada' && c.data === cmd.data && c.id !== cmd.id).map(c => c.id);
+    }
+    if (entry._cmdIds.includes(cmd.id)) return;
+    entry._cmdIds.push(cmd.id);
+  } else {
+    if (!entry || !Array.isArray(entry._cmdIds) || !entry._cmdIds.includes(cmd.id)) return;
+    entry._cmdIds = entry._cmdIds.filter(id => id !== cmd.id);
+  }
+
+  entry.vendas = entry.vendas || {};
+  ['dinheiro', 'pix', 'cartao'].forEach(k => {
+    entry.vendas[k] = Math.max(0, _cmdRound((parseFloat(entry.vendas[k]) || 0) + sinal * val[k]));
+  });
+  entry.totalVendas = Math.max(0, _cmdRound((parseFloat(entry.totalVendas) || 0) + sinal * soma));
+  entry.lucro = _cmdRound(entry.totalVendas - (parseFloat(entry.totalDesp) || 0));
+  saveData(all);
+  if (criou) _registrarAuditoria('lancamento_automatico_comanda', cmd.data, { lancamentoId: entry.id, comandaId: cmd.id });
 }
 
 /* ───────── Integração com o Novo lançamento ───────── */
