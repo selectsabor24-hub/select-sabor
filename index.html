@@ -4645,6 +4645,15 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
         </div>
       </div>
 
+      <!-- Instalar aplicativo -->
+      <div class="card mw-520">
+        <div class="card-title">Instalar aplicativo</div>
+        <div class="txt-hint" style="margin-bottom:10px">Instale o Controle de Caixa neste computador ou celular para abrir como um aplicativo, com ícone próprio.</div>
+        <div class="form-actions">
+          <button class="btn btn-primary" onclick="_pwaInstall()">📲 Instalar neste aparelho</button>
+        </div>
+      </div>
+
       <!-- Criar novo usuário -->
       <div class="card mw-520">
         <div class="card-title">Criar novo usuário</div>
@@ -19479,44 +19488,9 @@ function _showStatusBar(user) {
     if (a152) a152.href = icon152;
     if (a120) a120.href = icon120;
 
-    // Monta manifest
-    const manifest = {
-      name:             'Controle de Caixa',
-      short_name:       'Caixa',
-      description:      'Controle financeiro diário das lojas',
-      start_url:        './',
-      display:          'standalone',
-      orientation:      'portrait-primary',
-      background_color: '#16181D',
-      theme_color:      '#16181D',
-      lang:             'pt-BR',
-      categories:       ['finance', 'business', 'productivity'],
-      icons: [
-        { src: icon192, sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
-        { src: icon512, sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
-      ],
-      shortcuts: [
-        {
-          name:       'Novo lançamento',
-          short_name: 'Lançar',
-          description:'Abrir formulário de lançamento do dia',
-          url:        './#lancamento',
-          icons:      [{ src: icon192, sizes: '192x192', type: 'image/png' }],
-        },
-        {
-          name:       'Dashboard',
-          short_name: 'Dashboard',
-          description:'Ver métricas do mês',
-          url:        './#dashboard',
-          icons:      [{ src: icon192, sizes: '192x192', type: 'image/png' }],
-        },
-      ],
-    };
-
-    const blob = new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' });
-    const url  = URL.createObjectURL(blob);
-    const link = document.getElementById('pwa-manifest');
-    if (link) link.href = url;
+    // O manifest agora vem do arquivo manifest.json (raiz do site).
+    // Não é mais trocado por um blob: isso garante a instalação no PC/Android
+    // e permite gerar o APK (PWABuilder lê o manifest.json publicado).
   }
 
   /* ── 3. SERVICE WORKER ──────────────────────────────────────
@@ -19692,9 +19666,18 @@ function _showStatusBar(user) {
       _deferredPrompt.userChoice.then(() => { _deferredPrompt = null; });
     } else if (window.matchMedia('(display-mode: standalone)').matches) {
       if (typeof showToast === 'function') showToast('App já está instalado!', true);
-    } else {
-      if (typeof showToast === 'function')
-        showToast('No iOS: toque em Compartilhar → "Adicionar à Tela de Início"', true);
+    } else if (typeof showModal === 'function') {
+      showModal('Instalar o aplicativo',
+        `<div style="font-size:14px;line-height:1.6">
+          <strong>💻 Computador (Chrome ou Edge)</strong><br>
+          Clique no ícone de instalar (monitor com seta) no canto direito da barra de endereço.
+          Se não aparecer: menu ⋮ → <em>Transmitir, salvar e compartilhar</em> → <em>Instalar página como app</em>.<br><br>
+          <strong>🤖 Android (Chrome)</strong><br>
+          Menu ⋮ → <em>Instalar app</em> (ou <em>Adicionar à tela inicial</em>).<br><br>
+          <strong>🍎 iPhone (Safari)</strong><br>
+          Toque em Compartilhar → <em>Adicionar à Tela de Início</em>.
+        </div>`,
+        [{ label: 'Entendi', style: 'primary' }]);
     }
   };
 
