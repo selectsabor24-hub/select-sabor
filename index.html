@@ -7750,6 +7750,7 @@ function buildLancForm() {
   // Canais de venda
   const vendasGrid = document.getElementById('form-vendas-grid');
   vendasGrid.innerHTML = Object.entries(CONFIG.SALES_CHANNELS)
+    .filter(([key]) => key !== 'restaurante') // campo "Restaurante" removido do formulário (o total já vem de Dinheiro + Pix + Cartão + iFood + 99Food)
     .map(([key, label]) => `
       <div class="form-group">
         <label>${label} (R$)</label>
@@ -10748,8 +10749,14 @@ function _dashRenderMetrics(t, labelSufixo) {
     _dashMetricCard({
       accent: '#EA1D2C',
       iconHtml: `<svg viewBox="0 0 40 40" width="28" height="28" xmlns="http://www.w3.org/2000/svg"><rect width="40" height="40" rx="10" fill="#EA1D2C"/><text x="20" y="26" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="13" fill="#fff" letter-spacing="-0.5">iFood</text></svg>`,
-      label: `Delivery ${labelSufixo}`, value: fmt(t.delivery),
-      subText: `iFood ${fmt(t.totIfood)} · 99Food ${fmt(t.tot99food)}`
+      label: `iFood ${labelSufixo}`, value: fmt(t.totIfood),
+      subText: `${pct(t.totIfood, t.faturamento)} do faturamento`
+    }) +
+    _dashMetricCard({
+      accent: '#F5A623',
+      iconHtml: `<svg viewBox="0 0 40 40" width="28" height="28" xmlns="http://www.w3.org/2000/svg"><rect width="40" height="40" rx="10" fill="#F5A623"/><text x="20" y="27" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="18" fill="#fff">99</text></svg>`,
+      label: `99Food ${labelSufixo}`, value: fmt(t.tot99food),
+      subText: `${pct(t.tot99food, t.faturamento)} do faturamento`
     }) +
     _dashMetricCard({
       accent: '#0E7490',
