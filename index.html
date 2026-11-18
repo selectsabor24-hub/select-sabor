@@ -3000,6 +3000,9 @@ tbody tr:hover {
 .cmd-card .cmd-mesa { font-size: 20px; font-weight: 800; line-height: 1.1; word-break: break-word; }
 .cmd-card .cmd-meta { font-size: 12px; color: var(--text3); margin-top: 4px; }
 .cmd-card .cmd-total { font-family: 'DM Mono', monospace; font-size: 15px; font-weight: 600; margin-top: 10px; }
+.cmd-ident { display:inline-flex; align-items:center; gap:5px; flex-wrap:wrap; margin-top:5px; }
+.cmd-ident .cmd-num  { font-family:'DM Mono',monospace; font-size:11px; font-weight:700; color:var(--accent); background:var(--accent-bg); border-radius:6px; padding:1px 7px; }
+.cmd-ident .cmd-vez  { font-size:11px; font-weight:700; color:#B45309; background:#FEF3C7; border-radius:6px; padding:1px 7px; }
 .cmd-modal-head { padding: 18px 22px 14px; border-bottom: 1px solid var(--border); display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
 .cmd-modal-body { padding: 16px 22px; }
 .cmd-modal-foot { padding: 14px 22px 18px; border-top: 1px solid var(--border); display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap; }
@@ -16616,6 +16619,36 @@ function _cmdRotulo(c) {
   const m = String((c && c.mesa) || '');
   return /^\d+$/.test(m) ? 'Mesa ' + m : m;
 }
+/* Identificação de cada atendimento (mesas rotativas): nº da comanda no dia + "Nº atendimento" da mesa */
+function _cmdDiaAbertura(c) {
+  const d = new Date((c && c.abertaEm) || '');
+  if (isNaN(d)) return (c && c.data) || '';
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+function _cmdIdent(c) {
+  const dia = _cmdDiaAbertura(c);
+  const doDia = _cmdLista().filter(x => _cmdDiaAbertura(x) === dia)
+    .sort((a, b) => String(a.abertaEm).localeCompare(String(b.abertaEm)) || String(a.id).localeCompare(String(b.id)));
+  const chave = String(c.mesa || '').trim().toLowerCase();
+  const daMesa = doDia.filter(x => x.status !== 'cancelada' && String(x.mesa || '').trim().toLowerCase() === chave);
+  return {
+    num: doDia.findIndex(x => x.id === c.id) + 1,   // posição da comanda no dia
+    vez: daMesa.findIndex(x => x.id === c.id) + 1,  // quantas vezes essa mesa já foi atendida (0 = cancelada)
+    vezes: daMesa.length,
+  };
+}
+/** Selos "#7" e "2º atendimento" (este só aparece quando a mesma mesa teve mais de um atendimento no dia). */
+function _cmdIdentHtml(c) {
+  const i = _cmdIdent(c);
+  if (!i.num) return '';
+  return `<span class="cmd-ident"><span class="cmd-num" title="Número da comanda no dia">#${i.num}</span>` +
+    (i.vezes > 1 && i.vez > 0 ? `<span class="cmd-vez" title="Esta mesa teve ${i.vezes} atendimentos hoje">${i.vez}º atendimento</span>` : '') + `</span>`;
+}
+function _cmdIdentTexto(c) {
+  const i = _cmdIdent(c);
+  if (!i.num) return '';
+  return '#' + i.num + (i.vezes > 1 && i.vez > 0 ? ' · ' + i.vez + 'º atendimento' : '');
+}
 function _cmdSemLoja() {
   if (!_lojaAtiva) { showToast('Aguarde o carregamento do restaurante', false); return true; }
   return false;
@@ -16670,6 +16703,7 @@ function _cmdHtmlAbertas(abertas) {
     const nItens = _cmdItens(c).reduce((s, i) => s + (parseInt(i.qtd) || 0), 0);
     return `<button class="cmd-card${min >= 90 ? ' demora' : ''}" onclick="cmdAbrir('${c.id}')">
       <div class="cmd-mesa">${escapeHtml(_cmdRotulo(c))}</div>
+      <div>${_cmdIdentHtml(c)}</div>
       <div class="cmd-meta">${c.pessoas ? escapeHtml(c.pessoas) + ' pessoa(s) · ' : ''}${nItens} item(ns)</div>
       <div class="cmd-meta">${c.garcom ? escapeHtml(c.garcom) + ' · ' : ''}há ${_cmdDuracao(min)}</div>
       <div class="cmd-total">${fmt(t.total)}</div>
@@ -16692,10 +16726,10 @@ function _cmdHtmlFechadas(fech) {
   }
   const ord = fech.slice().sort((a, b) => String(b.fechadaEm).localeCompare(String(a.fechadaEm)));
   return `<div class="card"><div style="overflow-x:auto"><table class="cmd-itens">
-    <thead><tr><th>Hora</th><th>Mesa</th><th>Pagamento</th><th class="num">Total</th><th></th></tr></thead><tbody>` +
+    <thead><tr><th>Hora</th><th>Mesa / Atendimento</th><th>Pagamento</th><th class="num">Total</th><th></th></tr></thead><tbody>` +
     ord.map(c => `<tr>
-      <td>${_cmdHora(c.fechadaEm)}</td>
-      <td><strong>${escapeHtml(c.mesa)}</strong></td>
+      <td style="white-space:nowrap">${_cmdHora(c.abertaEm)} → ${_cmdHora(c.fechadaEm)}</td>
+      <td><strong>${escapeHtml(_cmdRotulo(c))}</strong><div>${_cmdIdentHtml(c)}</div></td>
       <td style="font-size:12px;color:var(--text2)">${escapeHtml(_cmdFormaTexto(c.pagamentos))}</td>
       <td class="num">${fmt(parseFloat(c.total) || 0)}</td>
       <td style="text-align:right;white-space:nowrap">
@@ -17005,6 +17039,7 @@ function _cmdHtmlModalComanda(c) {
 
   return `<div class="cmd-modal-head">
       <div><div style="font-size:20px;font-weight:800">${escapeHtml(_cmdRotulo(c))}${status}</div>
+        <div>${_cmdIdentHtml(c)}</div>
         <div style="font-size:12px;color:var(--text3);margin-top:3px">${c.pessoas ? escapeHtml(c.pessoas) + ' pessoa(s) · ' : ''}${c.garcom ? escapeHtml(c.garcom) + ' · ' : ''}aberta às ${_cmdHora(c.abertaEm)}</div></div>
       <button class="cmd-x" onclick="cmdFecharModal()" title="Fechar">×</button></div>
     <div class="cmd-modal-body">
@@ -17105,6 +17140,7 @@ function _cmdHtmlModalPagar(c) {
       <button class="btn btn-secondary" style="padding:6px 10px;font-size:12px" onclick="cmdCompletar('${k}')">Restante</button>
     </div>`;
   return `<div class="cmd-modal-head"><div><div style="font-size:20px;font-weight:800">Fechar conta — ${escapeHtml(_cmdRotulo(c))}</div>
+      <div>${_cmdIdentHtml(c)}</div>
       <div style="font-size:12px;color:var(--text3);margin-top:3px">Informe como o cliente pagou</div></div>
       <button class="cmd-x" onclick="cmdFecharModal()" title="Fechar">×</button></div>
     <div class="cmd-modal-body">
@@ -17165,7 +17201,7 @@ function cmdConfirmarPagamento() {
     pagamentos, troco: Math.max(0, troco),
   }).then(() => {
     _cmdLancAplicar({ id: c.id, data: hoje, pagamentos }, +1); // lança no caixa do dia automaticamente
-    showToast('Conta da mesa ' + c.mesa + ' fechada: ' + fmt(t.total));
+    showToast('Conta da mesa ' + c.mesa + ' (' + _cmdIdentTexto(c) + ') fechada: ' + fmt(t.total));
   }).catch(e => { console.error(e); showToast('Erro ao fechar a conta', false); });
   cmdFecharModal();
 }
