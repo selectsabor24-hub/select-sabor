@@ -6134,8 +6134,19 @@ function _lancamentoResumoAuditoria(d) {
 
 function _resumoLancamentosDia(data) {
   const lista = (getData() || []).filter(d => d.data === data);
-  const totalVendas = lista.reduce((s,d) => s + (parseFloat(d.totalVendas) || 0), 0);
-  const totalDesp = lista.reduce((s,d) => s + (parseFloat(d.totalDesp) || 0), 0);
+  // Mesma conta do Dashboard/Relatório:
+  //   Vendas   = soma dos canais de venda
+  //   Despesas = fornecedores + compras + funcionários + sócio/restaurante/outra loja/empréstimo
+  const fornList = getForn();
+  const idsPag = _dashIdsComPagFunc();
+  let totalVendas = 0, totalDesp = 0;
+  lista.forEach(d => {
+    const r = _dashCalcDia(d, fornList, idsPag);
+    totalVendas += r.vendas;
+    totalDesp += r.despesas;
+  });
+  // Pagamentos de funcionários lançados fora do caixa (tela Funcionários) nesta data
+  totalDesp += (_cache.pagamentosFunc || []).filter(p => p.data === data).reduce((s, p) => s + (parseFloat(p.valor) || 0), 0);
   return { lista, qtd: lista.length, totalVendas, totalDesp, lucro: totalVendas - totalDesp };
 }
 
@@ -6187,12 +6198,12 @@ function renderFechamento() {
         <div class="metric-card" style="border-left:3.5px solid var(--green-mid)">
           <div class="metric-label">Vendas</div>
           <div class="metric-value" style="color:var(--green-mid)">${fmt(resumo.totalVendas)}</div>
-          <div class="txt-hint txt-xs mt4">Total de entradas</div>
+          <div class="txt-hint txt-xs mt4">Total de vendas do dia</div>
         </div>
         <div class="metric-card" style="border-left:3.5px solid var(--red-mid)">
           <div class="metric-label">Despesas</div>
           <div class="metric-value" style="color:var(--red-mid)">${fmt(resumo.totalDesp)}</div>
-          <div class="txt-hint txt-xs mt4">Total de saídas</div>
+          <div class="txt-hint txt-xs mt4">Fornecedores, compras, funcionários e outras saídas</div>
         </div>
         <div class="metric-card" style="border-left:3.5px solid ${resumo.lucro >= 0 ? 'var(--green-mid)' : 'var(--red-mid)'}">
           <div class="metric-label">Lucro</div>
