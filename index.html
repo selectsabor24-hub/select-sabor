@@ -10761,7 +10761,7 @@ function _dashRenderMetrics(t, labelSufixo) {
     _dashMetricCard({
       accent: '#0E7490',
       iconHtml: `<svg viewBox="0 0 40 40" width="28" height="28" xmlns="http://www.w3.org/2000/svg"><rect width="40" height="40" rx="10" fill="#0E7490"/><path d="M12 28 Q14 18 20 16 Q26 18 28 28" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/><path d="M16 28 Q17 22 20 21 Q23 22 24 28" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/><line x1="12" y1="28" x2="28" y2="28" stroke="#fff" stroke-width="2" stroke-linecap="round"/><line x1="20" y1="16" x2="20" y2="13" stroke="#fff" stroke-width="2" stroke-linecap="round"/><circle cx="20" cy="12" r="1.5" fill="#fff"/></svg>`,
-      label: `Salão e balcão ${labelSufixo}`, value: fmt(t.salaoBalcao), valueClass: 'teal',
+      label: `Restaurante ${labelSufixo}`, value: fmt(t.salaoBalcao), valueClass: 'teal',
       subText: `Dinheiro, Pix, Cartão e Restaurante · ${pct(t.salaoBalcao, t.faturamento)} do faturamento`
     }) +
     _dashMetricCard({
