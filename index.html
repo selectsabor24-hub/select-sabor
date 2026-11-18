@@ -1033,6 +1033,18 @@ body.is-offline #login-screen {
   margin-top: 1.5rem;
   flex-wrap: wrap;
 }
+
+/* Cardápio — linhas de formulário alinhadas (Novo item / Nova categoria) */
+.cdp-row { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+.cdp-row .cdp-f-nome  { flex: 2 1 240px; min-width: 0; }
+.cdp-row .cdp-f-preco { flex: 0 1 150px; min-width: 120px; }
+.cdp-row .cdp-f-cat   { flex: 1 1 190px; min-width: 0; }
+.cdp-row .cdp-f-cadcat{ flex: 1 1 260px; max-width: 420px; min-width: 0; }
+.cdp-row .btn { white-space: nowrap; }
+@media (max-width: 600px) {
+  .cdp-row .cdp-f-preco { flex: 1 1 100%; }
+  .cdp-row .btn { width: 100%; justify-content: center; }
+}
 .totais-bar {
   margin-left: auto;
   display: flex;
@@ -16700,12 +16712,12 @@ function renderCardapio() {
 
   let html = `<div class="card mb-5">
       <div class="card-title">Categorias</div>
-      <div class="cmd-chips" style="max-height:none;margin:0 0 12px">${cats.map(c => {
+      <div class="cmd-chips" style="max-height:none;margin:0 0 16px">${cats.map(c => {
         const custom = _cdpCatsCustom().find(x => String(x.nome).toLowerCase() === c.toLowerCase());
         return `<span class="cmd-chip" style="cursor:default">${escapeHtml(c)}${custom ? `<button class="cmd-x" style="margin-left:8px;width:20px;height:20px;font-size:13px" title="Remover categoria" onclick="cdpCatDel('${custom.id}')">×</button>` : ''}</span>`;
       }).join('')}</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-        <input id="cdp-cat-nova" type="text" placeholder="Nova categoria (ex: Entradas)" maxlength="30" style="flex:1;min-width:180px;max-width:320px" onkeydown="if(event.key==='Enter')cdpCatAdd()">
+      <div class="cdp-row">
+        <div class="form-group cdp-f-cadcat"><label>Nova categoria</label><input id="cdp-cat-nova" type="text" placeholder="Ex: Entradas" maxlength="30" onkeydown="if(event.key==='Enter')cdpCatAdd()"></div>
         <button class="btn btn-secondary" onclick="cdpCatAdd()">+ Cadastrar categoria</button>
       </div>
     </div>
@@ -16715,12 +16727,12 @@ function renderCardapio() {
     </div>
     <div class="card mb-5">
       <div class="card-title">Novo item do cardápio</div>
-      <div class="form-grid">
-        <div class="form-group minw-200"><label>Nome</label><input id="cdp-nome" type="text" placeholder="Ex: Prato feito" maxlength="60" onkeydown="if(event.key==='Enter')cmdCardapioAdd()"></div>
-        <div class="form-group"><label>Preço (R$)</label><input id="cdp-preco" type="number" step="0.01" min="0" placeholder="0,00" onkeydown="if(event.key==='Enter')cmdCardapioAdd()"></div>
-        <div class="form-group"><label>Categoria</label><select id="cdp-cat" onchange="_cdpCatSel=this.value">${opts}</select></div>
+      <div class="cdp-row">
+        <div class="form-group cdp-f-nome"><label>Nome</label><input id="cdp-nome" type="text" placeholder="Ex: Prato feito" maxlength="60" onkeydown="if(event.key==='Enter')cmdCardapioAdd()"></div>
+        <div class="form-group cdp-f-preco"><label>Preço (R$)</label><input id="cdp-preco" type="number" step="0.01" min="0" placeholder="0,00" onkeydown="if(event.key==='Enter')cmdCardapioAdd()"></div>
+        <div class="form-group cdp-f-cat"><label>Categoria</label><select id="cdp-cat" onchange="_cdpCatSel=this.value">${opts}</select></div>
+        <button class="btn btn-primary" onclick="cmdCardapioAdd()">Adicionar ao cardápio</button>
       </div>
-      <div class="form-actions"><button class="btn btn-primary" onclick="cmdCardapioAdd()">Adicionar ao cardápio</button></div>
     </div>`;
 
   if (!itens.length) {
