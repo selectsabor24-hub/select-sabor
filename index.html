@@ -834,6 +834,13 @@ body.is-offline #login-screen {
 .section-sep.sep-dados         { background:#FEF9C3; border-left-color:#CA8A04; color:#713F12; }
 
 /* ---- Total por categoria no formulário de lançamento ---- */
+.cat-acoes { display:inline-flex; gap:6px; flex-shrink:0; }
+.cat-acoes button, .cat-restaurar {
+  padding:3px 9px; border:1px solid rgba(0,0,0,.18); border-radius:6px; background:rgba(255,255,255,.65);
+  color:inherit; font-family:'DM Sans',sans-serif; font-size:11px; font-weight:600; cursor:pointer; text-transform:none; letter-spacing:0;
+}
+.cat-acoes button:hover, .cat-restaurar:hover { background:#fff; }
+[data-theme="dark"] .cat-acoes button, [data-theme="dark"] .cat-restaurar { background:rgba(255,255,255,.08); border-color:rgba(255,255,255,.25); }
 .cat-total-row {
   display: none;
   justify-content: flex-end;
@@ -3486,11 +3493,11 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
           <div class="form-group">
             <label>Categoria</label>
             <select id="forn-cat">
-              <option value="fornecedor">Fornecedor</option>
-              <option value="compra">Compra Diversa</option>
-              <option value="socio">Conta paga pelo(a) sócio(a)</option>
-              <option value="restaurante">Conta do Restaurante</option>
-              <option value="emprestimo">Empréstimo para Aluguel</option>
+              <option value="fornecedor" data-cat-nome="fornecedor">Fornecedor</option>
+              <option value="compra" data-cat-nome="compra">Compra Diversa</option>
+              <option value="socio" data-cat-nome="socio">Conta paga pelo(a) sócio(a)</option>
+              <option value="restaurante" data-cat-nome="restaurante">Conta do Restaurante</option>
+              <option value="emprestimo" data-cat-nome="emprestimo">Empréstimo para Aluguel</option>
             </select>
           </div>
           <div class="self-end">
@@ -3500,38 +3507,81 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
           </div>
         </div>
 
+        <!-- Categorias excluídas (com opção de restaurar) -->
+        <div id="cat-ocultas-bar" style="display:none;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px;font-size:12px;color:var(--text2)"></div>
+
         <!-- Barra de ação em massa -->
         <div id="forn-massa-bar" style="display:none;align-items:center;gap:10px;flex-wrap:wrap;background:var(--blue-bg);border:1px solid #BDD5F0;border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:12px">
           <span id="forn-massa-count" style="font-size:13px;font-weight:600;color:var(--blue)">0 selecionados</span>
           <span class="txt-muted txt-sm">→ mover para:</span>
           <select id="forn-massa-cat" style="padding:5px 10px;border:1px solid var(--border2);border-radius:var(--radius-sm);font-family:'DM Sans',sans-serif;font-size:13px;background:var(--surface);color:var(--text)">
-            <option value="fornecedor">Fornecedor</option>
-            <option value="compra">Compra Diversa</option>
-            <option value="socio">Conta paga pelo(a) sócio(a)</option>
-            <option value="restaurante">Conta do Restaurante</option>
-            <option value="emprestimo">Empréstimo para Aluguel</option>
+            <option value="fornecedor" data-cat-nome="fornecedor">Fornecedor</option>
+            <option value="compra" data-cat-nome="compra">Compra Diversa</option>
+            <option value="socio" data-cat-nome="socio">Conta paga pelo(a) sócio(a)</option>
+            <option value="restaurante" data-cat-nome="restaurante">Conta do Restaurante</option>
+            <option value="emprestimo" data-cat-nome="emprestimo">Empréstimo para Aluguel</option>
           </select>
           <button onclick="moverFornSelecionados()" style="padding:5px 14px;background:var(--blue-mid);color:#fff;border:none;border-radius:var(--radius-sm);cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500">Mover</button>
           <button onclick="limparSelecaoForn()" style="padding:5px 12px;background:transparent;color:var(--text2);border:1px solid var(--border2);border-radius:var(--radius-sm);cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px">Cancelar</button>
         </div>
 
-        <div class="section-sep sep-fornecedores">Fornecedores</div>
-        <div id="grid-fornecedor" class="supplier-grid"></div>
+        <div data-cat-oculta="fornecedor">
+          <div class="section-sep sep-fornecedores" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+            <span data-cat-nome="fornecedor">Fornecedores</span>
+            <span class="cat-acoes">
+              <button type="button" onclick="catEditar('fornecedor')" title="Editar o nome da categoria">✏️ Editar</button>
+              <button type="button" onclick="catExcluir('fornecedor')" title="Excluir categoria">🗑 Excluir</button>
+            </span>
+          </div>
+          <div id="grid-fornecedor" class="supplier-grid"></div>
+        </div>
 
-        <div class="section-sep sep-compras mt-8">Compras Diversas</div>
-        <div id="grid-compra" class="supplier-grid"></div>
+        <div data-cat-oculta="compra">
+          <div class="section-sep sep-compras mt-8" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+            <span data-cat-nome="compra">Compras Diversas</span>
+            <span class="cat-acoes">
+              <button type="button" onclick="catEditar('compra')" title="Editar o nome da categoria">✏️ Editar</button>
+              <button type="button" onclick="catExcluir('compra')" title="Excluir categoria">🗑 Excluir</button>
+            </span>
+          </div>
+          <div id="grid-compra" class="supplier-grid"></div>
+        </div>
 
-        <div class="section-sep sep-socio mt-8">Contas Pagas pelo(a) Sócio(a)</div>
-        <div id="grid-socio" class="supplier-grid"></div>
+        <div data-cat-oculta="socio">
+          <div class="section-sep sep-socio mt-8" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+            <span data-cat-nome="socio">Contas Pagas pelo(a) Sócio(a)</span>
+            <span class="cat-acoes">
+              <button type="button" onclick="catEditar('socio')" title="Editar o nome da categoria">✏️ Editar</button>
+              <button type="button" onclick="catExcluir('socio')" title="Excluir categoria">🗑 Excluir</button>
+            </span>
+          </div>
+          <div id="grid-socio" class="supplier-grid"></div>
+        </div>
 
-        <div class="section-sep sep-restaurante mt-8">Contas do Restaurante</div>
-        <div id="grid-restaurante" class="supplier-grid"></div>
+        <div data-cat-oculta="restaurante">
+          <div class="section-sep sep-restaurante mt-8" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+            <span data-cat-nome="restaurante">Contas do Restaurante</span>
+            <span class="cat-acoes">
+              <button type="button" onclick="catEditar('restaurante')" title="Editar o nome da categoria">✏️ Editar</button>
+              <button type="button" onclick="catExcluir('restaurante')" title="Excluir categoria">🗑 Excluir</button>
+            </span>
+          </div>
+          <div id="grid-restaurante" class="supplier-grid"></div>
+        </div>
 
         <div class="section-sep sep-outra-loja mt-8" id="sep-outra_loja" style="display:none">Contas Pagas para Outra Loja</div>
         <div id="grid-outra_loja" class="supplier-grid" style="display:none"></div>
 
-        <div class="section-sep sep-emprestimo mt-8">Empréstimo para Aluguel</div>
-        <div id="grid-emprestimo" class="supplier-grid"></div>
+        <div data-cat-oculta="emprestimo">
+          <div class="section-sep sep-emprestimo mt-8" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+            <span data-cat-nome="emprestimo">Empréstimo para Aluguel</span>
+            <span class="cat-acoes">
+              <button type="button" onclick="catEditar('emprestimo')" title="Editar o nome da categoria">✏️ Editar</button>
+              <button type="button" onclick="catExcluir('emprestimo')" title="Excluir categoria">🗑 Excluir</button>
+            </span>
+          </div>
+          <div id="grid-emprestimo" class="supplier-grid"></div>
+        </div>
       </div>
     </div>
 
@@ -3622,24 +3672,32 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
         </div>
 
         <!-- Fornecedores (gerado dinamicamente) -->
-        <div class="section-sep sep-fornecedores">Fornecedores</div>
+        <div data-cat-oculta="fornecedor">
+        <div class="section-sep sep-fornecedores" data-cat-nome="fornecedor">Fornecedores</div>
         <div class="form-grid" id="form-forn-grid"></div>
         <div class="cat-total-row" id="cat-total-fornecedor"></div>
+        </div>
 
         <!-- Compras diversas (gerado dinamicamente) -->
-        <div class="section-sep sep-compras">Compras Diversas</div>
+        <div data-cat-oculta="compra">
+        <div class="section-sep sep-compras" data-cat-nome="compra">Compras Diversas</div>
         <div class="form-grid" id="form-comp-grid"></div>
         <div class="cat-total-row" id="cat-total-compra"></div>
+        </div>
 
         <!-- Contas pagas pelo(a) sócio(a) -->
-        <div class="section-sep sep-socio">Contas Pagas pelo(a) Sócio(a)</div>
+        <div data-cat-oculta="socio">
+        <div class="section-sep sep-socio" data-cat-nome="socio">Contas Pagas pelo(a) Sócio(a)</div>
         <div class="form-grid" id="form-socio-grid"></div>
         <div class="cat-total-row" id="cat-total-socio"></div>
+        </div>
 
         <!-- Contas do Restaurante -->
-        <div class="section-sep sep-restaurante">Contas do Restaurante</div>
+        <div data-cat-oculta="restaurante">
+        <div class="section-sep sep-restaurante" data-cat-nome="restaurante">Contas do Restaurante</div>
         <div class="form-grid" id="form-restaurante-grid"></div>
         <div class="cat-total-row" id="cat-total-restaurante"></div>
+        </div>
 
         <!-- Contas pagas para outra loja -->
         <div id="lanc-outra-loja-wrap" style="display:none">
@@ -3649,9 +3707,11 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
         </div>
 
         <!-- Empréstimo para Aluguel -->
-        <div class="section-sep sep-emprestimo">Empréstimo para Aluguel</div>
+        <div data-cat-oculta="emprestimo">
+        <div class="section-sep sep-emprestimo" data-cat-nome="emprestimo">Empréstimo para Aluguel</div>
         <div class="form-grid" id="form-emprestimo-grid"></div>
         <div class="cat-total-row" id="cat-total-emprestimo"></div>
+        </div>
 
         <!-- Pagamento de Funcionário (passagem / adiantamento) -->
         <div class="section-sep sep-pagamento">Pagamento de Funcionário</div>
@@ -3942,12 +4002,12 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
       <!-- Abas: Todos / categorias / Comparar -->
       <div class="gastos-tabs" id="gastos-tabs-bar">
         <button class="gastos-tab active"     onclick="filtrarGastosCat('todos', this)">Todos</button>
-        <button class="gastos-tab fornecedor" onclick="filtrarGastosCat('fornecedor', this)">Fornecedores</button>
-        <button class="gastos-tab compra"     onclick="filtrarGastosCat('compra', this)">Compras Diversas</button>
-        <button class="gastos-tab fornecedor" onclick="filtrarGastosCat('socio', this)">Sócio(a)</button>
-        <button class="gastos-tab compra"     onclick="filtrarGastosCat('restaurante', this)">Restaurante</button>
-        <button class="gastos-tab fornecedor" onclick="filtrarGastosCat('outra_loja', this)">Outra Loja</button>
-        <button class="gastos-tab compra"     onclick="filtrarGastosCat('emprestimo', this)">Empréstimo</button>
+        <button class="gastos-tab fornecedor" onclick="filtrarGastosCat('fornecedor', this)" data-cat-nome="fornecedor">Fornecedores</button>
+        <button class="gastos-tab compra"     onclick="filtrarGastosCat('compra', this)" data-cat-nome="compra">Compras Diversas</button>
+        <button class="gastos-tab fornecedor" onclick="filtrarGastosCat('socio', this)" data-cat-nome="socio">Sócio(a)</button>
+        <button class="gastos-tab compra"     onclick="filtrarGastosCat('restaurante', this)" data-cat-nome="restaurante">Restaurante</button>
+        <button class="gastos-tab fornecedor" onclick="filtrarGastosCat('outra_loja', this)" data-cat-nome="outra_loja">Outra Loja</button>
+        <button class="gastos-tab compra"     onclick="filtrarGastosCat('emprestimo', this)" data-cat-nome="emprestimo">Empréstimo</button>
         <button class="gastos-tab" id="gastos-tab-comparar" onclick="gastosAbrirComparacao(this)" style="margin-left:auto;border-left:1.5px solid var(--border2);padding-left:14px;color:var(--accent);font-weight:700">⇄ Comparar meses</button>
       </div>
 
@@ -4028,12 +4088,12 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
             <label>Categoria</label>
             <select id="comp-cat" onchange="renderComparacao()" class="input-base">
               <option value="todos">Todas</option>
-              <option value="fornecedor">Fornecedores</option>
-              <option value="compra">Compras Diversas</option>
-              <option value="socio">Sócio(a)</option>
-              <option value="restaurante">Restaurante</option>
-              <option value="outra_loja">Outra Loja</option>
-              <option value="emprestimo">Empréstimo</option>
+              <option value="fornecedor" data-cat-nome="fornecedor">Fornecedores</option>
+              <option value="compra" data-cat-nome="compra">Compras Diversas</option>
+              <option value="socio" data-cat-nome="socio">Sócio(a)</option>
+              <option value="restaurante" data-cat-nome="restaurante">Restaurante</option>
+              <option value="outra_loja" data-cat-nome="outra_loja">Outra Loja</option>
+              <option value="emprestimo" data-cat-nome="emprestimo">Empréstimo</option>
             </select>
           </div>
           <div class="form-group" style="min-width:150px">
@@ -5435,6 +5495,15 @@ function initRealtimeSync() {
     _refreshCurrentSection();
   });
   _listenersGlobais.push(refForn);
+
+  // Categorias de fornecedor: nomes personalizados e categorias excluídas (compartilhado)
+  const refCatCfg = _dbRef('categorias_forn');
+  refCatCfg.on('value', snap => {
+    _cache.catCfg = snap.val() || {};
+    aplicarNomesCategorias();
+    _refreshCurrentSection();
+  });
+  _listenersGlobais.push(refCatCfg);
 
   // Movimentações entre lojas
   const refLojas = _dbRef('lojas');
@@ -7800,6 +7869,140 @@ function buildYearSelects() {
    3.7 FORNECEDORES — CRUD e renderização
    ============================================================ */
 
+/* ============================================================
+   CATEGORIAS DE FORNECEDOR — editar nome / excluir (ocultar)
+   ------------------------------------------------------------
+   As categorias têm função fixa nos cálculos (ex.: fornecedor e compra
+   entram na entrada do caixa), por isso "excluir" apenas OCULTA a
+   categoria — e só se ela estiver vazia. Lançamentos antigos e relatórios
+   não são alterados. A configuração fica em caixa/categorias_forn.
+   ============================================================ */
+const CAT_PADRAO = {
+  fornecedor:  'Fornecedores',
+  compra:      'Compras Diversas',
+  socio:       'Contas Pagas pelo(a) Sócio(a)',
+  restaurante: 'Contas do Restaurante',
+  outra_loja:  'Contas Pagas para Outra Loja',
+  emprestimo:  'Empréstimo para Aluguel',
+};
+let _catLabelOrig = null;
+
+function _catCfg(cat) { return ((_cache.catCfg || {})[cat]) || {}; }
+function _catNome(cat, padrao) {
+  const n = String(_catCfg(cat).nome || '').trim();
+  return n || padrao || CAT_PADRAO[cat] || cat;
+}
+function _catOculta(cat) { return !!_catCfg(cat).oculta; }
+
+/** Aplica nomes e visibilidade das categorias em todo o HTML marcado (data-cat-nome / data-cat-oculta). */
+function aplicarNomesCategorias() {
+  if (!_catLabelOrig) _catLabelOrig = Object.assign({}, CATS_LABEL);
+  Object.keys(_catLabelOrig).forEach(cat => {
+    const n = String(_catCfg(cat).nome || '').trim();
+    CATS_LABEL[cat] = n || _catLabelOrig[cat];
+  });
+  document.querySelectorAll('[data-cat-nome]').forEach(el => {
+    if (el.dataset.catPad === undefined) el.dataset.catPad = el.textContent;
+    const n = String(_catCfg(el.dataset.catNome).nome || '').trim();
+    el.textContent = n || el.dataset.catPad;
+  });
+  document.querySelectorAll('[data-cat-oculta]').forEach(el => {
+    el.style.display = _catOculta(el.dataset.catOculta) ? 'none' : '';
+  });
+  ['forn-cat', 'forn-massa-cat'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    Array.from(sel.options).forEach(o => { const oc = _catOculta(o.value); o.hidden = oc; o.disabled = oc; });
+    if (sel.selectedOptions[0] && sel.selectedOptions[0].disabled) {
+      const ok = Array.from(sel.options).find(o => !o.disabled);
+      if (ok) sel.value = ok.value;
+    }
+  });
+  _catRenderOcultas();
+}
+
+function _catRenderOcultas() {
+  const bar = document.getElementById('cat-ocultas-bar');
+  if (!bar) return;
+  const ocultas = Object.keys(CAT_PADRAO).filter(c => c !== 'outra_loja' && _catOculta(c));
+  if (!ocultas.length) { bar.style.display = 'none'; bar.innerHTML = ''; return; }
+  bar.style.display = 'flex';
+  bar.innerHTML = '<span>Categorias excluídas:</span>' + ocultas.map(c =>
+    `<button type="button" class="cat-restaurar" onclick="catRestaurar('${c}')">↩ Restaurar “${escapeHtml(_catNome(c))}”</button>`).join('');
+}
+
+/** Opções do select de categoria no card do fornecedor (sem as categorias excluídas). */
+function _catOptionsHtml(sel) {
+  const lista = [['fornecedor', 'Fornecedor'], ['compra', 'Compra Diversa'], ['socio', 'Conta paga pelo(a) sócio(a)'],
+                 ['restaurante', 'Conta do Restaurante'], ['emprestimo', 'Empréstimo para Aluguel']];
+  let h = lista.filter(([c]) => !_catOculta(c) || c === sel)
+    .map(([c, pad]) => `<option value="${c}"${sel === c ? ' selected' : ''}>${escapeHtml(_catNome(c, pad))}</option>`).join('');
+  if (sel === 'outra_loja') h += '<option value="outra_loja" selected>Outra Loja</option>';
+  return h;
+}
+
+function _catSalvar(cat, patch) {
+  if (!db) { showToast('❌ Sem conexão com o servidor. Alteração NÃO salva.', false); return; }
+  const anterior = _cache.catCfg;
+  const cfg = JSON.parse(JSON.stringify(anterior || {}));
+  const atual = Object.assign({}, cfg[cat] || {}, patch);
+  if (!String(atual.nome || '').trim()) delete atual.nome;
+  if (!atual.oculta) delete atual.oculta;
+  if (Object.keys(atual).length) cfg[cat] = atual; else delete cfg[cat];
+  _cache.catCfg = cfg;
+  aplicarNomesCategorias();
+  _refreshCurrentSection();
+  _syncIndicator('saving');
+  _dbRef('categorias_forn').set(Object.keys(cfg).length ? cfg : null)
+    .then(() => { _syncIndicator('saved'); showToast('Categoria atualizada!'); })
+    .catch(err => {
+      _cache.catCfg = anterior;
+      aplicarNomesCategorias();
+      _refreshCurrentSection();
+      _syncIndicator('error');
+      showToast(err && err.code === 'PERMISSION_DENIED'
+        ? 'Sem permissão para salvar categorias. Publique as regras atualizadas do Firebase (firebase/firebase-database.rules.json).'
+        : 'Erro ao salvar categoria: ' + (err && err.message), false);
+    });
+}
+
+function catEditar(cat) {
+  const atual = String(_catCfg(cat).nome || '').trim() || CAT_PADRAO[cat];
+  showModal('Editar categoria',
+    `<div class="txt-hint mb4">Nome da categoria</div>
+     <input id="cat-edit-nome" type="text" maxlength="40" value="${escapeAttr(atual)}" style="width:100%;padding:8px 10px;border:1px solid var(--border2);border-radius:var(--radius-sm);font-family:'DM Sans',sans-serif;font-size:14px">
+     <div class="txt-hint" style="margin-top:8px">O novo nome vale em todo o sistema (fornecedores, lançamentos e relatórios). Apague o texto para voltar ao nome original.</div>`,
+    [
+      { label: 'Salvar', style: 'primary', action: () => {
+          const v = (document.getElementById('cat-edit-nome')?.value || '').trim();
+          _catSalvar(cat, { nome: v === CAT_PADRAO[cat] ? '' : v });
+      }},
+      { label: 'Cancelar', style: 'secondary' }
+    ]);
+  setTimeout(() => { const i = document.getElementById('cat-edit-nome'); if (i) { i.focus(); i.select(); } }, 60);
+}
+
+function catExcluir(cat) {
+  const nome = escapeHtml(_catNome(cat));
+  const n = getForn().filter(f => f.cat === cat).length;
+  if (n > 0) {
+    showModal('Não é possível excluir',
+      `A categoria <strong>${nome}</strong> ainda tem <strong>${n}</strong> item(ns) cadastrado(s).<br><br>Mova-os para outra categoria (marque os itens e use <em>Mover para</em>) ou exclua-os antes.`,
+      [{ label: 'Entendi', style: 'primary' }]);
+    return;
+  }
+  const visiveis = Object.keys(CAT_PADRAO).filter(c => c !== 'outra_loja' && !_catOculta(c));
+  if (visiveis.length <= 1) { showToast('Mantenha pelo menos uma categoria.', false); return; }
+  showModal('Excluir categoria?',
+    `A categoria <strong>${nome}</strong> deixará de aparecer em Fornecedores e em Novo lançamento.<br><br>Lançamentos antigos e relatórios continuam intactos, e você pode restaurá-la depois.`,
+    [
+      { label: 'Excluir', style: 'danger', action: () => _catSalvar(cat, { oculta: true }) },
+      { label: 'Cancelar', style: 'secondary' }
+    ]);
+}
+
+function catRestaurar(cat) { _catSalvar(cat, { oculta: false }); }
+
 /** Adiciona um novo fornecedor/compra. */
 function adicionarFornecedor() {
   const nome   = document.getElementById('forn-nome').value.trim();
@@ -7884,6 +8087,8 @@ function renderFornecedores() {
     { cat: 'emprestimo',  label: 'Empréstimo para Aluguel' },
   ];
 
+  CATS.forEach(c => { c.label = _catNome(c.cat, c.label); });
+
   CATS.forEach(({ cat, label }) => {
     const lista = forn.filter(f => f.cat === cat);
     const el    = document.getElementById('grid-' + cat);
@@ -7931,12 +8136,7 @@ function renderFornecedores() {
           <div class="txt-hint mb4">Categoria:</div>
           <select id="fcard-cat-${f.id}"
             style="width:100%;padding:7px 9px;border:1px solid var(--border2);border-radius:var(--radius-sm);font-family:'DM Sans',sans-serif;font-size:14px;margin-bottom:8px;background:var(--surface);color:var(--text)">
-            <option value="fornecedor"  ${f.cat==='fornecedor'  ? 'selected':''}>Fornecedor</option>
-            <option value="compra"      ${f.cat==='compra'      ? 'selected':''}>Compra Diversa</option>
-            <option value="socio"     ${f.cat==='socio'     ? 'selected':''}>Conta paga pelo(a) sócio(a)</option>
-            <option value="restaurante" ${f.cat==='restaurante' ? 'selected':''}>Conta do Restaurante</option>
-            ${f.cat==='outra_loja' ? '<option value="outra_loja" selected>Outra Loja</option>' : ''}
-            <option value="emprestimo"  ${f.cat==='emprestimo'  ? 'selected':''}>Empréstimo para Aluguel</option>
+            ${_catOptionsHtml(f.cat)}
           </select>
           <div class="d-flex gap-6">
             <button onclick="salvarEdicaoForn('${escapeJsString(f.id)}')" style="flex:1;padding:6px;background:var(--text);color:#fff;border:none;border-radius:var(--radius-sm);cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500">Salvar</button>
@@ -7946,6 +8146,7 @@ function renderFornecedores() {
       </div>`;
     }).join('');
   });
+  aplicarNomesCategorias();
 }
 
 /* ============================================================
@@ -7998,6 +8199,7 @@ function buildLancForm() {
   const _wrapOL = document.getElementById('lanc-outra-loja-wrap');
   if (_wrapOL) _wrapOL.style.display = getForn().some(f => f.cat === 'outra_loja') ? '' : 'none';
   buildFornGrid('emprestimo',  'form-emprestimo-grid');
+  aplicarNomesCategorias();
 
   // Funcionários da loja ativa
   buildFuncLancGrid();
@@ -8925,9 +9127,9 @@ function _renderRanking() {
 
   // Label da categoria para o cabeçalho
   const catLabels = {
-    todos: 'Todos', fornecedor: 'Fornecedores', compra: 'Compras Diversas',
-    socio: 'Sócio(a)', restaurante: 'Restaurante',
-    outra_loja: 'Outra Loja', emprestimo: 'Empréstimo',
+    todos: 'Todos', fornecedor: _catNome('fornecedor', 'Fornecedores'), compra: _catNome('compra', 'Compras Diversas'),
+    socio: _catNome('socio', 'Sócio(a)'), restaurante: _catNome('restaurante', 'Restaurante'),
+    outra_loja: _catNome('outra_loja', 'Outra Loja'), emprestimo: _catNome('emprestimo', 'Empréstimo'),
   };
   const catLabel = catLabels[cat] || cat;
 
@@ -11270,8 +11472,8 @@ function _dashRenderGraficos(mensal, forn, t) {
 
   /* ── 2. Despesas por categoria ── */
   const CATS_LABEL_DASH = {
-    fornecedor:'Fornecedores', compra:'Compras Diversas', socio:'Sócio(a)',
-    restaurante:'Restaurante', outra_loja:'Outra Loja', emprestimo:'Empr\xe9stimo',
+    fornecedor:_catNome('fornecedor','Fornecedores'), compra:_catNome('compra','Compras Diversas'), socio:_catNome('socio','Sócio(a)'),
+    restaurante:_catNome('restaurante','Restaurante'), outra_loja:_catNome('outra_loja','Outra Loja'), emprestimo:_catNome('emprestimo','Empr\xe9stimo'),
   };
   const despItems = Object.entries(CATS_LABEL_DASH).map(([cat, label]) => ({
     label, cat,
@@ -12034,12 +12236,12 @@ function _relBuildCards(data, forn, mapaFunc, totFuncs) {
     }).join('');
   }
   const CATS_REL = [
-    { cat:'fornecedor',  title:'Fornecedores' },
-    { cat:'compra',      title:'Compras Diversas' },
-    { cat:'socio',     title:'Contas pagas pelo(a) sócio(a)' },
-    { cat:'restaurante', title:'Contas do Restaurante' },
-    { cat:'outra_loja',  title:'Contas pagas para Outra Loja' },
-    { cat:'emprestimo',  title:'Empréstimo para Aluguel' },
+    { cat: 'fornecedor', title: _catNome('fornecedor', 'Fornecedores') },
+    { cat: 'compra', title: _catNome('compra', 'Compras Diversas') },
+    { cat: 'socio', title: _catNome('socio', 'Contas pagas pelo(a) sócio(a)') },
+    { cat: 'restaurante', title: _catNome('restaurante', 'Contas do Restaurante') },
+    { cat: 'outra_loja', title: _catNome('outra_loja', 'Contas pagas para Outra Loja') },
+    { cat: 'emprestimo', title: _catNome('emprestimo', 'Empréstimo para Aluguel') },
   ];
   const catCards = CATS_REL.map(({ cat, title }) => {
     const rows = makeRows(cat);
@@ -12827,12 +13029,12 @@ function imprimirRelatorio() {
 
   // ── Categorias de despesas (total mensal) ─────────────────────────────────
   const CATS_REL = [
-    { cat: 'fornecedor',  title: 'Fornecedores' },
-    { cat: 'compra',      title: 'Compras Diversas' },
-    { cat: 'socio',     title: 'Contas pagas pelo(a) sócio(a)' },
-    { cat: 'restaurante', title: 'Contas do Restaurante' },
-    { cat: 'outra_loja',  title: 'Contas pagas para Outra Loja' },
-    { cat: 'emprestimo',  title: 'Empréstimo para Aluguel' },
+    { cat: 'fornecedor', title: _catNome('fornecedor', 'Fornecedores') },
+    { cat: 'compra', title: _catNome('compra', 'Compras Diversas') },
+    { cat: 'socio', title: _catNome('socio', 'Contas pagas pelo(a) sócio(a)') },
+    { cat: 'restaurante', title: _catNome('restaurante', 'Contas do Restaurante') },
+    { cat: 'outra_loja', title: _catNome('outra_loja', 'Contas pagas para Outra Loja') },
+    { cat: 'emprestimo', title: _catNome('emprestimo', 'Empréstimo para Aluguel') },
   ];
 
   const catCards = CATS_REL.map(({ cat, title }) => {
