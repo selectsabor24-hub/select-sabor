@@ -2579,7 +2579,7 @@ table { max-width: 100%; }
   /* c) Filtros: grade que se ajusta (1, 2 ou 3 colunas conforme a largura) */
   .filter-row {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 120px), 1fr));
     gap: 10px;
     align-items: end;
   }
@@ -2602,6 +2602,50 @@ table { max-width: 100%; }
 
   /* Cabeçalhos de página e linhas de botões quebram linha em vez de cortar */
   .page-header { flex-wrap: wrap; }
+}
+
+/* e) Botões, títulos, formulários e barras que quebram linha em vez de estourar */
+@media (max-width: 700px) {
+  .btn, button { max-width: 100%; }
+  .btn { white-space: normal; text-align: center; line-height: 1.25; }
+  .card-title { flex-wrap: wrap; gap: 6px 12px; }
+  .form-group select, select.input-base, select.input-sm { padding-right: 34px; }
+
+  /* Contas a pagar: formulário de 5 colunas fixas vira 2 colunas */
+  [style*="grid-template-columns:1fr 1fr 1fr 1fr auto"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+  [style*="grid-template-columns:1fr 1fr 1fr 1fr auto"] > .form-group { min-width: 0; }
+  [style*="grid-template-columns:1fr 1fr 1fr 1fr auto"] > .form-group:nth-child(1),
+  [style*="grid-template-columns:1fr 1fr 1fr 1fr auto"] > .form-group:nth-child(4),
+  [style*="grid-template-columns:1fr 1fr 1fr 1fr auto"] > .form-group.self-end { grid-column: 1 / -1; }
+  [style*="grid-template-columns:1fr 1fr 1fr 1fr auto"] > .form-group.self-end .btn { width: 100%; }
+
+  /* Dashboard: Por dia / mês / ano / período — todos visíveis, em grade */
+  #dash-modos {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    width: 100%;
+    flex: 1 1 100%;
+  }
+  #dash-modos button { white-space: normal; padding: 9px 4px; line-height: 1.2; }
+
+  /* Campos com largura mínima fixa (minw-*) não podem passar da coluna */
+  .form-grid > [class*="minw-"] { min-width: 0; grid-column: 1 / -1; }
+  /* Botões com nowrap/altura fixa: podem quebrar texto e linha */
+  .btn[style*="nowrap"] { white-space: normal !important; height: auto !important; min-height: 38px; }
+  div[style*="flex-shrink:0"][style*="align-items:flex-end"] { flex-wrap: wrap; width: 100%; }
+
+  /* Dashboard: seletores de data ocupam a linha e quebram se faltar espaço */
+  #sec-dashboard .page-header > div[style*="flex-wrap:wrap"] { width: 100%; }
+  #dash-filtro-mes, #dash-filtro-dia, #dash-filtro-periodo { flex-wrap: wrap; }
+  #dash-filtro-mes { flex: 1 1 100%; }
+  #dash-filtro-mes select { flex: 1 1 100px; min-width: 0; }
+  #dash-filtro-dia input, #dash-filtro-periodo input { min-width: 0; flex: 1 1 120px; }
+}
+
+@media (max-width: 400px) {
+  #dash-modos { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 /* d) Menu "Mais opções" (celular): fica fora da tela quando fechado,
@@ -3180,6 +3224,21 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
   .cmd-avulso input:first-child { grid-column: 1 / -1; }
   .cmd-avulso button { grid-column: 1 / -1; }
 }
+
+/* ============================================================
+   12) AJUSTES FINAIS DE RESPONSIVIDADE (ficam por último para
+       vencer regras anteriores com !important)
+   ============================================================ */
+@media (max-width: 700px) {
+  /* Dashboard: a barra de filtros quebra linha (antes rolava para o lado
+     e escondia "Por dia / Por ano / Por período") */
+  #sec-dashboard .page-header > div:nth-child(2) {
+    flex-wrap: wrap !important;
+    overflow-x: visible !important;
+    gap: 8px !important;
+  }
+  #sec-dashboard .page-header > div:nth-child(2) > * { min-width: 0; }
+}
 </style>
 
 </head>
@@ -3406,7 +3465,7 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
           <!-- Botão tema -->
           <button id="theme-toggle" onclick="toggleTheme()" title="Alternar tema claro/escuro" style="padding:6px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;font-family:'DM Sans',sans-serif">🌙 Tema</button>
           <!-- Modo de filtro -->
-          <div style="display:flex;border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;font-size:12px;font-weight:600">
+          <div id="dash-modos" style="display:flex;border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;font-size:12px;font-weight:600">
             <button id="dash-modo-dia" onclick="dashSetModo('dia')" class="btn-ghost-sm">Por dia</button>
             <button id="dash-modo-mes" onclick="dashSetModo('mes')" class="btn-ghost-dark">Por mês</button>
             <button id="dash-modo-ano" onclick="dashSetModo('ano')" class="btn-ghost-sm">Por ano</button>
