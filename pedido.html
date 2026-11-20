@@ -525,25 +525,6 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
       el.innerHTML = '<img src="' + d + '" alt="" width="84" height="84" decoding="async">';
     });
   }
-  /* Foto do aviso do dia (cardapioFotos/<loja>/_aviso, versão em cfg.avisoFotoV), com cache no celular. */
-  var AVISO_FOTO = null, avisoFotoBuscando = 0;
-  function avisoFoto() {
-    var v = cfg && cfg.avisoFotoV;
-    if (!v) { AVISO_FOTO = null; return null; }
-    if (AVISO_FOTO && AVISO_FOTO.v === v) return AVISO_FOTO.d;
-    var c = lsGet('avisoFoto_' + LOJA);
-    if (c && c.v === v && typeof c.d === 'string' && c.d.indexOf('data:image/') === 0) { AVISO_FOTO = c; return c.d; }
-    if (avisoFotoBuscando !== v) {
-      avisoFotoBuscando = v;
-      base('cardapioFotos/' + LOJA + '/_aviso').once('value').then(function (sn) {
-        var d = sn.val();
-        if (typeof d !== 'string' || d.indexOf('data:image/') !== 0) return;
-        AVISO_FOTO = { v: v, d: d }; lsSet('avisoFoto_' + LOJA, AVISO_FOTO);
-        try { desenharCabecalho(); } catch (e) {}
-      }).catch(function () { avisoFotoBuscando = 0; });
-    }
-    return AVISO_FOTO && AVISO_FOTO.v === v ? AVISO_FOTO.d : null;
-  }
   function fotosSincronizar() {
     var cache = fotoCacheLer(), manter = {};
     itensAtivos().forEach(function (i) {
@@ -712,9 +693,9 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
   var _fotoAnimada = null; // última foto cujo efeito de entrada já rodou
   function desenharAviso() {
     var av = $('#aviso'); if (!av) return;
-    var txt = !aberta() ? (foraDoHorarioLoja() ? 'Estamos fechados no momento. Nosso horário de pedidos é das ' + fmtMin(cfg.abreMin) + ' às ' + fmtMin(cfg.fechaMin) + '. Você pode ver o cardápio, mas só dá para enviar pedidos quando abrirmos.' : 'Estamos fechados no momento. Você pode ver o cardápio, mas só dá para enviar pedidos quando abrirmos.') : (cfg && cfg.aviso) || '';
+    var txt = !aberta() ? (foraDoHorarioLoja() ? 'Estamos fechados no momento. Nosso horário de pedidos é das ' + fmtMin(cfg.abreMin) + ' às ' + fmtMin(cfg.fechaMin) + '. Você pode ver o cardápio, mas só dá para enviar pedidos quando abrirmos.' : 'Estamos fechados no momento. Você pode ver o cardápio, mas só dá para enviar pedidos quando abrirmos.') : '';
     var dest = aberta() ? destaqueItem() : null;
-    var foto = aberta() ? ((dest && dest.fotoV && FOTOS[dest.id]) || avisoFoto()) : null;
+    var foto = aberta() ? ((dest && dest.fotoV && FOTOS[dest.id]) || null) : null;
     var animar = !!foto && foto !== _fotoAnimada; if (foto) _fotoAnimada = foto;
     av.textContent = '';
     if (dest) { var bd = document.createElement('span'); bd.className = 'dest-badge' + (foto ? '' : ' sem') + (animar ? ' anim' : ''); bd.textContent = '⭐ Destaque'; av.appendChild(bd); }
