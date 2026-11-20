@@ -167,6 +167,24 @@
           "taxaAcima": {
             ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1000"
           },
+          "lojaCep": {
+            ".validate": "newData.isString() && newData.val().matches(/^[0-9]{5}-[0-9]{3}$/)"
+          },
+          "lojaRua": {
+            ".validate": "newData.isString() && newData.val().length <= 120"
+          },
+          "lojaNumero": {
+            ".validate": "newData.isString() && newData.val().length <= 20"
+          },
+          "lojaBairro": {
+            ".validate": "newData.isString() && newData.val().length <= 80"
+          },
+          "lojaCidade": {
+            ".validate": "newData.isString() && newData.val().length <= 80"
+          },
+          "lojaUf": {
+            ".validate": "newData.isString() && newData.val().length === 2"
+          },
           "$outro": {
             ".validate": "false"
           }
