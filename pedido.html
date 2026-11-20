@@ -6,6 +6,11 @@
 <title>Faça seu pedido</title>
 <meta name="theme-color" content="#2F5233">
 <meta name="robots" content="noindex">
+<link rel="manifest" id="pwa-manifest" href="manifest-pedido.json">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" id="apple-title" content="Pedidos">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-180.png">
 <script src="https://cdn.jsdelivr.net/npm/firebase@10.12.2/firebase-app-compat.min.js"></script>
@@ -129,6 +134,19 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
 .linha-tempo .hr { margin-left: auto; font-size: 13px; color: var(--mut); font-weight: 600; flex-shrink: 0; }
 .carregando { text-align: center; padding: 60px 10px; color: var(--mut); }
 .toast { position: fixed; left: 50%; bottom: calc(24px + var(--safe-b)); transform: translateX(-50%); background: #1F2A22; color: #fff; padding: 10px 16px; border-radius: 99px; font-size: 14px; z-index: 60; max-width: 92vw; text-align: center; }
+/* Instalar no celular (PWA) */
+.install { display: flex; align-items: center; gap: 10px; margin: 12px 0 0; padding: 10px 10px 10px 12px; border-radius: 14px; background: #fff; border: 1.5px solid var(--verde2); box-shadow: 0 4px 14px rgba(47,82,51,.12); }
+.install .ic { font-size: 26px; line-height: 1; flex-shrink: 0; }
+.install .tx { flex: 1; min-width: 0; font-size: 13px; color: var(--mut); line-height: 1.3; }
+.install .tx strong { display: block; font-size: 15px; color: var(--txt); }
+.install .ok { flex-shrink: 0; background: var(--verde); color: #fff; border: 0; border-radius: 10px; padding: 10px 14px; font-weight: 700; min-height: 44px; }
+.install .x { flex-shrink: 0; background: transparent; border: 0; font-size: 18px; color: var(--mut); width: 36px; height: 44px; }
+.sheet-fundo { position: fixed; inset: 0; z-index: 70; background: rgba(0,0,0,.45); display: flex; align-items: flex-end; justify-content: center; }
+.sheet { width: 100%; max-width: 640px; background: #fff; border-radius: 20px 20px 0 0; padding: 18px 18px calc(18px + var(--safe-b)); max-height: 90vh; overflow-y: auto; }
+.sheet h3 { margin: 0 0 10px; font-size: 18px; color: var(--verde); }
+.sheet ol { margin: 0; padding-left: 22px; line-height: 1.6; }
+.sheet .dica { margin: 12px 0 0; font-size: 13px; color: var(--mut); }
+.sheet button { display: block; width: 100%; margin-top: 14px; background: var(--verde); color: #fff; border: 0; border-radius: 14px; padding: 14px; font-weight: 700; }
 @media (max-width: 340px) {
   .top img { width: 52px; height: 52px; }
   .item { padding: 10px; }
@@ -154,6 +172,12 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
   <div class="wrap">
     <div id="banner-andamento" class="banner-andamento hide"></div>
     <div id="aviso" class="aviso hide"></div>
+    <div id="install" class="install hide">
+      <span class="ic">📲</span>
+      <div class="tx"><strong>Instale o app no celular</strong><span id="install-sub">Peça mais rápido, direto da tela inicial.</span></div>
+      <button type="button" class="ok" id="install-ok">Instalar</button>
+      <button type="button" class="x" id="install-x" aria-label="Fechar">✕</button>
+    </div>
   </div>
   <nav class="cats hide" id="cats"><div class="scroll" id="cats-scroll"></div></nav>
   <main class="wrap" id="menu-lista"></main>
@@ -223,6 +247,100 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
 <!-- Erro geral -->
 <div id="v-erro" class="hide"><div class="wrap"><div class="vazio" id="erro-msg" style="padding-top:80px"></div></div></div>
 
+<!-- Ajuda de instalação (iPhone/iPad) -->
+<div class="sheet-fundo hide" id="ios-help">
+  <div class="sheet" role="dialog" aria-modal="true" aria-label="Como instalar">
+    <h3>Instalar no iPhone</h3>
+    <ol>
+      <li>Toque no botão <strong>Compartilhar</strong> (quadrado com uma seta para cima) na barra do Safari.</li>
+      <li>Role a lista e toque em <strong>Adicionar à Tela de Início</strong>.</li>
+      <li>Toque em <strong>Adicionar</strong>. Pronto, o ícone aparece na sua tela.</li>
+    </ol>
+    <p class="dica">Se abriu o link pelo WhatsApp ou Instagram, toque em “Abrir no Safari” primeiro.</p>
+    <button type="button" id="ios-help-ok">Entendi</button>
+  </div>
+</div>
+
+<script>
+/* ---------- Instalação como app (PWA) ---------- */
+(function () {
+  'use strict';
+  var $ = function (s) { return document.querySelector(s); };
+  var LOJA = (new URLSearchParams(location.search).get('loja') || '').trim();
+  if (!LOJA) { try { LOJA = JSON.parse(localStorage.getItem('ultimaLoja')) || ''; } catch (e) {} }
+  if (!/^[A-Za-z0-9_-]{1,60}$/.test(String(LOJA))) LOJA = '';
+  var nomeLoja = '', urlManifest = null, promptEv = null;
+  var base = location.origin + location.pathname;
+  var ios = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  var standalone = function () { return (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true; };
+  var abs = function (p) { return new URL(p, location.href).href; };
+
+  /* Manifest gerado na hora: o app instalado abre direto na loja certa (?loja=...) */
+  function montarManifest() {
+    if (!LOJA) return;
+    var start = base + '?loja=' + encodeURIComponent(LOJA);
+    var m = {
+      id: start, name: nomeLoja || 'Faça seu pedido', short_name: (nomeLoja || 'Pedidos').slice(0, 12),
+      description: 'Faça seu pedido online', start_url: start, scope: base, display: 'standalone',
+      orientation: 'portrait-primary', background_color: '#F7F4EF', theme_color: '#2F5233', lang: 'pt-BR',
+      icons: [
+        { src: abs('icon-192.png'), sizes: '192x192', type: 'image/png', purpose: 'any' },
+        { src: abs('icon-512.png'), sizes: '512x512', type: 'image/png', purpose: 'any' },
+        { src: abs('icon-maskable-192.png'), sizes: '192x192', type: 'image/png', purpose: 'maskable' },
+        { src: abs('icon-maskable-512.png'), sizes: '512x512', type: 'image/png', purpose: 'maskable' }
+      ]
+    };
+    try {
+      var novo = URL.createObjectURL(new Blob([JSON.stringify(m)], { type: 'application/manifest+json' }));
+      $('#pwa-manifest').setAttribute('href', novo);
+      if (urlManifest) URL.revokeObjectURL(urlManifest);
+      urlManifest = novo;
+    } catch (e) { /* mantém o manifest-pedido.json */ }
+  }
+  montarManifest();
+
+  window.pedidoPwa = {
+    nome: function (n) {
+      n = String(n || '').trim();
+      if (!n || n === nomeLoja) return;
+      nomeLoja = n;
+      var t = $('#apple-title'); if (t) t.setAttribute('content', n.slice(0, 20));
+      montarManifest();
+    }
+  };
+
+  /* Banner "Instalar" */
+  var DIAS = 3;
+  function dispensado() { try { var t = Number(localStorage.getItem('pwaDispensado')) || 0; return Date.now() - t < DIAS * 864e5; } catch (e) { return false; } }
+  function esconder() { $('#install').classList.add('hide'); }
+  function avaliar() {
+    if (standalone() || dispensado() || !LOJA) { esconder(); return; }
+    if (promptEv || ios) $('#install').classList.remove('hide');
+  }
+  window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); promptEv = e; avaliar(); });
+  window.addEventListener('appinstalled', function () { promptEv = null; esconder(); });
+  $('#install-x').onclick = function () { try { localStorage.setItem('pwaDispensado', String(Date.now())); } catch (e) {} esconder(); };
+  $('#install-ok').onclick = function () {
+    if (promptEv) {
+      var ev = promptEv; promptEv = null;
+      ev.prompt();
+      if (ev.userChoice) ev.userChoice.then(function (r) { if (r && r.outcome === 'accepted') esconder(); else avaliar(); });
+      esconder();
+    } else if (ios) { $('#ios-help').classList.remove('hide'); }
+  };
+  $('#ios-help-ok').onclick = function () { $('#ios-help').classList.add('hide'); };
+  $('#ios-help').addEventListener('click', function (e) { if (e.target === this) this.classList.add('hide'); });
+  avaliar();
+
+  /* Service worker próprio da página de pedidos (escopo só desta página) */
+  if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('./sw-pedido.js', { scope: location.pathname }).catch(function () {});
+    });
+  }
+})();
+</script>
+
 <script>
 (function () {
   'use strict';
@@ -260,6 +378,12 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
   var params = new URLSearchParams(location.search);
   var LOJA = (params.get('loja') || '').trim();
   var PED_ID = (params.get('p') || '').trim();
+  /* App instalado abre sem ?loja: usa a última loja visitada */
+  if (!LOJA) { var ultima = lsGet('ultimaLoja'); if (typeof ultima === 'string') LOJA = ultima.trim(); }
+  if (/^[A-Za-z0-9_-]{1,60}$/.test(LOJA)) {
+    lsSet('ultimaLoja', LOJA);
+    if (!params.get('loja') && !PED_ID) { try { history.replaceState(null, '', '?loja=' + encodeURIComponent(LOJA)); } catch (e) {} }
+  }
   var db = null, cfg = null, cardapio = [], cart = {}, modo = 'entrega', pag = '', catAtiva = '';
   var pedido = null, refPedido = null, ultimoStatus = null, pendenteId = null, enviando = false;
 
@@ -311,6 +435,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
   /* ---------- Tela 1: menu ---------- */
   function desenharCabecalho() {
     $('#loja-nome').textContent = (cfg && cfg.nome) || 'Cardápio';
+    if (window.pedidoPwa && cfg && cfg.nome) window.pedidoPwa.nome(cfg.nome);
     document.title = ((cfg && cfg.nome) ? cfg.nome + ' · ' : '') + 'Faça seu pedido';
     var info = [];
     if (cfg && cfg.tempoEstimado) info.push('⏱ ' + esc(cfg.tempoEstimado));
