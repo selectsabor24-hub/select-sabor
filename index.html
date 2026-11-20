@@ -49,7 +49,8 @@
   ║         motoqueiro) o valor é lançado AUTOMATICAMENTE no caixa     ║
   ║         do dia (só entregas de hoje; caixa fechado não lança).     ║
   ║         A taxa de entrega NÃO entra no caixa (vai p/ o motoqueiro).║
-  ║         App do motoqueiro: resumo mostra só a taxa recebida.       ║
+  ║         App do motoqueiro: soma das taxas do dia sempre visível;   ║
+  ║         painel: nova aba "A pagar" (taxas por motoqueiro/período). ║
   ║  v5.5 — Código de confirmação da entrega: ao pedir por entrega o   ║
   ║         cliente recebe um código de 4 números (só ele e a loja veem║
   ║         O motoqueiro digita o código para dar a entrega como feita.║
@@ -4754,6 +4755,7 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
         <button id="mot-tab-sair"   onclick="motSetTab('sair')">Para sair</button>
         <button id="mot-tab-rua"    onclick="motSetTab('rua')">Na rua</button>
         <button id="mot-tab-feitas" onclick="motSetTab('feitas')">Entregues hoje</button>
+        <button id="mot-tab-pagar" onclick="motSetTab('pagar')">💰 A pagar</button>
         <button id="mot-tab-cadastro" onclick="motSetTab('cadastro')">👤 Cadastro</button>
       </div>
 
@@ -18465,6 +18467,7 @@ function _chatRapida(btn) { const ta = document.getElementById('chat-txt'); if (
    O lançamento no caixa continua na aba Pedidos online.
    ============================================================ */
 let _motTab = 'sair';
+let _motPagarDe = '', _motPagarAte = ''; // filtro da aba "A pagar" (AAAA-MM-DD); vazio = hoje
 let _motProntos = null;
 const MOT_COR = { sair: '#7C3AED', rua: '#0891B2', feitas: '#16A34A' };
 
@@ -18520,6 +18523,17 @@ function renderMotoqueiro() {
     tabCad.classList.toggle('active', _motTab === 'cadastro');
     const nAtivos = _motCadLista().filter(m => m.ativo !== false).length;
     tabCad.textContent = '👤 Cadastro' + (nAtivos ? ' (' + nAtivos + ')' : '');
+  }
+  const tabPag = document.getElementById('mot-tab-pagar');
+  if (tabPag) tabPag.classList.toggle('active', _motTab === 'pagar');
+  if (_motTab === 'pagar') {
+    // Não recria os campos de data enquanto o usuário mexe neles
+    const ae = document.activeElement;
+    if (ae && ae.tagName === 'INPUT' && ae.closest && ae.closest('#mot-lista')) return;
+    ['sair', 'rua', 'feitas'].forEach(t => { const b = document.getElementById('mot-tab-' + t); if (b) b.classList.remove('active'); });
+    met.innerHTML = '';
+    lista.innerHTML = _motPagarHtml();
+    return;
   }
   if (_motTab === 'cadastro') {
     ['sair', 'rua', 'feitas'].forEach(t => { const b = document.getElementById('mot-tab-' + t); if (b) b.classList.remove('active'); });
@@ -18815,10 +18829,58 @@ function _motResumoHtml(feitas) {
   const linhas = Object.keys(g).sort().map(k => {
     const r = g[k];
     return `<div class="mot-resumo-l"><strong>${escapeHtml(k)}</strong>
-      <span>${r.n} entrega${r.n > 1 ? 's' : ''} · taxas de entrega ${fmt(_pedRound(r.taxas))}</span>
+      <span>${r.n} entrega${r.n > 1 ? 's' : ''} · a pagar ao motoqueiro ${fmt(_pedRound(r.taxas))}</span>
       <span>💵 ${fmt(_pedRound(r.dinheiro))} · 📲 ${fmt(_pedRound(r.pix))} · 💳 ${fmt(_pedRound(r.cartao))}</span></div>`;
   }).join('');
   return `<div class="card"><div class="card-title">Resumo de hoje</div>${linhas}</div>`;
+}
+
+/** Aba "A pagar": soma das taxas de entrega por motoqueiro no período (padrão: hoje). */
+function motPagarFiltro() {
+  const de = document.getElementById('mot-pg-de'), ate = document.getElementById('mot-pg-ate');
+  _motPagarDe = de ? de.value : ''; _motPagarAte = ate ? ate.value : '';
+  _motPagarRender();
+}
+function motPagarHoje() { _motPagarDe = ''; _motPagarAte = ''; _motPagarRender(); }
+function _motPagarRender() {
+  const lista = document.getElementById('mot-lista'); if (!lista || _motTab !== 'pagar') return;
+  lista.innerHTML = _motPagarHtml();
+}
+function _motPagarHtml() {
+  const hoje = _pedDia(Date.now());
+  let de = _motPagarDe || hoje, ate = _motPagarAte || hoje;
+  if (de > ate) { const x = de; de = ate; ate = x; }
+  const feitas = _motEntregas().filter(p => {
+    if (p.status !== 'entregue') return false;
+    const d = _pedDia(_motTsEntrega(p));
+    return d >= de && d <= ate;
+  }).sort((a, b) => _motTsEntrega(a) - _motTsEntrega(b));
+  const g = {};
+  feitas.forEach(p => {
+    const k = String(p.motoqueiro || '').trim() || 'Sem nome';
+    const r = g[k] = g[k] || { n: 0, taxas: 0, linhas: [] };
+    const taxa = _pedTotais(p).taxa;
+    r.n++; r.taxas += taxa;
+    r.linhas.push({ cod: p.codigo || '', ts: _motTsEntrega(p), taxa });
+  });
+  const nomes = Object.keys(g).sort();
+  const total = _pedRound(nomes.reduce((s, k) => s + g[k].taxas, 0));
+  const periodo = de === ate ? (de === hoje ? 'hoje' : _formatarDataBR(de)) : _formatarDataBR(de) + ' a ' + _formatarDataBR(ate);
+  const filtro = `<div class="card" style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+    <div class="form-group" style="margin:0"><label>De</label><input type="date" id="mot-pg-de" class="input-base" value="${de}" max="${hoje}" onchange="motPagarFiltro()"></div>
+    <div class="form-group" style="margin:0"><label>Até</label><input type="date" id="mot-pg-ate" class="input-base" value="${ate}" max="${hoje}" onchange="motPagarFiltro()"></div>
+    <button class="btn btn-secondary btn-md" onclick="motPagarHoje()">Hoje</button></div>`;
+  if (!nomes.length) return filtro + `<div class="card" style="text-align:center;color:var(--text3);padding:28px 12px">Nenhuma entrega concluída em ${periodo}.</div>`;
+  const blocos = nomes.map(k => {
+    const r = g[k];
+    const det = r.linhas.map(l => `<div style="display:flex;justify-content:space-between;font-size:13px;color:var(--text3);padding:2px 0"><span>#${escapeHtml(l.cod)} · ${_pedDia(l.ts) === hoje ? '' : _formatarDataBR(_pedDia(l.ts)) + ' '}${_pedHora(l.ts)}</span><span>${fmt(_pedRound(l.taxa))}</span></div>`).join('');
+    return `<div class="card"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px">
+      <div><strong>${escapeHtml(k)}</strong><div style="font-size:13px;color:var(--text3)">${r.n} entrega${r.n > 1 ? 's' : ''} · ${periodo}</div></div>
+      <div style="text-align:right"><div style="font-size:12px;color:var(--text3)">A pagar</div><div style="font-size:24px;font-weight:800">${fmt(_pedRound(r.taxas))}</div></div></div>
+      <div style="margin-top:8px;border-top:1px dashed var(--border);padding-top:6px">${det}</div></div>`;
+  }).join('');
+  const resumo = nomes.length > 1 ? `<div class="card" style="display:flex;justify-content:space-between;font-weight:800"><span>Total a pagar aos motoqueiros</span><span>${fmt(total)}</span></div>` : '';
+  return filtro + blocos + resumo;
 }
 
 function _motCardHtml(p) {

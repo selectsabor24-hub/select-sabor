@@ -18,7 +18,7 @@
 <script src="https://cdn.jsdelivr.net/npm/firebase@10.12.2/firebase-auth-compat.min.js"></script>
 <!--
   ╔══════════════════════════════════════════════════════════════════════╗
-  ║  APP DO MOTOQUEIRO — Select Sabor                          v1.1      ║
+  ║  APP DO MOTOQUEIRO — Select Sabor                          v1.2      ║
   ╠══════════════════════════════════════════════════════════════════════╣
   ║  · Login individual (e-mail + senha criados em Motoqueiro > Cadastro)║
   ║  · Lê os pedidos de ENTREGA da loja do motoqueiro (caixa/pedidos)    ║
@@ -106,6 +106,10 @@ button { cursor: pointer; }
 .acoes button { flex: 1 1 140px; min-height: 52px; border-radius: 12px; border: 1.5px solid var(--borda); background: #fff; font-weight: 800; font-size: 16px; }
 .acoes button.p { background: var(--verde); border-color: var(--verde); color: #fff; }
 .acoes button:disabled { opacity: .6; }
+.taxa-dia { background: var(--verde); color: #fff; border-radius: 16px; padding: 12px 16px; margin: 0 0 12px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.taxa-dia small { display: block; font-size: 12px; font-weight: 700; opacity: .85; text-transform: uppercase; letter-spacing: .4px; }
+.taxa-dia .sub { font-size: 12px; font-weight: 500; opacity: .85; margin-top: 2px; text-transform: none; letter-spacing: 0; }
+.taxa-dia b { font-size: 28px; white-space: nowrap; }
 .resumo { background: #fff; border-radius: 16px; padding: 14px; margin-bottom: 12px; border: 1px solid var(--borda); }
 .resumo h3 { margin: 0 0 8px; font-size: 15px; }
 .resumo .l { display: flex; justify-content: space-between; gap: 10px; padding: 5px 0; border-bottom: 1px dashed var(--borda); font-size: 15px; }
@@ -170,6 +174,7 @@ button { cursor: pointer; }
       <div class="met"><small>Na rua</small><b id="m-rua">0</b></div>
       <div class="met"><small>Hoje</small><b id="m-hoje">0</b></div>
     </div>
+    <div class="taxa-dia" id="tx-dia"></div>
     <div class="tabs" id="tabs">
       <button data-t="sair">Para sair</button>
       <button data-t="rua">Na rua</button>
@@ -383,22 +388,20 @@ button { cursor: pointer; }
     $('#m-sair').textContent = L.sair.length;
     $('#m-rua').textContent = L.rua.length;
     $('#m-hoje').textContent = L.hoje.length;
+    // Soma das taxas de entrega do dia (o que o motoqueiro tem a receber), sempre visível
+    var taxasDia = 0, taxasRua = 0;
+    L.hoje.forEach(function (p) { taxasDia += totais(p).taxa; });
+    L.rua.forEach(function (p) { taxasRua += totais(p).taxa; });
+    $('#tx-dia').innerHTML = '<div><small>🛵 Taxas de hoje</small><div class="sub">' + L.hoje.length + ' entrega' + (L.hoje.length === 1 ? '' : 's') + ' feita' + (L.hoje.length === 1 ? '' : 's') +
+      (L.rua.length ? ' · +' + brl(round(taxasRua)) + ' na rua' : '') + '</div></div><b>' + brl(round(taxasDia)) + '</b>';
     Array.prototype.forEach.call(document.querySelectorAll('#tabs button'), function (b) { b.classList.toggle('on', b.dataset.t === tab); });
     document.title = (L.sair.length ? '(' + L.sair.length + ') ' : '') + 'Entregas';
     atualizarBadge(L.sair.length);
     var vazio = { sair: 'Nenhuma entrega pronta para sair.<br>Você será avisado quando uma ficar pronta.', rua: 'Nenhuma entrega na rua.', hoje: 'Nenhuma entrega concluída hoje.' }[tab];
     var arr = L[tab] || [];
-    var html = (tab === 'hoje' ? resumo(arr) : '') + (arr.length ? arr.map(cartao).join('') : '<div class="card vazio">' + vazio + '</div>');
+    var html = (arr.length ? arr.map(cartao).join('') : '<div class="card vazio">' + vazio + '</div>');
     $('#lista').innerHTML = html;
     $('#rodape').textContent = 'Atualizado às ' + hora(Date.now());
-  }
-
-  function resumo(arr) {
-    if (!arr.length) return '';
-    var taxas = 0;
-    arr.forEach(function (p) { taxas += totais(p).taxa; });
-    return '<div class="resumo"><h3>Resumo de hoje — ' + arr.length + ' entrega' + (arr.length > 1 ? 's' : '') + '</h3>' +
-      '<div class="l"><span>🛵 Taxa recebida</span><b>' + brl(round(taxas)) + '</b></div></div>';
   }
 
   function cartao(p) {
