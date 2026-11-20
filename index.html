@@ -3303,6 +3303,12 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
 .mot-end { margin-top: 10px; font-size: 18px; font-weight: 800; line-height: 1.3; overflow-wrap: anywhere; }
 .mot-end small { display: block; margin-top: 2px; font-size: 13px; font-weight: 500; color: var(--text3); }
 .mot-cli { margin-top: 8px; }
+.mot-app-link-box { display: flex; flex-direction: column; gap: 10px; }
+.mot-app-link-box input { width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: var(--radius-sm); background: var(--bg); color: var(--text); font-family: 'DM Mono', monospace; font-size: 13px; text-overflow: ellipsis; }
+.mot-app-link-box input:focus { outline: 0; border-color: var(--accent); background: var(--surface); box-shadow: 0 0 0 3px rgba(29,78,216,0.12); }
+.mot-app-link-btns { display: flex; gap: 8px; }
+.mot-app-link-btns .btn { flex: 1 1 0; text-align: center; justify-content: center; }
+@media (min-width: 700px) { .mot-app-link-box { flex-direction: row; align-items: center; } .mot-app-link-box input { flex: 1 1 auto; min-width: 0; } .mot-app-link-btns .btn { flex: 0 0 auto; } }
 .mot-links { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
 .mot-links .btn { flex: 1 1 calc(33% - 8px); text-align: center; text-decoration: none; }
 .mot-cobrar { margin-top: 12px; padding: 10px 12px; border-radius: 10px; font-weight: 700; line-height: 1.35; }
@@ -18352,10 +18358,12 @@ function _motCadHtml() {
   const linkCard = `<div class="card mb-5">
       <div class="card-title">App do motoqueiro</div>
       <div style="font-size:13px;color:var(--text3);margin-bottom:10px">Cada motoqueiro instala este app no celular, entra com o próprio e-mail e senha e recebe o aviso (som, vibração e notificação) quando uma entrega fica pronta.</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-        <input id="mot-app-link" type="text" readonly value="${escapeAttr(_motAppLink())}" style="flex:1 1 260px;min-width:0" onclick="this.select()">
-        <button class="btn btn-secondary btn-md" onclick="motAppCopiar()">Copiar link</button>
-        <a class="btn btn-secondary btn-md" href="${escapeAttr(_motAppLink())}" target="_blank" rel="noopener" style="text-decoration:none">Abrir</a>
+      <div class="mot-app-link-box">
+        <input id="mot-app-link" type="text" readonly value="${escapeAttr(_motAppLink())}" onclick="this.select()">
+        <div class="mot-app-link-btns">
+          <button class="btn btn-secondary btn-md" onclick="motAppCopiar()">📋 Copiar link</button>
+          <a class="btn btn-secondary btn-md" href="${escapeAttr(_motAppLink())}" target="_blank" rel="noopener" style="text-decoration:none">↗ Abrir</a>
+        </div>
       </div>
     </div>`;
 
