@@ -69,6 +69,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
 .item { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--card); border: 1px solid var(--borda); border-radius: var(--raio); padding: 12px 14px; margin-bottom: 8px; }
 .item .info { min-width: 0; flex: 1; }
 .item .nome { font-weight: 700; overflow-wrap: anywhere; }
+.item .desc { margin-top: 3px; font-size: 13px; color: var(--mut); line-height: 1.35; overflow-wrap: anywhere; }
 .item .preco { margin-top: 2px; color: var(--laranja); font-weight: 800; }
 .add { flex-shrink: 0; background: var(--verde); color: #fff; border: 0; border-radius: 12px; padding: 10px 16px; font-weight: 700; min-height: 44px; }
 .add[disabled] { background: #C9CFC9; cursor: not-allowed; }
@@ -483,7 +484,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
       h += '<h2 class="cat-titulo" id="cat-' + ix + '">' + esc(c) + '</h2>';
       porCat[c].sort(function (a, b) { return String(a.nome).localeCompare(String(b.nome), 'pt-BR'); }).forEach(function (i) {
         var q = cart[i.id] || 0;
-        h += '<div class="item"><div class="info"><div class="nome">' + esc(i.nome) + '</div><div class="preco">' + brl(i.preco) + '</div></div>' +
+        h += '<div class="item"><div class="info"><div class="nome">' + esc(i.nome) + '</div>' + (i.desc ? '<div class="desc">' + esc(i.desc) + '</div>' : '') + '<div class="preco">' + brl(i.preco) + '</div></div>' +
           (q > 0
             ? '<div class="stepper"><button type="button" data-m="-1" data-id="' + esc(i.id) + '" aria-label="Diminuir">−</button><span>' + q + '</span><button type="button" data-m="1" data-id="' + esc(i.id) + '" aria-label="Aumentar">+</button></div>'
             : '<button type="button" class="add" data-m="1" data-id="' + esc(i.id) + '"' + (aberta() ? '' : ' disabled') + '>Adicionar</button>') +
