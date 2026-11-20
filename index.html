@@ -48,6 +48,7 @@
   ║  v5.6 — Pedidos online: ao finalizar a entrega (painel ou app do    ║
   ║         motoqueiro) o valor é lançado AUTOMATICAMENTE no caixa     ║
   ║         do dia (só entregas de hoje; caixa fechado não lança).     ║
+  ║         A taxa de entrega NÃO entra no caixa (vai p/ o motoqueiro).║
   ║         App do motoqueiro: resumo mostra só a taxa recebida.       ║
   ║  v5.5 — Código de confirmação da entrega: ao pedir por entrega o   ║
   ║         cliente recebe um código de 4 números (só ele e a loja veem║
@@ -18106,7 +18107,7 @@ function pedExcluir(id) {
   if (doCaixa && typeof _bloquearSeCaixaFechado === 'function' && _bloquearSeCaixaFechado(c.data, 'excluir pedido')) return;
   const final = p.status === 'entregue' || p.status === 'cancelado';
   const aviso = (final ? '' : '<br><br><strong>Atenção:</strong> este pedido ainda está em andamento e o cliente deixará de acompanhá-lo.')
-    + (doCaixa ? '<br><br>O valor de <strong>' + fmt(_pedTotais(p).total) + '</strong> será descontado do caixa de ' + _formatarDataBR(c.data) + '.' : '');
+    + (doCaixa ? '<br><br>O valor de <strong>' + fmt(c.total != null ? c.total : _pedTotais(p).sub) + '</strong> será descontado do caixa de ' + _formatarDataBR(c.data) + '.' : '');
   showModal('Excluir pedido ' + (p.codigo || ''),
     'Excluir o pedido <strong>' + escapeHtml(p.codigo || '') + '</strong> de ' + escapeHtml((p.cliente || {}).nome || 'cliente') + '? Não é possível desfazer.' + aviso,
     [{ label: 'Excluir pedido', style: 'danger', action: () => {
@@ -18138,13 +18139,14 @@ function pedLancarCaixa(id, auto) {
   const t = _pedTotais(p), agora = new Date().toISOString();
   const itens = {};
   t.itens.forEach(i => { itens[i.id] = { id: i.id, nome: i.n, preco: i.preco, qtd: i.q }; });
-  if (t.taxa > 0) itens.taxa_entrega = { id: 'taxa_entrega', nome: 'Taxa de entrega', preco: t.taxa, qtd: 1 };
+  // A taxa de entrega NÃO entra no caixa: é repassada ao motoqueiro. Lança só o valor dos itens.
+  const valor = t.sub;
   const forma = p.pagamento === 'cartao' ? 'cartao' : (p.pagamento === 'pix' ? 'pix' : 'dinheiro');
-  const pagamentos = { dinheiro: 0, pix: 0, cartao: 0 }; pagamentos[forma] = t.total;
+  const pagamentos = { dinheiro: 0, pix: 0, cartao: 0 }; pagamentos[forma] = valor;
   const cid = 'ped_' + id;
   const c = { id: cid, mesa: 'Online ' + (p.codigo || ''), pessoas: '', garcom: '', status: 'fechada',
     abertaEm: agora, fechadaEm: agora, data: hoje, servicoPct: 0, desconto: 0, itens,
-    subtotal: t.total, servico: 0, total: t.total, pagamentos, troco: 0, origem: 'pedido_online', pedidoId: id };
+    subtotal: valor, servico: 0, total: valor, pagamentos, troco: 0, origem: 'pedido_online', pedidoId: id };
   let reservou = false;
   const reserva = auto
     ? _pedRef(id).child('lancado').transaction(cur => cur ? undefined : true).then(r => { reservou = !!(r && r.committed); return reservou; })
@@ -18154,7 +18156,7 @@ function pedLancarCaixa(id, auto) {
     return _cmdRef(cid).set(c).then(() => {
       _cmdLancAplicar({ id: cid, data: hoje, pagamentos }, +1);
       return auto ? null : _pedRef(id).update({ lancado: true });
-    }).then(() => showToast('Pedido ' + (p.codigo || '') + (auto ? ' lançado automaticamente no caixa: ' : ' lançado no caixa: ') + fmt(t.total)))
+    }).then(() => showToast('Pedido ' + (p.codigo || '') + (auto ? ' lançado automaticamente no caixa: ' : ' lançado no caixa: ') + fmt(valor)))
       .catch(e => {
         console.error(e);
         showToast('Erro ao lançar no caixa', false);
