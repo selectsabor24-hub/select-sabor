@@ -291,6 +291,8 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
   var nomeLoja = '', urlManifest = null, promptEv = null;
   var base = location.origin + location.pathname;
   var ios = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  /* Vibração ao mudar o status / chegar mensagem (padrão: ligada) */
+  function vibrar(padrao) { try { if (navigator.vibrate) navigator.vibrate(padrao); } catch (x) {} }
   var standalone = function () { return (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true; };
   var abs = function (p) { return new URL(p, location.href).href; };
 
@@ -856,7 +858,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     $('#tr-novo').onclick = voltarMenu;
     // aviso quando o status muda
     if (ultimoStatus && ultimoStatus !== st) {
-      if (navigator.vibrate) { try { navigator.vibrate([200, 100, 200]); } catch (x) {} }
+      vibrar([400, 150, 400, 150, 400]);
       toast(titulo);
     }
     ultimoStatus = st;
@@ -893,7 +895,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     var ult = msgs.filter(function (m) { return m.de === 'loja'; }).reduce(function (mx, m) { return Math.max(mx, m.ts || 0); }, 0);
     if (chatUlt !== null && ult > chatUlt) {
       toast('💬 Nova mensagem da loja');
-      if (navigator.vibrate) { try { navigator.vibrate([150, 80, 150]); } catch (x) {} }
+      vibrar([250, 100, 250]);
     }
     chatUlt = Math.max(chatUlt || 0, ult);
   }
