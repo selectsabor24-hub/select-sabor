@@ -4670,7 +4670,7 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
           <div class="form-group"><label>Tempo estimado</label><input id="pc-tempo" class="input-base" maxlength="40" placeholder="Ex.: 40–50 min"></div>
           <div class="form-group"><label>Taxa de entrega (R$)</label><input id="pc-taxa" class="input-base" inputmode="decimal" placeholder="0,00"></div>
           <div class="form-group"><label>Pedido mínimo (R$)</label><input id="pc-min" class="input-base" inputmode="decimal" placeholder="0,00"></div>
-          <div class="form-group"><label>WhatsApp da loja (com DDD)</label><input id="pc-whats" class="input-base" inputmode="tel" maxlength="20" placeholder="(31) 99999-0000"></div>
+          <div class="form-group"><label>WhatsApp da loja (com DDD)</label><input id="pc-whats" class="input-base" inputmode="tel" maxlength="16" placeholder="(31) 99999-0000" oninput="this.value=_maskFone(this.value)"></div>
           <div class="form-group"><label>Aviso no topo do cardápio (opcional)</label><input id="pc-aviso" class="input-base" maxlength="200" placeholder="Ex.: Hoje temos feijoada!"></div>
         </div>
         <div class="ped-checks">
@@ -17991,6 +17991,16 @@ function pedLancarCaixa(id) {
 }
 
 /* ---------- WhatsApp e impressão ---------- */
+/** Máscara de telefone BR: (31) 98888-7777 (celular) ou (31) 3888-7777 (fixo). */
+function _maskFone(v) {
+  let d = String(v || '').replace(/\D/g, '');
+  if (d.length > 11 && d.startsWith('55')) d = d.slice(2);
+  d = d.slice(0, 11);
+  if (d.length <= 2) return d ? '(' + d : '';
+  if (d.length <= 6) return '(' + d.slice(0, 2) + ') ' + d.slice(2);
+  if (d.length <= 10) return '(' + d.slice(0, 2) + ') ' + d.slice(2, 6) + '-' + d.slice(6);
+  return '(' + d.slice(0, 2) + ') ' + d.slice(2, 7) + '-' + d.slice(7);
+}
 function _pedFone(tel) {
   let d = String(tel || '').replace(/\D/g, '');
   if (!d) return '';
@@ -18070,7 +18080,7 @@ function pedConfigAbrir() {
   set('pc-tempo', c.tempoEstimado || '');
   set('pc-taxa', money(c.taxaEntrega));
   set('pc-min', money(c.pedidoMinimo));
-  set('pc-whats', c.whatsapp || '');
+  set('pc-whats', _maskFone(c.whatsapp || ''));
   set('pc-aviso', c.aviso || '');
   document.getElementById('pc-entrega').checked  = c.aceitaEntrega !== false;
   document.getElementById('pc-retirada').checked = c.aceitaRetirada !== false;
