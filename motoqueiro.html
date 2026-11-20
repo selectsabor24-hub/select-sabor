@@ -311,6 +311,7 @@ button { cursor: pointer; }
       eu = { uid: user.uid, lojaId: v.lojaId, nome: String(v.nome || '').slice(0, 40), ativo: true };
       mostrar('app');
       iniciar();
+      ativarPush();
     }).catch(function (e) {
       console.error(e);
       loginErro('Não foi possível carregar seu cadastro. Verifique a internet e tente de novo.');
@@ -689,6 +690,21 @@ button { cursor: pointer; }
     toast(som ? 'Som ligado' : 'Som desligado');
   });
 
+  /* ---------- Push: avisos com a tela bloqueada ---------- */
+  var VAPID_PUBLIC = "BMDXtShYYtIn3grq3paLBpprRf0Lq_5uURiNYIj4AgmQagYiSiqOLe1g5EpvzePm6QJ7uAGEv0JMcyRW_SX-aHk";
+  function b64uParaBytes(s) { s = s.replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '='; var b = atob(s), u = new Uint8Array(b.length); for (var i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; }
+  function ativarPush() {
+    if (!eu || !('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window) || Notification.permission !== 'granted') return;
+    navigator.serviceWorker.ready.then(function (reg) {
+      return reg.pushManager.getSubscription().then(function (sub) {
+        return sub || reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64uParaBytes(VAPID_PUBLIC) });
+      });
+    }).then(function (sub) {
+      var j = sub.toJSON();
+      return ref('pushMotoqueiros/' + eu.lojaId + '/' + eu.uid).set({ endpoint: j.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth, nome: eu.nome || '', ts: Date.now() });
+    }).catch(function (e) { console.warn('push', e && e.message); });
+  }
+
   /* ---------- Permissão de notificações ---------- */
   function avisoNotif() {
     var el = $('#av-notif');
@@ -702,7 +718,7 @@ button { cursor: pointer; }
       el.classList.remove('hide');
       $('#bt-notif').onclick = function () {
         destravarAudio();
-        Notification.requestPermission().then(function () { avisoNotif(); if (Notification.permission === 'granted') { bipar(); toast('Avisos ativados ✅'); } });
+        Notification.requestPermission().then(function () { avisoNotif(); if (Notification.permission === 'granted') { bipar(); ativarPush(); toast('Avisos ativados ✅'); } });
       };
     } else if (Notification.permission === 'denied') {
       el.innerHTML = '🔕 Os avisos do navegador estão bloqueados. Libere nas configurações do site/app para ser notificado com a tela apagada.';

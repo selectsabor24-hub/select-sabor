@@ -4719,6 +4719,15 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
           <label style="display:flex;align-items:center;gap:6px;font-size:13px"><input id="ps-vib" type="checkbox" checked onchange="pedSomCfgSalvar()"> 📳 Vibrar ao receber pedido</label>
           <button class="btn btn-secondary btn-md" type="button" onclick="pedSomTestar()">▶ Testar som</button>
         </div>
+        <div class="card-title" style="margin-top:6px;font-size:15px">📲 Aviso ao motoqueiro com a tela bloqueada <span style="font-weight:400;font-size:12px;color:var(--text-muted,#6b7280)">(grátis)</span></div>
+        <div style="font-size:13px;margin:6px 0 8px;line-height:1.5">Preencha com os dados do servidor de avisos (ver LEIA-ME.txt na pasta cloudflare-worker). O motoqueiro só precisa tocar em "Ativar avisos" no app dele. O aviso sai deste painel, então ele precisa estar aberto ao aceitar o pedido e marcar como pronto.</div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 12px">
+          <input id="pc-push-url" class="input-base" placeholder="Endereço do servidor (https://...workers.dev)" style="flex:2 1 260px">
+          <input id="pc-push-seg" class="input-base" type="password" placeholder="Senha do servidor" style="flex:1 1 140px">
+          <button class="btn btn-secondary btn-md" type="button" onclick="pedPushCfgSalvar()">Salvar</button>
+          <button class="btn btn-secondary btn-md" type="button" onclick="pedPushTestar()">▶ Enviar aviso de teste</button>
+        </div>
+        <small id="pc-push-msg" style="display:block;margin-bottom:10px;font-size:13px"></small>
         <div class="form-actions" style="margin-top:12px">
           <button class="btn btn-primary btn-md" onclick="pedConfigSalvar()">Salvar</button>
           <button class="btn btn-secondary btn-md" onclick="pedConfigFechar()">Cancelar</button>
@@ -18054,11 +18063,71 @@ function pedAcao(a, id) {
 }
 
 /* ---------- Status ---------- */
+/* ---------- Aviso push gratuito ao motoqueiro (Web Push via servidor Cloudflare) ---------- */
+function _pedPushMsg(t, ok) { const m = document.getElementById('pc-push-msg'); if (m) { m.textContent = t; m.style.color = ok ? '#15803d' : '#b91c1c'; } }
+function pedPushCfgAbrir() {
+  _pedPushMsg('', true);
+  const u = document.getElementById('pc-push-url'), sg = document.getElementById('pc-push-seg');
+  if (u) u.value = ''; if (sg) sg.value = '';
+  if (!_lojaAtiva) return;
+  _dbRef('pushConfig/' + _lojaAtiva).once('value').then(s => {
+    const v = s.val() || {}; if (u) u.value = v.url || ''; if (sg) sg.value = v.segredo || '';
+  }).catch(() => {});
+}
+function pedPushCfgSalvar() {
+  if (!_lojaAtiva) return;
+  const url = (document.getElementById('pc-push-url').value || '').trim().replace(/\/+$/, '');
+  const seg = (document.getElementById('pc-push-seg').value || '').trim();
+  if (!url && !seg) { _dbRef('pushConfig/' + _lojaAtiva).remove().then(() => _pedPushMsg('Servidor de avisos removido', true)); return; }
+  if (!/^https:\/\/[^\s]+$/.test(url) || !seg) { _pedPushMsg('Informe o endereço (começa com https://) e a senha', false); return; }
+  _dbRef('pushConfig/' + _lojaAtiva).set({ url, segredo: seg })
+    .then(() => _pedPushMsg('Salvo ✔', true))
+    .catch(() => _pedPushMsg('Sem permissão. Publique as regras atualizadas do Firebase.', false));
+}
+/* Envia o aviso a todos os motoqueiros que ativaram. Devolve { enviados, aparelhos } ou null. */
+function _pedPushEnviar(titulo, msg, tag) {
+  if (!_lojaAtiva) return Promise.resolve(null);
+  const loja = _lojaAtiva;
+  return Promise.all([_dbRef('pushConfig/' + loja).once('value'), _dbRef('pushMotoqueiros/' + loja).once('value')]).then(r => {
+    const cfg = r[0].val(), todos = r[1].val() || {};
+    if (!cfg || !cfg.url || !cfg.segredo) return { semServidor: true };
+    const subs = Object.keys(todos).map(k => todos[k]).filter(x => x && x.endpoint && x.p256dh && x.auth)
+      .map(x => ({ endpoint: x.endpoint, p256dh: x.p256dh, auth: x.auth }));
+    if (!subs.length) return { enviados: 0, aparelhos: 0 };
+    let click = ''; try { click = new URL('motoqueiro.html', location.href).href; } catch (e) {}
+    return fetch(cfg.url, { method: 'POST', body: JSON.stringify({ segredo: cfg.segredo, subs, title: titulo, body: msg, url: click, tag: tag || 'entrega' }) })
+      .then(x => x.json()).then(d => {
+        if (d && d.mortos && d.mortos.length) {
+          Object.keys(todos).forEach(k => { if (d.mortos.indexOf((todos[k] || {}).endpoint) >= 0) _dbRef('pushMotoqueiros/' + loja + '/' + k).remove().catch(() => {}); });
+        }
+        return { enviados: (d && d.enviados) || 0, aparelhos: subs.length, erro: d && d.erro };
+      });
+  }).catch(() => null);
+}
+function pedPushTestar() {
+  _pedPushMsg('Enviando…', true);
+  _pedPushEnviar('🛵 Teste de aviso', 'Se você viu isto, os avisos estão funcionando.', 'teste').then(r => {
+    if (!r) _pedPushMsg('Não foi possível enviar. Confira o endereço do servidor e as regras do Firebase.', false);
+    else if (r.semServidor) _pedPushMsg('Preencha e salve o endereço e a senha do servidor.', false);
+    else if (r.erro === 'senha') _pedPushMsg('A senha não confere com a do servidor.', false);
+    else if (!r.aparelhos) _pedPushMsg('Nenhum motoqueiro ativou os avisos ainda (ele precisa abrir o app e tocar em "Ativar avisos").', false);
+    else _pedPushMsg('Aviso enviado a ' + r.enviados + ' de ' + r.aparelhos + ' aparelho(s).', r.enviados > 0);
+  });
+}
+function _pedPushAvisarStatus(id, st) {
+  if (st !== 'preparo' && st !== 'pronto') return;
+  const p = _pedGet(id); if (!p || p.tipo !== 'entrega') return;
+  const e = p.endereco || {};
+  const local = [e.bairro, e.rua].filter(Boolean).join(' — ');
+  const corpo = '#' + (p.codigo || '') + (local ? ' — ' + local : '');
+  if (st === 'preparo') _pedPushEnviar('🍳 Pedido aceito — vá para a loja', corpo, 'prep-' + id);
+  else _pedPushEnviar('🛵 Nova entrega pronta', corpo, 'pronto-' + id);
+}
 function pedMudar(id, st, extra) {
   if (!_lojaAtiva) return Promise.resolve();
   const upd = Object.assign({ status: st, atualizadoEm: firebase.database.ServerValue.TIMESTAMP }, extra || {});
   upd['hist/' + st] = firebase.database.ServerValue.TIMESTAMP;
-  return _pedRef(id).update(upd).catch(e => {
+  return _pedRef(id).update(upd).then(() => { try { _pedPushAvisarStatus(id, st); } catch (e) {} }).catch(e => {
     console.error(e);
     showToast(e && /permission/i.test(e.message || e.code || '')
       ? 'Sem permissão. Publique as regras atualizadas do Firebase (firebase/firebase-database.rules.json).'
@@ -18309,6 +18378,7 @@ function pedConfigAbrir() {
   set('pc-acima', c.taxaAcima != null ? money(c.taxaAcima) : '');
   _pedMapaLink();
   pedSomCfgAbrir();
+  pedPushCfgAbrir();
   document.getElementById('pc-entrega').checked  = c.aceitaEntrega !== false;
   document.getElementById('pc-retirada').checked = c.aceitaRetirada !== false;
   document.getElementById('pc-aberto').checked   = _pedCfg() ? c.aberto === true : true;

@@ -36,6 +36,22 @@ self.addEventListener('fetch', event => {
   );
 });
 
+// Push (avisos com a tela bloqueada): mostra a notificação com som e vibração
+self.addEventListener('push', event => {
+  let d = {};
+  try { d = event.data ? event.data.json() : {}; } catch (e) { d = { title: 'Select Sabor', body: event.data ? event.data.text() : '' }; }
+  event.waitUntil(self.registration.showNotification(d.title || 'Select Sabor', {
+    body: d.body || '',
+    icon: 'icon-192.png',
+    badge: 'icon-192.png',
+    tag: d.tag || 'entrega',
+    renotify: true,
+    requireInteraction: true,
+    vibrate: [500, 150, 500, 150, 500],
+    data: { url: d.url || '' }
+  }));
+});
+
 self.addEventListener('notificationclick', event => {
   event.notification.close();
   event.waitUntil(
