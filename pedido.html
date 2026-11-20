@@ -42,7 +42,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
 .hide { display: none !important; }
 
 /* Cabeçalho */
-.top { background: linear-gradient(160deg, var(--verde), var(--verde2)); color: #fff; padding: calc(14px + var(--safe-t)) 0 18px; }
+.top { position: sticky; top: 0; z-index: 25; background: linear-gradient(160deg, var(--verde), var(--verde2)); color: #fff; padding: calc(14px + var(--safe-t)) 0 18px; }
 .top .wrap { display: flex; align-items: center; gap: 12px; }
 .top img { width: 64px; height: 64px; border-radius: 50%; background: #fff; flex-shrink: 0; box-shadow: 0 0 0 3px rgba(255,255,255,.35); }
 .top h1 { margin: 0; font-size: clamp(18px, 5.4vw, 24px); line-height: 1.15; word-break: break-word; }
@@ -102,7 +102,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
 .banner-andamento button { background: var(--verde); color: #fff; border: 0; border-radius: 10px; padding: 8px 14px; font-weight: 600; }
 
 /* Categorias (rolagem lateral) */
-.cats { position: sticky; top: 0; z-index: 20; background: var(--bg); border-bottom: 1px solid var(--borda); padding: calc(8px + 0px) 0; }
+.cats { position: sticky; top: var(--top-h, 0px); z-index: 20; background: var(--bg); border-bottom: 1px solid var(--borda); padding: calc(8px + 0px) 0; }
 .cats .scroll { display: flex; gap: 8px; overflow-x: auto; padding: 2px 14px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
 .cats .scroll::-webkit-scrollbar { display: none; }
 .cats button { flex: 0 0 auto; border: 1px solid var(--borda); background: #fff; border-radius: 99px; padding: 8px 14px; font-size: 14px; font-weight: 600; color: var(--txt); }
@@ -1167,6 +1167,17 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     try { fotosSincronizar(); } catch (e) {}
     cardPronto = true; iniciar();
   }, function () { cardPronto = true; cardapio = []; iniciar(); });
+})();
+</script>
+<script>
+/* Cabeçalho fixo: as categorias grudam logo abaixo dele, qualquer que seja a altura */
+(function () {
+  var h = document.querySelector('header.top');
+  if (!h) return;
+  function ajusta() { document.documentElement.style.setProperty('--top-h', h.offsetHeight + 'px'); }
+  if (window.ResizeObserver) new ResizeObserver(ajusta).observe(h);
+  window.addEventListener('resize', ajusta);
+  ajusta();
 })();
 </script>
 </body>
