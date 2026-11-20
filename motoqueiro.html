@@ -158,6 +158,7 @@ button { cursor: pointer; }
         <small><span class="dot" id="tp-dot"></span><span id="tp-loja">—</span></small>
       </div>
       <button class="ib" id="bt-som" title="Som dos avisos" aria-label="Som dos avisos">🔔</button>
+      <button class="ib" id="bt-som-cfg" title="Configurar som" aria-label="Configurar som">⚙</button>
       <button class="ib" id="bt-sair" title="Sair" aria-label="Sair">⎋</button>
     </div>
   </header>
@@ -316,7 +317,7 @@ button { cursor: pointer; }
 
   /* ---------- Escutas do Firebase ---------- */
   function ouvir(r, evento, fn, fnErro) { r.on(evento, fn, fnErro || function (e) { console.warn(e && e.message); }); escutas.push([r, evento, fn]); }
-  function desligar() { escutas.forEach(function (x) { try { x[0].off(x[1], x[2]); } catch (e) {} }); escutas = []; prontosVistos = null; }
+  function desligar() { escutas.forEach(function (x) { try { x[0].off(x[1], x[2]); } catch (e) {} }); escutas = []; prontosVistos = null; loopParar(); }
 
   function iniciar() {
     $('#tp-nome').textContent = eu.nome || 'Motoqueiro';
@@ -516,7 +517,7 @@ button { cursor: pointer; }
   function detectar() {
     var prontos = pedidos.filter(function (p) { return p.status === 'pronto'; });
     var ids = {}; prontos.forEach(function (p) { ids[p.id] = 1; });
-    if (prontosVistos === null) { prontosVistos = ids; return; }
+    if (prontosVistos === null) { prontosVistos = ids; if (pendentes().length) loopIniciar(); return; }
     var novos = prontos.filter(function (p) { return !prontosVistos[p.id]; });
     prontosVistos = ids;
     if (novos.length) avisar(novos);
@@ -526,6 +527,7 @@ button { cursor: pointer; }
     var titulo = '🛵 Nova entrega pronta' + (novos.length > 1 ? ' (+' + (novos.length - 1) + ')' : '');
     var corpo = '#' + (p.codigo || '') + ' — ' + [[e.rua, e.numero].filter(Boolean).join(', '), e.bairro, e.cep ? 'CEP ' + e.cep : ''].filter(Boolean).join(' — ');
     bipar();
+    loopIniciar();
     try { if (navigator.vibrate) navigator.vibrate([300, 120, 300, 120, 300]); } catch (x) {}
     var a = $('#alerta');
     a.innerHTML = esc(titulo) + '<small>' + esc(corpo) + '</small>';
@@ -555,21 +557,64 @@ button { cursor: pointer; }
     } catch (e) {}
   }
   ['pointerdown', 'keydown', 'touchstart'].forEach(function (ev) { document.addEventListener(ev, destravarAudio, { passive: true }); });
-  function bipar() {
-    if (!som) return;
+  /* Toque escolhido, volume e repetição (salvo neste aparelho) */
+  function somCfg() {
+    var c = {}; try { c = JSON.parse(lsGet('motSomCfg', '{}')) || {}; } catch (e) {}
+    return { tipo: (c.tipo === 2 || c.tipo === 3) ? c.tipo : 1, vol: (c.vol >= 0.2 && c.vol <= 1) ? c.vol : 0.9, repetir: c.repetir !== false };
+  }
+  function tocar(c) {
     try {
       destravarAudio(); if (!audio) return;
-      var t0 = audio.currentTime;
-      [0, 0.3, 0.6, 1.0, 1.3, 1.6].forEach(function (d, i) {
+      var t0 = audio.currentTime + 0.02;
+      var nota = function (freq, ini, dur, onda, ganho) {
         var o = audio.createOscillator(), g = audio.createGain();
-        o.type = 'sine'; o.frequency.value = (i % 3 === 1) ? 1046 : 784;
-        g.gain.setValueAtTime(0.0001, t0 + d);
-        g.gain.exponentialRampToValueAtTime(0.6, t0 + d + 0.03);
-        g.gain.exponentialRampToValueAtTime(0.0001, t0 + d + 0.26);
+        o.type = onda; o.frequency.value = freq;
+        g.gain.setValueAtTime(0.0001, t0 + ini);
+        g.gain.exponentialRampToValueAtTime(Math.max(0.001, ganho * c.vol), t0 + ini + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + ini + dur);
         o.connect(g); g.connect(audio.destination);
-        o.start(t0 + d); o.stop(t0 + d + 0.28);
-      });
+        o.start(t0 + ini); o.stop(t0 + ini + dur + 0.02);
+      };
+      var i;
+      if (c.tipo === 1) { [0, 0.9].forEach(function (b) { nota(880, b, 0.55, 'triangle', 0.6); nota(659, b + 0.35, 0.7, 'triangle', 0.6); }); }
+      else if (c.tipo === 2) { for (i = 0; i < 6; i++) nota(i % 2 ? 1175 : 1046, i * 0.16, 0.12, 'square', 0.35); }
+      else { for (i = 0; i < 4; i++) { nota(660, i * 0.45, 0.22, 'sawtooth', 0.3); nota(880, i * 0.45 + 0.22, 0.22, 'sawtooth', 0.3); } }
     } catch (e) {}
+  }
+  function bipar(forcar) {
+    if (!som && !forcar) return;
+    tocar(somCfg());
+  }
+  /* Repete o toque enquanto houver entrega pronta esperando (das últimas 3 horas) */
+  var loopT = null;
+  function pendentes() {
+    var lim = Date.now() - 36e5 * 3;
+    return pedidos.filter(function (p) { return p.status === 'pronto' && meu(p) && (((p.hist && p.hist.pronto) || p.atualizadoEm || p.ts || 0) > lim); });
+  }
+  function loopIniciar() {
+    if (loopT || !somCfg().repetir) return;
+    loopT = setInterval(function () {
+      if (!eu || !som || !somCfg().repetir || !pendentes().length) { loopParar(); return; }
+      bipar();
+      try { if (navigator.vibrate) navigator.vibrate([300, 120, 300]); } catch (x) {}
+    }, 8000);
+  }
+  function loopParar() { if (loopT) { clearInterval(loopT); loopT = null; } }
+  $('#bt-som-cfg').addEventListener('click', function () {
+    var btn = 'width:100%;padding:12px;border-radius:12px;border:1px solid #cfd4dc;background:#fff;font-size:16px;font-weight:600';
+    modal('Som dos avisos',
+      '<div style="display:grid;gap:14px;margin:10px 0">' +
+      '<label>Toque<br><select id="sc-tipo" style="width:100%;font-size:16px;padding:10px"><option value="1">Campainha</option><option value="2">Alerta (bipes)</option><option value="3">Sirene</option></select></label>' +
+      '<label>Volume<br><input id="sc-vol" type="range" min="20" max="100" step="10" style="width:100%"></label>' +
+      '<label style="display:flex;gap:8px;align-items:center"><input id="sc-rep" type="checkbox"> Repetir até pegar a entrega</label>' +
+      '<button type="button" id="sc-test" style="' + btn + '">▶ Testar som</button></div>',
+      'Salvar', function () { lsSet('motSomCfg', JSON.stringify(lerCfgModal())); toast('Som salvo'); });
+    var c = somCfg();
+    $('#sc-tipo').value = String(c.tipo); $('#sc-vol').value = String(Math.round(c.vol * 100)); $('#sc-rep').checked = c.repetir;
+    $('#sc-test').onclick = function () { destravarAudio(); tocar(lerCfgModal()); };
+  });
+  function lerCfgModal() {
+    return { tipo: parseInt($('#sc-tipo').value, 10) || 1, vol: (parseInt($('#sc-vol').value, 10) || 90) / 100, repetir: $('#sc-rep').checked };
   }
   $('#bt-som').addEventListener('click', function () {
     som = !som; lsSet('motSom', som ? '1' : '0');
