@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <script>try{var t=localStorage.getItem("caixa-theme");if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Controle de Caixa v5.7</title>
+<title>Controle de Caixa v5.8</title>
 
 <!-- ============================================================
      PWA — Progressive Web App
@@ -34,7 +34,7 @@
 <!--
   ╔══════════════════════════════════════════════════════════════════════╗
   ║           CONTROLE DE CAIXA                                           ║
-  ║           Versão: 5.7 — Espaço do banco + limpeza automática de pedidos      ║
+  ║           Versão: 5.8 — Perfil "Atendimento" (pedidos, motoqueiro, comandas, cardápio) ║
   ╠══════════════════════════════════════════════════════════════════════╣
   ║  HISTÓRICO DE VERSÕES                                                ║
   ║  ─────────────────────────────────────────────────────────────────  ║
@@ -45,6 +45,9 @@
   ║         · Melhoria: renderContas usa cache; seção 3.22 documentada   ║
   ║  v3.3 — Seções novas: Planilhas já lançadas (3.23), calendário       ║
   ║         visual de lançamentos com marcação de cartão                 ║
+  ║  v5.8 — Perfil de acesso "Atendimento" por usuário (Configurações): ║
+  ║         só vê Pedidos online, Motoqueiro, Comandas/Mesas e Cardápio.║
+  ║         Regras do Firebase também bloqueiam as demais áreas.        ║
   ║  v5.7 — Configurações: "Espaço usado no banco" (estimativa) e      ║
   ║         limpeza automática de pedidos online concluídos antigos     ║
   ║         (com backup JSON antes; nunca apaga caixa/comandas).        ║
@@ -3484,7 +3487,7 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
           <img src="logo.png" alt="Select Sabor" style="width:44px;height:44px;border-radius:50%;flex-shrink:0;background:#fff;box-shadow:0 0 0 2px rgba(255,255,255,0.18)">
           <div>
             <div class="logo-title">Controle de Caixa</div>
-            <div class="logo-sub">v5.7</div>
+            <div class="logo-sub">v5.8</div>
           </div>
         </div>
         <span id="status-dot" style="display:none;width:8px;height:8px;border-radius:50%;background:#4ADE80;flex-shrink:0;box-shadow:0 0 0 2px rgba(74,222,128,0.2)" title="Conectado"></span>
@@ -5095,6 +5098,13 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
             <label>Senha</label>
             <input id="cfg-novo-senha" type="password" placeholder="Mínimo 6 caracteres">
           </div>
+          <div class="form-group">
+            <label>Perfil de acesso</label>
+            <select id="cfg-novo-perfil" style="padding:9px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:14px;width:100%">
+              <option value="completo">Completo (todas as telas, menos Configurações)</option>
+              <option value="atendimento">Atendimento (só Pedidos online, Motoqueiro, Comandas/Mesas e Cardápio)</option>
+            </select>
+          </div>
         </div>
         <div id="cfg-erro" style="margin-top:10px;font-size:13px;color:var(--red);display:none"></div>
         <div class="form-actions">
@@ -6027,6 +6037,9 @@ function initRealtimeSync() {
   });
   _listenersGlobais.push(refLojasCad);
 
+  // Perfil atendimento não lê fornecedores, categorias, movimentações nem metas
+  if (_ehAtendimento()) return;
+
   // Fornecedores (compartilhados entre lojas)
   const refForn = _dbRef('fornecedores');
   refForn.on('value', snap => {
@@ -6512,7 +6525,8 @@ function setLojaAtiva(id) {
   // Exibe skeleton na seção atual enquanto os dados da nova loja carregam
   showSectionLoading(_currentSection);
   // Contador: aguarda os 4 listeners principais responderem
-  _lojaCarregandoCount = 4;
+  const _atend = _ehAtendimento();      // atendimento: não carrega funcionários, contas nem auditoria
+  _lojaCarregandoCount = _atend ? 1 : 4;
 
   /** Chamado a cada resposta do Firebase; remove o skeleton quando todos chegarem. */
   function _onLojaResolved() {
@@ -6548,6 +6562,7 @@ function setLojaAtiva(id) {
   });
   _listenersLoja.push(refLanc);
 
+  if (!_atend) {
   // Escuta funcionários da loja ativa
   const refFuncs = _dbRef('funcionarios/' + id);
   let _funcsPrimeiraVez = true;
@@ -6600,6 +6615,7 @@ function setLojaAtiva(id) {
     _refreshCurrentSection();
   });
   _listenersLoja.push(refContas);
+  } // fim: dados que o perfil atendimento não carrega
 
   // Escuta fechamentos de caixa da loja ativa
   const refFechamentos = _dbRef('fechamentos_caixa/' + id);
@@ -6611,12 +6627,14 @@ function setLojaAtiva(id) {
   _listenersLoja.push(refFechamentos);
 
   // Escuta auditoria da loja ativa
+  if (!_atend) {
   const refAuditoria = _dbRef('auditoria/' + id);
   refAuditoria.limitToLast(100).on('value', snap => {
     _cache.auditoria = snap.val() ? Object.values(snap.val()) : [];
     _refreshCurrentSection();
   });
   _listenersLoja.push(refAuditoria);
+  }
 
   // Comandas / Mesas e cardápio da loja ativa
   _cache.comandas = [];
@@ -8188,11 +8206,21 @@ function isAdminEmail(email) {
   return ADMIN_EMAILS.includes(String(email || '').trim().toLowerCase());
 }
 
+/* Perfil do usuário logado: 'admin' | 'completo' | 'atendimento'.
+   'atendimento' = só Pedidos online, Motoqueiro, Comandas/Mesas e Cardápio. */
+let _perfilAtual = 'completo';
+const _PERFIL_ATEND_SECOES = ['pedidos', 'motoqueiro', 'comandas', 'cardapio'];
+function _ehAtendimento() { return _perfilAtual === 'atendimento'; }
+
 function _usuarioTemAcesso(user) {
   if (!user) return Promise.resolve(false);
-  if (isAdminEmail(user.email)) return Promise.resolve(true);
+  if (isAdminEmail(user.email)) { _perfilAtual = 'admin'; return Promise.resolve(true); }
   return _dbRef('usuarios/' + user.uid).once('value')
-    .then(snap => snap.exists() && snap.val()?.ativo !== false)
+    .then(snap => {
+      const v = snap.val() || {};
+      _perfilAtual = v.perfil === 'atendimento' ? 'atendimento' : 'completo';
+      return snap.exists() && v.ativo !== false;
+    })
     .catch(err => {
       console.error('[auth] Falha ao validar usuário no banco:', err);
       return false;
@@ -8325,6 +8353,11 @@ function _syncIndicator(state) {
  * → Para adicionar nova seção: acrescente o case correspondente.
  */
 function showSection(id, btn) {
+  // Perfil atendimento: só as telas liberadas (vale também se alguém chamar pelo console)
+  if (_ehAtendimento() && !_PERFIL_ATEND_SECOES.includes(id)) {
+    showToast('Seu usuário não tem acesso a esta tela.', false);
+    return;
+  }
   // Bloqueia acesso a seções admin para não-admins (mesmo via console)
   const _secAdminOnly = ['lojas', 'configuracoes'];
   if (_secAdminOnly.includes(id)) {
@@ -16532,6 +16565,10 @@ function renderConfiguracoes() {
         <div>
           <div class="txt-md-medium">${escapeHtml(u.nome || '—')}</div>
           <div class="txt-hint">${escapeHtml(u.email)}</div>
+          <select onchange="alterarPerfilUsuario('${escapeJsString(u.uid)}', this.value)" style="margin-top:6px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-size:12px">
+            <option value="completo"${u.perfil === 'atendimento' ? '' : ' selected'}>Perfil: Completo</option>
+            <option value="atendimento"${u.perfil === 'atendimento' ? ' selected' : ''}>Perfil: Atendimento</option>
+          </select>
         </div>
         <button class="btn-danger" onclick="excluirUsuario('${escapeJsString(u.uid)}','${escapeJsString(u.email)}')">Excluir</button>
       </div>`).join('');
@@ -16725,10 +16762,18 @@ function bancoIniciar() {
   });
 }
 
+function alterarPerfilUsuario(uid, perfil) {
+  if (!_bancoAdmin()) { showToast('Acesso restrito a administradores.', false); return; }
+  _dbRef('usuarios/' + uid + '/perfil').set(perfil === 'atendimento' ? 'atendimento' : 'completo')
+    .then(() => showToast('Perfil atualizado. Vale no próximo login do usuário.'))
+    .catch(e => { console.error(e); showToast('Erro ao alterar o perfil.', false); });
+}
+
 function criarUsuario() {
   const nome  = document.getElementById('cfg-novo-nome').value.trim();
   const email = document.getElementById('cfg-novo-email').value.trim();
   const senha = document.getElementById('cfg-novo-senha').value;
+  const perfil = (document.getElementById('cfg-novo-perfil') || {}).value === 'atendimento' ? 'atendimento' : 'completo';
   const erroEl = document.getElementById('cfg-erro');
   erroEl.style.display = 'none';
 
@@ -16756,7 +16801,7 @@ function criarUsuario() {
   secondaryApp.auth().createUserWithEmailAndPassword(email, senha)
     .then(cred => {
       const uid = cred.user.uid;
-      return _dbRef('usuarios/' + uid).set({ uid, nome, email, ativo: true, criadoEm: new Date().toISOString() })
+      return _dbRef('usuarios/' + uid).set({ uid, nome, email, ativo: true, perfil, criadoEm: new Date().toISOString() })
         .then(() => secondaryApp.auth().signOut());
     })
     .then(() => {
@@ -21452,6 +21497,28 @@ function _showStatusBar(user) {
   // v4.0: restaurante único — a tela Loja A ↔ B fica oculta
   if (navLojas)    navLojas.style.display      = 'none';
   if (drawerLojas) drawerLojas.style.display   = 'none';
+  if (_ehAtendimento()) _aplicarPerfilAtendimento();
+}
+
+/** Perfil "atendimento": esconde tudo, menos Pedidos online, Motoqueiro, Comandas/Mesas e Cardápio. */
+function _aplicarPerfilAtendimento() {
+  const ok = id => _PERFIL_ATEND_SECOES.includes(id);
+  const idDe = el => { const m = /(?:showSection|drawerNav|bottomNav)\('([a-z]+)'/.exec(el.getAttribute('onclick') || ''); return m ? m[1] : null; };
+  // Sidebar
+  document.querySelectorAll('.nav-item').forEach(b => { const id = idDe(b); if (id && !ok(id)) b.style.display = 'none'; });
+  document.querySelectorAll('.nav-section-label').forEach(l => {
+    const t = (l.textContent || '').trim();
+    if (t !== 'Pedidos' && t !== 'Cadastros') l.style.display = 'none';
+  });
+  // Menu "Mais" do celular
+  document.querySelectorAll('.drawer-item').forEach(b => { const id = idDe(b); if (id && !ok(id)) b.style.display = 'none'; });
+  // Barra inferior: sobra só o botão "Mais" (abre o menu com as 4 telas)
+  document.querySelectorAll('.bottom-nav-item').forEach(b => { if (b.id !== 'bn-mais') b.style.display = 'none'; });
+  document.querySelectorAll('.logo-sub').forEach(e => { e.textContent = e.textContent.trim() + ' · Atendimento'; });
+  // Tela inicial: Pedidos online
+  const btn = document.getElementById('nav-pedidos');
+  showSection('pedidos', btn);
+  if (btn) btn.classList.add('active');
 }
 
 </script>

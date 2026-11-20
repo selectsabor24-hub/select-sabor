@@ -1,26 +1,29 @@
 {
   "rules": {
     "caixa": {
-      ".read": "auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true)",
+      ".read": "auth != null && (auth.token.email == 'selectsabor24@gmail.com' || (root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true && root.child('caixa/usuarios/' + auth.uid + '/perfil').val() != 'atendimento'))",
       ".write": "auth != null && (auth.token.email == 'selectsabor24@gmail.com')",
       "usuarios": {
         ".read": "auth != null && (auth.token.email == 'selectsabor24@gmail.com')",
         "$uid": {
-          ".write": "auth != null && (auth.token.email == 'selectsabor24@gmail.com')"
+          ".write": "auth != null && (auth.token.email == 'selectsabor24@gmail.com')",
+          ".read": "auth != null && auth.uid == $uid"
         }
       },
       "lojas": {
         ".write": "auth != null && (auth.token.email == 'selectsabor24@gmail.com')"
       },
       "lojasCad": {
-        ".write": "auth != null && (auth.token.email == 'selectsabor24@gmail.com')"
+        ".write": "auth != null && (auth.token.email == 'selectsabor24@gmail.com')",
+        ".read": "auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true)"
       },
       "lancamentos_loja": {
         "$lojaId": {
           "$lancamentoId": {
             ".write": "auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true)",
             ".validate": "newData.val() == null || (newData.hasChildren(['id', 'data']))"
-          }
+          },
+          ".read": "auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true)"
         }
       },
       "comandas": {
@@ -28,7 +31,8 @@
           "$comandaId": {
             ".write": "auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true)",
             ".validate": "newData.val() == null || newData.hasChildren(['id','mesa','status'])"
-          }
+          },
+          ".read": "auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true)"
         }
       },
       "cardapio": {
@@ -48,40 +52,41 @@
           "$motId": {
             ".write": "auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true)",
             ".validate": "newData.val() == null || (newData.hasChildren(['id','nome']) && newData.child('nome').isString() && newData.child('nome').val().length <= 40)"
-          }
+          },
+          ".read": "auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true)"
         }
       },
       "fornecedores": {
-        ".write": "auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true)"
+        ".write": "auth != null && (auth.token.email == 'selectsabor24@gmail.com' || (root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true && root.child('caixa/usuarios/' + auth.uid + '/perfil').val() != 'atendimento'))"
       },
       "funcionarios": {
         "$id": {
-          ".write": "auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true)"
+          ".write": "auth != null && (auth.token.email == 'selectsabor24@gmail.com' || (root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true && root.child('caixa/usuarios/' + auth.uid + '/perfil').val() != 'atendimento'))"
         }
       },
       "pagamentos_func": {
         "$id": {
-          ".write": "auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true)"
+          ".write": "auth != null && (auth.token.email == 'selectsabor24@gmail.com' || (root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true && root.child('caixa/usuarios/' + auth.uid + '/perfil').val() != 'atendimento'))"
         }
       },
       "ponto_func": {
         "$id": {
-          ".write": "auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true)"
+          ".write": "auth != null && (auth.token.email == 'selectsabor24@gmail.com' || (root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true && root.child('caixa/usuarios/' + auth.uid + '/perfil').val() != 'atendimento'))"
         }
       },
       "faltas_func": {
         "$id": {
-          ".write": "auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true)"
+          ".write": "auth != null && (auth.token.email == 'selectsabor24@gmail.com' || (root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true && root.child('caixa/usuarios/' + auth.uid + '/perfil').val() != 'atendimento'))"
         }
       },
       "contas_pagar": {
         "$id": {
-          ".write": "auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true)"
+          ".write": "auth != null && (auth.token.email == 'selectsabor24@gmail.com' || (root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true && root.child('caixa/usuarios/' + auth.uid + '/perfil').val() != 'atendimento'))"
         }
       },
       "metas": {
         "$id": {
-          ".write": "auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true)"
+          ".write": "auth != null && (auth.token.email == 'selectsabor24@gmail.com' || (root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true && root.child('caixa/usuarios/' + auth.uid + '/perfil').val() != 'atendimento'))"
         }
       },
       "config_usuario": {
@@ -92,9 +97,10 @@
       "fechamentos_caixa": {
         "$lojaId": {
           "$data": {
-            ".write": "auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true)",
+            ".write": "auth != null && (auth.token.email == 'selectsabor24@gmail.com' || (root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true && root.child('caixa/usuarios/' + auth.uid + '/perfil').val() != 'atendimento'))",
             ".validate": "newData.val() == null || newData.hasChildren(['data','status'])"
-          }
+          },
+          ".read": "auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true)"
         }
       },
       "auditoria": {
@@ -344,7 +350,7 @@
               ".validate": "false"
             }
           },
-          ".read": "(auth != null && root.child('caixa/motoqueirosUid/' + auth.uid + '/ativo').val() === true && root.child('caixa/motoqueirosUid/' + auth.uid + '/lojaId').val() === $lojaId) && query.limitToLast <= 100 && ((query.orderByChild === 'status' && (query.equalTo === 'pronto' || query.equalTo === 'preparo')) || (query.orderByChild === 'motoqueiro' && query.equalTo === root.child('caixa/motoqueirosUid/' + auth.uid + '/nome').val()))"
+          ".read": "auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true)"
         }
       },
       "codigosEntrega": {
@@ -352,7 +358,8 @@
           "$pedidoId": {
             ".write": "(!data.exists() && newData.exists()) || (auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true))",
             ".validate": "$pedidoId.matches(/^[-A-Za-z0-9_]{8,40}$/) && newData.isString() && newData.val().matches(/^[0-9]{4}$/)"
-          }
+          },
+          ".read": "auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true)"
         }
       },
       "pushMotoqueiros": {
@@ -379,13 +386,14 @@
             "$outro": {
               ".validate": "false"
             }
-          }
+          },
+          ".read": "auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true)"
         }
       },
       "pushConfig": {
         "$lojaId": {
           ".read": "(auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true))",
-          ".write": "(auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true))",
+          ".write": "(auth != null && (auth.token.email == 'selectsabor24@gmail.com' || (root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true && root.child('caixa/usuarios/' + auth.uid + '/perfil').val() != 'atendimento')))",
           ".validate": "newData.val() == null || newData.hasChildren(['url','segredo'])",
           "url": {
             ".validate": "newData.isString() && newData.val().length <= 300 && newData.val().beginsWith('https://')"
