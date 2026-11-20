@@ -98,6 +98,14 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
 @keyframes avisoPulso { 0%,100% { transform: scale(1); } 50% { transform: scale(1.12); } }
 @keyframes avisoBrilho { 0%,60% { left: -60%; } 100% { left: 130%; } }
 @media (prefers-reduced-motion: reduce) { .aviso.destaque::before, .aviso.destaque::after { animation: none; } }
+/* Entrada da foto do destaque: cresce do centro até o tamanho final (toca só na 1ª vez, não a cada clique na sacola) */
+@keyframes fotoCresce { 0% { transform: scale(.35); opacity: 0; } 60% { opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
+@keyframes fotoFundo { from { opacity: 0; } to { opacity: 1; } }
+@keyframes selosPop { 0% { transform: scale(0); opacity: 0; } 70% { transform: scale(1.15); opacity: 1; } 100% { transform: scale(1); } }
+.aviso.destaque .aviso-img.anim { animation: fotoCresce 1s cubic-bezier(.2,.8,.25,1) both; }
+.aviso.destaque .aviso-bg.anim { animation: fotoFundo .8s ease-out both; }
+.aviso.destaque .dest-badge.anim { animation: selosPop .5s .8s cubic-bezier(.2,.8,.3,1.3) both; }
+@media (prefers-reduced-motion: reduce) { .aviso.destaque .aviso-img.anim, .aviso.destaque .aviso-bg.anim, .aviso.destaque .dest-badge.anim { animation: none; } }
 .banner-andamento { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin: 12px 0 0; padding: 10px 12px; border-radius: 12px; background: var(--verde-bg); border: 1px solid #BBD7BF; font-size: 14px; }
 .banner-andamento button { background: var(--verde); color: #fff; border: 0; border-radius: 10px; padding: 8px 14px; font-weight: 600; }
 
@@ -664,18 +672,20 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     var id = cfg && cfg.destaqueId; if (!id) return null;
     return itensAtivos().filter(function (i) { return i.id === id; })[0] || null;
   }
+  var _fotoAnimada = null; // última foto cujo efeito de entrada já rodou
   function desenharAviso() {
     var av = $('#aviso'); if (!av) return;
     var txt = !aberta() ? 'Estamos fechados no momento. Você pode ver o cardápio, mas só dá para enviar pedidos quando abrirmos.' : (cfg && cfg.aviso) || '';
     var dest = aberta() ? destaqueItem() : null;
     var foto = aberta() ? ((dest && dest.fotoV && FOTOS[dest.id]) || avisoFoto()) : null;
+    var animar = !!foto && foto !== _fotoAnimada; if (foto) _fotoAnimada = foto;
     av.textContent = '';
-    if (dest) { var bd = document.createElement('span'); bd.className = 'dest-badge' + (foto ? '' : ' sem'); bd.textContent = '⭐ Destaque'; av.appendChild(bd); }
+    if (dest) { var bd = document.createElement('span'); bd.className = 'dest-badge' + (foto ? '' : ' sem') + (animar ? ' anim' : ''); bd.textContent = '⭐ Destaque'; av.appendChild(bd); }
     if (foto) {
       // foto inteira, centralizada, sem cortar: o fundo desfocado preenche as sobras
       var fw = document.createElement('div'); fw.className = 'aviso-foto';
-      var bg = document.createElement('img'); bg.className = 'aviso-bg'; bg.alt = ''; bg.src = foto; bg.setAttribute('aria-hidden', 'true');
-      var im = document.createElement('img'); im.className = 'aviso-img'; im.alt = ''; im.src = foto;
+      var bg = document.createElement('img'); bg.className = 'aviso-bg' + (animar ? ' anim' : ''); bg.alt = ''; bg.src = foto; bg.setAttribute('aria-hidden', 'true');
+      var im = document.createElement('img'); im.className = 'aviso-img' + (animar ? ' anim' : ''); im.alt = ''; im.src = foto;
       fw.appendChild(bg); fw.appendChild(im); av.appendChild(fw);
     }
     var tx = document.createElement('span'); tx.className = 'aviso-txt'; tx.textContent = txt; av.appendChild(tx);
