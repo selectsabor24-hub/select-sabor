@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <script>try{var t=localStorage.getItem("caixa-theme");if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Controle de Caixa v5.3</title>
+<title>Controle de Caixa v5.4</title>
 
 <!-- ============================================================
      PWA — Progressive Web App
@@ -33,7 +33,7 @@
 <!--
   ╔══════════════════════════════════════════════════════════════════════╗
   ║           CONTROLE DE CAIXA                                           ║
-  ║           Versão: 5.3 — Cadastro de motoqueiros + menu "Pedidos"      ║
+  ║           Versão: 5.4 — App do motoqueiro (motoqueiro.html)           ║
   ╠══════════════════════════════════════════════════════════════════════╣
   ║  HISTÓRICO DE VERSÕES                                                ║
   ║  ─────────────────────────────────────────────────────────────────  ║
@@ -44,6 +44,12 @@
   ║         · Melhoria: renderContas usa cache; seção 3.22 documentada   ║
   ║  v3.3 — Seções novas: Planilhas já lançadas (3.23), calendário       ║
   ║         visual de lançamentos com marcação de cartão                 ║
+  ║  v5.4 — App do motoqueiro: página motoqueiro.html (PWA, login      ║
+  ║         próprio) com aviso de nova entrega. Cadastro cria o login   ║
+  ║         (e-mail + senha), mostra o link e envia por WhatsApp.       ║
+  ║         Regras Firebase: motoqueirosUid + escrita limitada.         ║
+  ║         Arquivos novos: motoqueiro.html, sw-motoqueiro.js,          ║
+  ║         manifest-motoqueiro.json                                    ║
   ║  v5.3 — Motoqueiro: nova aba "Cadastro" (nome, telefone, moto/placa,║
   ║         ativar/desativar, editar, excluir) e lista "Quem é você?"   ║
   ║         no topo. Menu lateral: nova categoria "Pedidos" (entre      ║
@@ -3306,7 +3312,7 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
 .mot-resumo-l:last-child { border-bottom: 0; }
 .mot-resumo-l span { font-size: 13px; color: var(--text3); }
 /* Cadastro de motoqueiros (v5.3) */
-.mot-cad-form { display: grid; grid-template-columns: 2fr 1.2fr 1.2fr auto; gap: 12px; align-items: end; }
+.mot-cad-form { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; align-items: end; }
 .mot-cad-form .form-group { margin: 0; min-width: 0; }
 .mot-cad-item { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px 0; border-bottom: 1px dashed var(--border); }
 .mot-cad-item:last-child { border-bottom: 0; }
@@ -3447,7 +3453,7 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
           <img src="logo.png" alt="Select Sabor" style="width:44px;height:44px;border-radius:50%;flex-shrink:0;background:#fff;box-shadow:0 0 0 2px rgba(255,255,255,0.18)">
           <div>
             <div class="logo-title">Controle de Caixa</div>
-            <div class="logo-sub">v5.3</div>
+            <div class="logo-sub">v5.4</div>
           </div>
         </div>
         <span id="status-dot" style="display:none;width:8px;height:8px;border-radius:50%;background:#4ADE80;flex-shrink:0;box-shadow:0 0 0 2px rgba(74,222,128,0.2)" title="Conectado"></span>
@@ -18308,6 +18314,9 @@ function _motSeletorRender() {
   if (sel.value !== atual) sel.value = atual;
 }
 
+/** Link do app do motoqueiro (mesma pasta do index.html). */
+function _motAppLink() { return _pedBaseUrl() + 'motoqueiro.html'; }
+
 function _motCadHtml() {
   const lista = _motCadLista();
   const ed = _motEditId ? lista.find(m => m.id === _motEditId) : null;
@@ -18315,6 +18324,23 @@ function _motCadHtml() {
   const v = (campo) => ed ? escapeAttr(ed[campo] || '') : '';
   const hojeNome = {};
   _motEntregas().filter(_motEntregueHoje).forEach(p => { const k = String(p.motoqueiro || '').trim(); if (k) hojeNome[k] = (hojeNome[k] || 0) + 1; });
+  const temAcesso = !!(ed && ed.uid);
+
+  const linkCard = `<div class="card mb-5">
+      <div class="card-title">App do motoqueiro</div>
+      <div style="font-size:13px;color:var(--text3);margin-bottom:10px">Cada motoqueiro instala este app no celular, entra com o próprio e-mail e senha e recebe o aviso (som, vibração e notificação) quando uma entrega fica pronta.</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <input id="mot-app-link" type="text" readonly value="${escapeAttr(_motAppLink())}" style="flex:1 1 260px;min-width:0" onclick="this.select()">
+        <button class="btn btn-secondary btn-md" onclick="motAppCopiar()">Copiar link</button>
+        <a class="btn btn-secondary btn-md" href="${escapeAttr(_motAppLink())}" target="_blank" rel="noopener" style="text-decoration:none">Abrir</a>
+      </div>
+    </div>`;
+
+  const acesso = temAcesso
+    ? `<div style="grid-column:1/-1;font-size:13px;color:var(--text3)">📱 Acesso ao app ativo: <strong>${escapeHtml(ed.email || '')}</strong>. Para trocar a senha, use o botão 🔑 na lista (envia e-mail de redefinição).</div>`
+    : `<div class="form-group"><label>E-mail de acesso ao app <span style="font-weight:400;color:var(--text3)">(opcional)</span></label><input id="mot-cad-email" type="email" maxlength="80" placeholder="Ex: joao@selectsabor.com" autocomplete="off" autocapitalize="off"></div>
+       <div class="form-group"><label>Senha inicial <span style="font-weight:400;color:var(--text3)">(mín. 6)</span></label><input id="mot-cad-senha" type="text" maxlength="40" placeholder="Ex: entrega2026" autocomplete="off"></div>
+       <div style="grid-column:1/-1;font-size:12px;color:var(--text3);margin-top:-4px">Pode ser um e-mail fictício (não precisa existir), mas aí não dá para redefinir a senha por e-mail: se ele esquecer, exclua e cadastre de novo. Deixe em branco para cadastrar sem acesso ao app.</div>`;
 
   const form = `<div class="card mb-5" id="mot-cad-form">
       <div class="card-title">${ed ? 'Editar motoqueiro' : 'Novo motoqueiro'}</div>
@@ -18322,76 +18348,162 @@ function _motCadHtml() {
         <div class="form-group"><label>Nome</label><input id="mot-cad-nome" type="text" maxlength="40" placeholder="Ex: João" autocomplete="off" value="${v('nome')}" onkeydown="if(event.key==='Enter')motCadSalvar()"></div>
         <div class="form-group"><label>Telefone / WhatsApp</label><input id="mot-cad-fone" type="tel" maxlength="20" placeholder="(11) 90000-0000" autocomplete="off" value="${v('telefone')}" onkeydown="if(event.key==='Enter')motCadSalvar()"></div>
         <div class="form-group"><label>Moto / Placa</label><input id="mot-cad-placa" type="text" maxlength="20" placeholder="Ex: ABC-1D23" autocomplete="off" value="${v('placa')}" onkeydown="if(event.key==='Enter')motCadSalvar()"></div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap">
-          <button class="btn btn-primary btn-md" onclick="motCadSalvar()">${ed ? 'Salvar' : '+ Cadastrar'}</button>
+        ${acesso}
+        <div style="grid-column:1/-1;display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn btn-primary btn-md" id="mot-cad-btn" onclick="motCadSalvar()">${ed ? 'Salvar' : '+ Cadastrar'}</button>
           ${ed ? '<button class="btn btn-secondary btn-md" onclick="motCadCancelar()">Cancelar</button>' : ''}
         </div>
       </div>
     </div>`;
 
   if (!lista.length) {
-    return form + `<div class="card" style="text-align:center;color:var(--text3);padding:28px 12px">Nenhum motoqueiro cadastrado ainda.<br>Cadastre acima para escolher o nome nas entregas.</div>`;
+    return linkCard + form + `<div class="card" style="text-align:center;color:var(--text3);padding:28px 12px">Nenhum motoqueiro cadastrado ainda.<br>Cadastre acima para escolher o nome nas entregas.</div>`;
   }
   const linhas = lista.map(m => {
     const off = m.ativo === false;
     const n = hojeNome[String(m.nome || '').trim()] || 0;
-    const info = [m.telefone ? '📞 ' + escapeHtml(m.telefone) : '', m.placa ? '🏍️ ' + escapeHtml(m.placa) : '', n ? n + ' entrega' + (n > 1 ? 's' : '') + ' hoje' : ''].filter(Boolean).join(' · ');
+    const info = [m.telefone ? '📞 ' + escapeHtml(m.telefone) : '', m.placa ? '🏍️ ' + escapeHtml(m.placa) : '', m.uid ? '📱 app: ' + escapeHtml(m.email || '') : 'sem acesso ao app', n ? n + ' entrega' + (n > 1 ? 's' : '') + ' hoje' : ''].filter(Boolean).join(' · ');
+    const mid = escapeAttr(m.id);
     return `<div class="mot-cad-item${off ? ' off' : ''}">
         <div class="mot-cad-info"><strong>${escapeHtml(m.nome || '')}</strong>${info ? `<span>${info}</span>` : ''}</div>
         <span class="mot-cad-tag">${off ? 'Inativo' : 'Ativo'}</span>
         <div class="mot-cad-acoes">
-          <button class="btn btn-secondary btn-md" data-mot="${escapeAttr(m.id)}" onclick="motCadEditar(this.dataset.mot)">Editar</button>
-          <button class="btn btn-secondary btn-md" data-mot="${escapeAttr(m.id)}" onclick="motCadAtivo(this.dataset.mot)">${off ? 'Ativar' : 'Desativar'}</button>
-          <button class="btn btn-secondary btn-md" data-mot="${escapeAttr(m.id)}" onclick="motCadExcluir(this.dataset.mot)" title="Excluir">🗑</button>
+          <button class="btn btn-secondary btn-md" data-mot="${mid}" onclick="motCadEditar(this.dataset.mot)">Editar</button>
+          ${m.uid && m.telefone ? `<button class="btn btn-secondary btn-md" data-mot="${mid}" onclick="motCadEnviarLink(this.dataset.mot)" title="Enviar o link do app por WhatsApp">💬 Link</button>` : ''}
+          ${m.uid && m.email ? `<button class="btn btn-secondary btn-md" data-mot="${mid}" onclick="motCadSenha(this.dataset.mot)" title="Enviar e-mail para redefinir a senha">🔑</button>` : ''}
+          <button class="btn btn-secondary btn-md" data-mot="${mid}" onclick="motCadAtivo(this.dataset.mot)">${off ? 'Ativar' : 'Desativar'}</button>
+          <button class="btn btn-secondary btn-md" data-mot="${mid}" onclick="motCadExcluir(this.dataset.mot)" title="Excluir">🗑</button>
         </div>
       </div>`;
   }).join('');
-  return form + `<div class="card"><div class="card-title">Motoqueiros cadastrados (${lista.length})</div>${linhas}</div>`;
+  return linkCard + form + `<div class="card"><div class="card-title">Motoqueiros cadastrados (${lista.length})</div>${linhas}</div>`;
 }
 
 function _motCadSemFoco() { const a = document.activeElement; if (a && a.blur) a.blur(); }
+
+function motAppCopiar() {
+  const t = _motAppLink();
+  const ok = () => showToast('Link copiado');
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(ok).catch(() => { const i = document.getElementById('mot-app-link'); if (i) { i.select(); document.execCommand('copy'); ok(); } });
+  else { const i = document.getElementById('mot-app-link'); if (i) { i.select(); try { document.execCommand('copy'); ok(); } catch (e) {} } }
+}
+
+/** Grava o motoqueiro e (se houver acesso) o vínculo uid → loja, tudo de uma vez. */
+function _motCadGravar(reg, ed) {
+  const up = {};
+  up['motoqueiros/' + _lojaAtiva + '/' + reg.id] = reg;
+  if (reg.uid) up['motoqueirosUid/' + reg.uid] = { lojaId: _lojaAtiva, nome: reg.nome, ativo: reg.ativo !== false, motId: reg.id };
+  return _dbRef('').update(up);
+}
 
 function motCadSalvar() {
   if (!_lojaAtiva) { showToast('Aguarde o carregamento do restaurante', false); return; }
   const nome  = (document.getElementById('mot-cad-nome').value || '').trim().replace(/\s+/g, ' ').slice(0, 40);
   const fone  = (document.getElementById('mot-cad-fone').value || '').replace(/[^\d()+\-\s]/g, '').trim().slice(0, 20);
   const placa = (document.getElementById('mot-cad-placa').value || '').trim().slice(0, 20);
+  const elEmail = document.getElementById('mot-cad-email'), elSenha = document.getElementById('mot-cad-senha');
+  const email = elEmail ? elEmail.value.trim().toLowerCase() : '';
+  const senha = elSenha ? elSenha.value : '';
   if (!nome) { showToast('Informe o nome do motoqueiro', false); return; }
   if (_motCadLista().some(m => m.id !== _motEditId && String(m.nome || '').trim().toLowerCase() === nome.toLowerCase())) {
     showToast('Já existe um motoqueiro chamado "' + nome + '"', false); return;
   }
+  const quer = !!(email || senha);
+  if (quer) {
+    const cu = firebase.auth().currentUser;
+    if (!cu || !isAdminEmail(cu.email)) { showToast('Só o administrador pode criar o acesso ao app', false); return; }
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showToast('Informe um e-mail de acesso válido', false); return; }
+    if (senha.length < 6) { showToast('A senha deve ter pelo menos 6 caracteres', false); return; }
+  }
   const ed = _motEditId ? _motCadLista().find(m => m.id === _motEditId) : null;
   const id = ed ? ed.id : 'mot_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
   const reg = { id, nome, telefone: fone, placa, ativo: ed ? ed.ativo !== false : true, criadoEm: ed && ed.criadoEm ? ed.criadoEm : Date.now() };
-  _motCadRef(id).set(reg)
-    .then(() => {
-      // se o nome escolhido neste aparelho era o antigo, acompanha a mudança
-      if (ed && _motNome() === String(ed.nome || '').trim() && ed.nome !== nome) _motNomeSalvar(nome);
-      showToast(ed ? 'Motoqueiro atualizado' : 'Motoqueiro cadastrado');
-      _motEditId = null;
-      _motCadSemFoco();
-      renderMotoqueiro();
-      const n = document.getElementById('mot-cad-nome'); if (n && !ed) n.focus();
+  if (ed && ed.uid) { reg.uid = ed.uid; reg.email = ed.email || ''; }
+
+  const btn = document.getElementById('mot-cad-btn'); if (btn) btn.disabled = true;
+  const fim = () => { const b = document.getElementById('mot-cad-btn'); if (b) b.disabled = false; };
+  const falha = e => {
+    console.error(e); fim();
+    const msg = e && e.code && /^auth\//.test(e.code) ? _authErro(e.code)
+      : (e && /permission/i.test(e.message || e.code || '') ? 'Sem permissão para salvar. Publique as regras atualizadas do Firebase (firebase-database.rules.json).' : 'Erro ao salvar o motoqueiro');
+    showToast(msg, false);
+  };
+  const concluir = (criouAcesso) => {
+    if (ed && _motNome() === String(ed.nome || '').trim() && ed.nome !== nome) _motNomeSalvar(nome);
+    showToast(ed ? 'Motoqueiro atualizado' : 'Motoqueiro cadastrado');
+    _motEditId = null; _motCadSemFoco(); fim(); renderMotoqueiro();
+    if (criouAcesso) _motCadMostrarAcesso(reg, senha);
+    else { const n = document.getElementById('mot-cad-nome'); if (n && !ed) n.focus(); }
+  };
+
+  if (!quer) { _motCadGravar(reg, ed).then(() => concluir(false)).catch(falha); return; }
+
+  // Cria o login com um app Firebase secundário (não derruba a sessão do administrador)
+  const secName = 'SecondaryAuth';
+  let sec = firebase.apps.find(a => a.name === secName);
+  if (!sec) sec = firebase.initializeApp(FIREBASE_CONFIG, secName);
+  sec.auth().createUserWithEmailAndPassword(email, senha)
+    .then(cred => {
+      reg.uid = cred.user.uid; reg.email = email;
+      return sec.auth().signOut().catch(() => {}).then(() => _motCadGravar(reg, ed));
     })
-    .catch(e => {
-      console.error(e);
-      showToast(e && /permission/i.test(e.message || e.code || '')
-        ? 'Sem permissão para salvar. Publique as regras atualizadas do Firebase (firebase-database.rules.json).'
-        : 'Erro ao salvar o motoqueiro', false);
-    });
+    .then(() => concluir(true))
+    .catch(falha);
 }
+
+/** Mostra os dados de acesso uma única vez (a senha não fica guardada em lugar nenhum). */
+function _motCadMostrarAcesso(reg, senha) {
+  const link = _motAppLink();
+  const texto = 'Olá ' + reg.nome.split(' ')[0] + '! Este é o app de entregas do restaurante.\n\nLink: ' + link + '\nE-mail: ' + reg.email + '\nSenha: ' + senha +
+    '\n\nAbra o link no celular, entre e toque em "Ativar avisos". Depois instale o app na tela inicial.';
+  const botoes = [];
+  const fone = _pedFone(reg.telefone);
+  if (fone) botoes.push({ label: 'Enviar por WhatsApp', style: 'primary', action: () => window.open('https://wa.me/' + fone + '?text=' + encodeURIComponent(texto), '_blank', 'noopener') });
+  botoes.push({ label: 'Fechar', style: 'secondary' });
+  showModal('Acesso criado para ' + escapeHtml(reg.nome),
+    `Passe estes dados ao motoqueiro. <strong>A senha não fica guardada</strong> — anote agora.<br><br>
+     Link: <strong>${escapeHtml(link)}</strong><br>E-mail: <strong>${escapeHtml(reg.email)}</strong><br>Senha: <strong>${escapeHtml(senha)}</strong>`, botoes);
+}
+
+function motCadEnviarLink(id) {
+  const m = _motCadLista().find(x => x.id === id); if (!m) return;
+  const fone = _pedFone(m.telefone); if (!fone) { showToast('Cadastre o telefone do motoqueiro', false); return; }
+  const texto = 'Olá ' + String(m.nome || '').split(' ')[0] + '! App de entregas do restaurante: ' + _motAppLink() + '\nSeu e-mail de acesso: ' + (m.email || '') + '\n(a senha foi passada separadamente)';
+  window.open('https://wa.me/' + fone + '?text=' + encodeURIComponent(texto), '_blank', 'noopener');
+}
+
+function motCadSenha(id) {
+  const m = _motCadLista().find(x => x.id === id); if (!m || !m.email) return;
+  showModal('Redefinir senha', `Enviar um e-mail de redefinição de senha para <strong>${escapeHtml(m.email)}</strong>?<br><span class="txt-hint">Só funciona se esse e-mail for real. Se for fictício, exclua e cadastre de novo com outra senha.</span>`, [
+    { label: 'Enviar e-mail', style: 'primary', action: () => {
+        firebase.auth().sendPasswordResetEmail(m.email)
+          .then(() => showToast('E-mail de redefinição enviado'))
+          .catch(e => showToast(_authErro(e && e.code), false));
+    }},
+    { label: 'Cancelar', style: 'secondary' }
+  ]);
+}
+
 function motCadEditar(id) { _motEditId = id; _motCadSemFoco(); renderMotoqueiro(); const n = document.getElementById('mot-cad-nome'); if (n) { n.focus(); n.select(); } }
 function motCadCancelar() { _motEditId = null; _motCadSemFoco(); renderMotoqueiro(); }
+
 function motCadAtivo(id) {
   const m = _motCadLista().find(x => x.id === id); if (!m) return;
-  _motCadRef(id).child('ativo').set(m.ativo === false)
-    .catch(e => { console.error(e); showToast('Erro ao atualizar o motoqueiro', false); });
+  const novo = m.ativo === false;
+  const up = {};
+  up['motoqueiros/' + _lojaAtiva + '/' + id + '/ativo'] = novo;
+  if (m.uid) up['motoqueirosUid/' + m.uid + '/ativo'] = novo; // desativar também bloqueia o login no app
+  _dbRef('').update(up).catch(e => { console.error(e); showToast('Erro ao atualizar o motoqueiro', false); });
 }
+
 function motCadExcluir(id) {
   const m = _motCadLista().find(x => x.id === id); if (!m) return;
-  showModal('Excluir motoqueiro', `Excluir <strong>${escapeHtml(m.nome || '')}</strong> do cadastro? As entregas já feitas continuam com o nome dele. Se só quiser tirar da lista, use <em>Desativar</em>.`, [
+  showModal('Excluir motoqueiro', `Excluir <strong>${escapeHtml(m.nome || '')}</strong> do cadastro? As entregas já feitas continuam com o nome dele.${m.uid ? '<br><br>O acesso dele ao app será bloqueado.' : ''} Se só quiser tirar da lista, use <em>Desativar</em>.`, [
     { label: 'Excluir', style: 'danger', action: () => {
-        _motCadRef(id).remove()
+        const up = {};
+        up['motoqueiros/' + _lojaAtiva + '/' + id] = null;
+        if (m.uid) up['motoqueirosUid/' + m.uid + '/ativo'] = false;
+        _dbRef('').update(up)
           .then(() => { if (_motEditId === id) _motEditId = null; showToast('Motoqueiro excluído'); })
           .catch(e => { console.error(e); showToast('Erro ao excluir', false); });
     }},
