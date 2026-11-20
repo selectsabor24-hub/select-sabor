@@ -3239,6 +3239,44 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
   }
   #sec-dashboard .page-header > div:nth-child(2) > * { min-width: 0; }
 }
+
+/* ============================================================
+   13) PEDIDOS ONLINE (painel)
+   ============================================================ */
+.ped-badge { display: none; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 99px; background: #DC2626; color: #fff; font-size: 11px; font-weight: 700; align-items: center; justify-content: center; margin-left: auto; }
+.drawer-item { position: relative; }
+.drawer-item .ped-badge { position: absolute; top: 8px; right: 10px; margin-left: 0; }
+.ped-topo-linha { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.ped-status { font-weight: 800; font-size: 16px; }
+.ped-status.on { color: var(--green-mid, #16A34A); }
+.ped-status.off { color: var(--red-mid, #DC2626); }
+.ped-sub { color: var(--text3); font-size: 13px; margin-top: 2px; }
+.ped-link { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.ped-link input { flex: 1 1 220px; min-width: 0; }
+.ped-checks { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 10px; }
+.ped-checks label { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; }
+.ped-vazio { text-align: center; padding: 28px 14px; }
+.ped-card { border-left: 5px solid var(--ped-cor, #2563EB); }
+.ped-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ped-cod { font-weight: 900; font-size: 20px; letter-spacing: 1px; }
+.ped-chip { color: #fff; font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 99px; }
+.ped-tipo { font-weight: 700; font-size: 13px; }
+.ped-hora { margin-left: auto; color: var(--text3); font-size: 12px; }
+.ped-cli { margin-top: 8px; }
+.ped-end { margin-top: 4px; font-size: 14px; overflow-wrap: anywhere; }
+.ped-itens { list-style: none; margin: 10px 0 0; padding: 8px 0 0; border-top: 1px dashed var(--border); }
+.ped-itens li { display: flex; justify-content: space-between; gap: 10px; padding: 3px 0; }
+.ped-itens li span:first-child { min-width: 0; overflow-wrap: anywhere; }
+.ped-warn { color: var(--red-mid, #DC2626); font-size: 12px; }
+.ped-obs { margin-top: 8px; padding: 8px 10px; background: #FEF3C7; color: #78350F; border-radius: 8px; font-size: 14px; overflow-wrap: anywhere; }
+.ped-tot { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--border); }
+.ped-pag { margin-top: 4px; font-size: 13px; color: var(--text2); }
+.ped-acoes { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.ped-ok { align-self: center; font-weight: 700; color: var(--green-mid, #16A34A); }
+@media (max-width: 600px) {
+  .ped-acoes .btn { flex: 1 1 calc(50% - 8px); }
+  .ped-hora { margin-left: 0; width: 100%; }
+}
 </style>
 
 </head>
@@ -3401,6 +3439,10 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
     </button>
 
     <div class="nav-section-label">Lançamentos</div>
+    <button class="nav-item" id="nav-pedidos" onclick="showSection('pedidos', this)">
+      <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg></span> Pedidos online
+      <span class="ped-badge" id="ped-badge-nav"></span>
+    </button>
     <button class="nav-item" id="nav-comandas" onclick="showSection('comandas', this)">
       <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"/></svg></span> Comandas / Mesas
     </button>
@@ -4512,6 +4554,54 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
       <div id="cmd-conteudo"></div>
     </div>
 
+    <!-- SEÇÃO: PEDIDOS ONLINE -->
+    <div id="sec-pedidos" class="section">
+      <div class="page-header">
+        <div>
+          <div class="page-title">🛵 Pedidos online</div>
+          <div class="page-sub">Pedidos feitos pelo link do cardápio. Atualize o status e o cliente acompanha em tempo real.</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <button class="btn btn-secondary btn-md" id="ped-som-btn" onclick="pedSomToggle()">🔔 Som ligado</button>
+          <button class="btn btn-secondary btn-md" onclick="pedConfigAbrir()">⚙ Configurar</button>
+        </div>
+      </div>
+
+      <div id="ped-topo"></div>
+
+      <!-- Configuração -->
+      <div class="card" id="ped-config" style="display:none">
+        <div class="card-title">Configurar pedidos online</div>
+        <div class="form-grid">
+          <div class="form-group"><label>Nome que o cliente vê</label><input id="pc-nome" class="input-base" maxlength="80" placeholder="Ex.: Select Sabor"></div>
+          <div class="form-group"><label>Tempo estimado</label><input id="pc-tempo" class="input-base" maxlength="40" placeholder="Ex.: 40–50 min"></div>
+          <div class="form-group"><label>Taxa de entrega (R$)</label><input id="pc-taxa" class="input-base" inputmode="decimal" placeholder="0,00"></div>
+          <div class="form-group"><label>Pedido mínimo (R$)</label><input id="pc-min" class="input-base" inputmode="decimal" placeholder="0,00"></div>
+          <div class="form-group"><label>WhatsApp da loja (com DDD)</label><input id="pc-whats" class="input-base" inputmode="tel" maxlength="20" placeholder="(31) 99999-0000"></div>
+          <div class="form-group"><label>Aviso no topo do cardápio (opcional)</label><input id="pc-aviso" class="input-base" maxlength="200" placeholder="Ex.: Hoje temos feijoada!"></div>
+        </div>
+        <div class="ped-checks">
+          <label><input type="checkbox" id="pc-entrega"> Aceitar entrega</label>
+          <label><input type="checkbox" id="pc-retirada"> Aceitar retirada na loja</label>
+          <label><input type="checkbox" id="pc-aberto"> Receber pedidos agora</label>
+        </div>
+        <div class="form-actions" style="margin-top:12px">
+          <button class="btn btn-primary btn-md" onclick="pedConfigSalvar()">Salvar</button>
+          <button class="btn btn-secondary btn-md" onclick="pedConfigFechar()">Cancelar</button>
+        </div>
+      </div>
+
+      <div class="metrics-grid" id="ped-metricas"></div>
+
+      <div class="cmd-tabs" id="ped-tabs">
+        <button id="ped-tab-novos"       onclick="pedSetTab('novos')">Novos</button>
+        <button id="ped-tab-andamento"   onclick="pedSetTab('andamento')">Em andamento</button>
+        <button id="ped-tab-finalizados" onclick="pedSetTab('finalizados')">Finalizados hoje</button>
+      </div>
+
+      <div id="ped-lista"></div>
+    </div>
+
     <!-- SEÇÃO: FUNCIONÁRIOS -->
     <div id="sec-funcionarios" class="section">
       <div class="page-header">
@@ -5438,6 +5528,10 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
     <button class="drawer-item" id="di-comandas" onclick="drawerNav('comandas', this)">
       <span class="drawer-item-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"/></svg></span>Comandas
     </button>
+    <button class="drawer-item" id="di-pedidos" onclick="drawerNav('pedidos', this)">
+      <span class="drawer-item-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg></span>Pedidos online
+      <span class="ped-badge" id="ped-badge-di"></span>
+    </button>
     <button class="drawer-item" id="di-funcionarios" onclick="drawerNav('funcionarios', this)">
       <span class="drawer-item-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>Funcionários
     </button>
@@ -6308,6 +6402,26 @@ function setLojaAtiva(id) {
   });
   _listenersLoja.push(refCardapio);
 
+  // Pedidos online da loja ativa
+  _cache.pedidos = [];
+  _cache.pedidosCfg = null;
+  _pedVistos = null; // a 1ª carga não dispara alerta
+  const refPedidos = _dbRef('pedidos/' + id).orderByChild('ts').limitToLast(200);
+  refPedidos.on('value', snap => {
+    const v = snap.val() || {};
+    _cache.pedidos = Object.keys(v).filter(k => /^[-A-Za-z0-9_]{8,40}$/.test(k)).map(k => Object.assign({ id: k }, v[k]));
+    _pedDetectarNovos();
+    _pedAtualizarBadge();
+    if (_currentSection === 'pedidos') _refreshCurrentSection();
+  }, e => console.warn('[pedidos] sem acesso:', e && e.message));
+  _listenersLoja.push(refPedidos);
+  const refPedCfg = _dbRef('pedidosConfig/' + id);
+  refPedCfg.on('value', snap => {
+    _cache.pedidosCfg = snap.val();
+    if (_currentSection === 'pedidos') _refreshCurrentSection();
+  });
+  _listenersLoja.push(refPedCfg);
+
   // Atualiza seletor visual
   renderSeletorLojas();
 }
@@ -6338,6 +6452,7 @@ function _refreshCurrentSection() {
       case 'planilhas':      renderPlanilhas();     break;
       case 'cartoes':        renderCartoes();       break;
       case 'comandas':       renderComandas();      break;
+      case 'pedidos':        renderPedidos();       break;
       case 'cardapio':       renderCardapio();      break;
       }
     } finally {
@@ -8025,6 +8140,7 @@ function _showSectionInternal(id, btn) {
     case 'contas':         renderContas();        break;
     case 'planilhas':      renderPlanilhas();     break;
     case 'comandas':       renderComandas();      break;
+    case 'pedidos':        renderPedidos();       break;
     case 'cardapio':       renderCardapio();      break;
     case 'cartoes': {
       // Pré-selecionar mês e ano atual na primeira vez
@@ -17330,6 +17446,446 @@ function _syncDrawer(id) {
   document.querySelectorAll('.bottom-nav-item').forEach(b => b.classList.remove('active'));
   const bn = document.getElementById('bn-' + id);
   if (bn) bn.classList.add('active');
+}
+
+/* ============================================================
+   3.30 PEDIDOS ONLINE (v5.0)
+   ============================================================
+   Firebase: caixa/pedidosConfig/{lojaId}   configuração pública (aberto, taxa, mínimo…)
+             caixa/pedidos/{lojaId}/{id}    pedido do cliente + status
+   O cliente usa  pedido.html?loja={lojaId}  (sem login) e acompanha o status
+   em tempo real. Aqui a equipe aceita, avança o status e lança no caixa.
+   ============================================================ */
+let _pedTab = 'novos';
+let _pedVistos = null;
+let _pedAudio = null;
+let _pedTituloOrig = null;
+const _pedLancando = new Set();
+let _pedSom = (function () { try { return localStorage.getItem('pedSom') !== '0'; } catch (e) { return true; } })();
+
+const PED_ST = {
+  novo:      { lbl: 'Novo',             cor: '#2563EB' },
+  preparo:   { lbl: 'Em preparo',       cor: '#D97706' },
+  pronto:    { lbl: 'Pronto',           cor: '#7C3AED' },
+  saiu:      { lbl: 'Saiu p/ entrega',  cor: '#0891B2' },
+  entregue:  { lbl: 'Entregue',         cor: '#16A34A' },
+  cancelado: { lbl: 'Cancelado',        cor: '#DC2626' },
+};
+const PED_PAG = { dinheiro: '💵 Dinheiro', cartao: '💳 Cartão', pix: '📲 Pix' };
+
+function _pedLista()   { return _cache.pedidos || []; }
+function _pedGet(id)   { return _pedLista().find(p => p.id === id) || null; }
+function _pedRef(id)   { return _dbRef('pedidos/' + _lojaAtiva + '/' + id); }
+function _pedCfg()     { return _cache.pedidosCfg || null; }
+function _pedRound(v)  { return Math.round((v + Number.EPSILON) * 100) / 100; }
+function _pedNum(str)  {
+  // aceita "5,50", "5.50" e "1.234,50"
+  let t = String(str == null ? '' : str).trim().replace(/[^\d.,]/g, '');
+  if (!t) return 0;
+  if (t.indexOf(',') >= 0) t = t.replace(/\./g, '').replace(',', '.');
+  const v = parseFloat(t);
+  return isNaN(v) ? 0 : Math.max(0, v);
+}
+function _pedDia(ts) { const d = new Date(ts); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function _pedEhHoje(ts) { return !!ts && _pedDia(ts) === _pedDia(Date.now()); }
+function _pedHora(ts) { if (!ts) return ''; const d = new Date(ts); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }
+function _pedHa(ts) {
+  if (!ts) return '';
+  const m = Math.floor((Date.now() - ts) / 60000);
+  if (m < 1) return 'agora';
+  if (m < 60) return 'há ' + m + ' min';
+  const h = Math.floor(m / 60);
+  return h < 24 ? 'há ' + h + ' h' : 'há ' + Math.floor(h / 24) + ' d';
+}
+function _pedBaseUrl()    { return location.href.split('#')[0].split('?')[0].replace(/[^/]*$/, ''); }
+function _pedLinkCliente() { return _pedBaseUrl() + 'pedido.html?loja=' + encodeURIComponent(_lojaAtiva); }
+function _pedLinkAcomp(p)  { return _pedLinkCliente() + '&p=' + encodeURIComponent(p.id); }
+
+function _pedItens(p) {
+  return Object.keys(p.itens || {}).map(k => {
+    const it = p.itens[k] || {};
+    const card = (_cache.cardapio || []).find(c => c.id === k);
+    const fixo = typeof it.p === 'number';
+    const preco = fixo ? it.p : (card ? (parseFloat(card.preco) || 0) : 0);
+    return { id: k, q: parseInt(it.q) || 0, n: it.n || (card && card.nome) || 'Item', preco, fixo, noCardapio: !!card };
+  });
+}
+function _pedTotais(p) {
+  const itens = _pedItens(p);
+  const sub = _pedRound(itens.reduce((s, i) => s + i.preco * i.q, 0));
+  const cfg = _pedCfg() || {};
+  const confirmado = typeof p.total === 'number';
+  const taxa = confirmado ? (parseFloat(p.taxa) || 0) : (p.tipo === 'entrega' ? (parseFloat(cfg.taxaEntrega) || 0) : 0);
+  const total = confirmado ? p.total : _pedRound(sub + taxa);
+  return { itens, sub, taxa, total, confirmado };
+}
+
+/* ---------- Alerta de pedido novo ---------- */
+function _pedDetectarNovos() {
+  const lista = _pedLista();
+  if (_pedVistos === null) { _pedVistos = new Set(lista.map(p => p.id)); return; }
+  const novos = lista.filter(p => !_pedVistos.has(p.id));
+  novos.forEach(p => _pedVistos.add(p.id));
+  const reais = novos.filter(p => p.status === 'novo');
+  if (reais.length) _pedAlertar(reais);
+}
+function _pedAlertar(novos) {
+  const p = novos[0];
+  showToast('🛵 Novo pedido online ' + (p.codigo || '') + (novos.length > 1 ? ' (+' + (novos.length - 1) + ')' : ''));
+  _pedBeep();
+  try { if (navigator.vibrate) navigator.vibrate([200, 100, 200]); } catch (e) {}
+}
+function _pedBeep() {
+  if (!_pedSom) return;
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
+    _pedAudio = _pedAudio || new AC();
+    if (_pedAudio.state === 'suspended') _pedAudio.resume();
+    const t0 = _pedAudio.currentTime;
+    [0, 0.28, 0.56].forEach((d, i) => {
+      const o = _pedAudio.createOscillator(), g = _pedAudio.createGain();
+      o.type = 'sine'; o.frequency.value = i === 1 ? 988 : 740;
+      g.gain.setValueAtTime(0.0001, t0 + d);
+      g.gain.exponentialRampToValueAtTime(0.4, t0 + d + 0.03);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + d + 0.24);
+      o.connect(g); g.connect(_pedAudio.destination);
+      o.start(t0 + d); o.stop(t0 + d + 0.26);
+    });
+  } catch (e) {}
+}
+function pedSomToggle() {
+  _pedSom = !_pedSom;
+  try { localStorage.setItem('pedSom', _pedSom ? '1' : '0'); } catch (e) {}
+  if (_pedSom) _pedBeep(); // também "destrava" o áudio do navegador
+  _pedAtualizarSomBtn();
+}
+function _pedAtualizarSomBtn() {
+  const b = document.getElementById('ped-som-btn');
+  if (b) b.textContent = _pedSom ? '🔔 Som ligado' : '🔕 Som desligado';
+}
+function _pedAtualizarBadge() {
+  const n = _pedLista().filter(p => p.status === 'novo').length;
+  ['ped-badge-nav', 'ped-badge-di'].forEach(id => {
+    const el = document.getElementById(id); if (!el) return;
+    el.textContent = n; el.style.display = n ? 'inline-flex' : 'none';
+  });
+  if (_pedTituloOrig === null) _pedTituloOrig = document.title.replace(/^\(\d+\)\s*/, '');
+  document.title = (n ? '(' + n + ') ' : '') + _pedTituloOrig;
+}
+
+/* ---------- Tela ---------- */
+function pedSetTab(t) { _pedTab = t; renderPedidos(); }
+
+function renderPedidos() {
+  const lista = document.getElementById('ped-lista'); if (!lista) return;
+  _pedAtualizarSomBtn();
+  const topo = document.getElementById('ped-topo');
+  const met = document.getElementById('ped-metricas');
+  if (!_lojaAtiva) {
+    topo.innerHTML = '<div class="card" style="text-align:center;color:var(--text3)">Aguarde o carregamento do restaurante.</div>';
+    met.innerHTML = ''; lista.innerHTML = ''; return;
+  }
+  const cfg = _pedCfg();
+  if (!cfg) {
+    topo.innerHTML = `<div class="card ped-vazio"><div style="font-size:34px">🛵</div>
+      <div style="font-weight:800;margin:6px 0">Pedidos online ainda não configurados</div>
+      <div style="color:var(--text3);margin-bottom:12px">Configure a taxa de entrega e o tempo estimado, depois divulgue o link do cardápio para os clientes.</div>
+      <button class="btn btn-primary btn-md" onclick="pedConfigAbrir()">Configurar e ativar</button></div>`;
+    met.innerHTML = ''; lista.innerHTML = '';
+    document.getElementById('ped-tabs').style.display = 'none';
+    return;
+  }
+  document.getElementById('ped-tabs').style.display = '';
+  const aberto = cfg.aberto === true;
+  const link = _pedLinkCliente();
+  topo.innerHTML = `<div class="card ped-topo">
+    <div class="ped-topo-linha">
+      <div>
+        <div class="ped-status ${aberto ? 'on' : 'off'}">${aberto ? '● Recebendo pedidos' : '● Pedidos pausados'}</div>
+        <div class="ped-sub">${escapeHtml(cfg.nome || '')}${cfg.tempoEstimado ? ' · ⏱ ' + escapeHtml(cfg.tempoEstimado) : ''} · Entrega ${(parseFloat(cfg.taxaEntrega) || 0) > 0 ? fmt(cfg.taxaEntrega) : 'grátis'}</div>
+      </div>
+      <button class="btn ${aberto ? 'btn-secondary' : 'btn-primary'} btn-md" onclick="pedToggleAberto()">${aberto ? '⏸ Pausar pedidos' : '▶ Abrir para pedidos'}</button>
+    </div>
+    <div class="ped-link">
+      <input class="input-base" id="ped-link-input" readonly value="${escapeHtml(link)}" onclick="this.select()">
+      <button class="btn btn-secondary btn-md" onclick="pedCopiarLink()">📋 Copiar link</button>
+      <button class="btn btn-secondary btn-md" onclick="pedAbrirLink()">↗ Abrir</button>
+      <button class="btn btn-secondary btn-md" onclick="pedCompartilharLink()">💬 Enviar no WhatsApp</button>
+    </div></div>`;
+
+  const todos = _pedLista();
+  const novos = todos.filter(p => p.status === 'novo');
+  const and   = todos.filter(p => ['preparo', 'pronto', 'saiu'].indexOf(p.status) >= 0);
+  const fim   = todos.filter(p => (p.status === 'entregue' || p.status === 'cancelado') && _pedEhHoje(p.ts));
+  const entregues = fim.filter(p => p.status === 'entregue');
+  const vendido = entregues.reduce((s, p) => s + _pedTotais(p).total, 0);
+  met.innerHTML = `
+    <div class="metric-card"><div class="metric-label">Novos</div><div class="metric-value">${novos.length}</div></div>
+    <div class="metric-card"><div class="metric-label">Em andamento</div><div class="metric-value">${and.length}</div></div>
+    <div class="metric-card"><div class="metric-label">Entregues hoje</div><div class="metric-value">${entregues.length}</div></div>
+    <div class="metric-card"><div class="metric-label">Vendido online hoje</div><div class="metric-value">${fmt(vendido)}</div></div>`;
+
+  const cont = { novos: novos.length, andamento: and.length, finalizados: fim.length };
+  ['novos', 'andamento', 'finalizados'].forEach(t => {
+    const b = document.getElementById('ped-tab-' + t); if (!b) return;
+    b.classList.toggle('active', t === _pedTab);
+    const nome = { novos: 'Novos', andamento: 'Em andamento', finalizados: 'Finalizados hoje' }[t];
+    b.textContent = nome + (cont[t] ? ' (' + cont[t] + ')' : '');
+  });
+
+  let arr;
+  if (_pedTab === 'novos')        arr = novos.slice().sort((a, b) => (a.ts || 0) - (b.ts || 0));
+  else if (_pedTab === 'andamento') arr = and.slice().sort((a, b) => (a.ts || 0) - (b.ts || 0));
+  else                             arr = fim.slice().sort((a, b) => (b.ts || 0) - (a.ts || 0));
+  const vazio = { novos: 'Nenhum pedido novo no momento.', andamento: 'Nenhum pedido em andamento.', finalizados: 'Nenhum pedido finalizado hoje.' }[_pedTab];
+  lista.innerHTML = arr.length ? arr.map(_pedCardHtml).join('') : `<div class="card" style="text-align:center;color:var(--text3);padding:28px 12px">${vazio}</div>`;
+}
+
+function _pedCardHtml(p) {
+  const st = PED_ST[p.status] || PED_ST.novo;
+  const t = _pedTotais(p);
+  const ent = p.tipo === 'entrega';
+  const cli = p.cliente || {};
+  const e = p.endereco || {};
+  const id = escapeHtml(p.id);
+  const trocoTxt = (p.pagamento === 'dinheiro' && p.troco)
+    ? ` · troco para ${fmt(p.troco)} (devolver ${fmt(Math.max(0, _pedRound(p.troco - t.total)))})` : '';
+  const btn = (a, rot, cls) => `<button class="btn ${cls || 'btn-secondary'} btn-md" data-ped="${id}" onclick="pedAcao('${a}', this.dataset.ped)">${rot}</button>`;
+  let acoes = '';
+  if (p.status === 'novo')          acoes = btn('aceitar', '✅ Aceitar pedido', 'btn-primary') + btn('cancelar', '✖ Recusar');
+  else if (p.status === 'preparo')  acoes = btn('pronto', '✅ Pedido pronto', 'btn-primary') + btn('cancelar', '✖ Cancelar');
+  else if (p.status === 'pronto')   acoes = (ent ? btn('saiu', '🛵 Saiu para entrega', 'btn-primary') : btn('entregue', '✅ Cliente retirou', 'btn-primary')) + btn('cancelar', '✖ Cancelar');
+  else if (p.status === 'saiu')     acoes = btn('entregue', '✅ Entregue', 'btn-primary') + btn('cancelar', '✖ Cancelar');
+  else if (p.status === 'entregue') acoes = p.lancado ? '<span class="ped-ok">✓ Lançado no caixa</span>' : btn('caixa', '💰 Lançar no caixa', 'btn-primary');
+  acoes += btn('whats', '💬 WhatsApp') + btn('imprimir', '🖨 Imprimir');
+  const itens = t.itens.map(i =>
+    `<li><span>${i.q}× ${escapeHtml(i.n)}${(!i.noCardapio && !i.fixo) ? ' <em class="ped-warn">(fora do cardápio)</em>' : ''}</span><span>${fmt(i.preco * i.q)}</span></li>`).join('');
+  return `<div class="card ped-card" style="--ped-cor:${st.cor}">
+    <div class="ped-head">
+      <span class="ped-cod">#${escapeHtml(p.codigo || '')}</span>
+      <span class="ped-chip" style="background:${st.cor}">${st.lbl}</span>
+      <span class="ped-tipo">${ent ? '🛵 Entrega' : '🏪 Retirada'}</span>
+      <span class="ped-hora">${_pedHora(p.ts)} · ${_pedHa(p.ts)}</span>
+    </div>
+    <div class="ped-cli"><strong>${escapeHtml(cli.nome || '')}</strong> · <a href="tel:${escapeHtml(String(cli.telefone || '').replace(/[^\d+]/g, ''))}">${escapeHtml(cli.telefone || '')}</a></div>
+    ${ent ? `<div class="ped-end">📍 ${escapeHtml((e.rua || '') + ', ' + (e.numero || '') + ' — ' + (e.bairro || ''))}${e.complemento ? ' · ' + escapeHtml(e.complemento) : ''}${e.referencia ? ' · ref.: ' + escapeHtml(e.referencia) : ''}</div>` : ''}
+    <ul class="ped-itens">${itens}</ul>
+    ${p.obs ? `<div class="ped-obs">📝 ${escapeHtml(p.obs)}</div>` : ''}
+    ${p.status === 'cancelado' && p.motivo ? `<div class="ped-obs">Motivo: ${escapeHtml(p.motivo)}</div>` : ''}
+    <div class="ped-tot">
+      <span>Subtotal ${fmt(t.sub)}${ent ? ' · Entrega ' + (t.taxa > 0 ? fmt(t.taxa) : 'grátis') : ''}</span>
+      <strong>Total ${fmt(t.total)}${t.confirmado ? '' : ' <small>(estimado)</small>'}</strong>
+    </div>
+    <div class="ped-pag">${PED_PAG[p.pagamento] || ''}${escapeHtml(trocoTxt)} · paga na ${ent ? 'entrega' : 'retirada'}</div>
+    <div class="ped-acoes">${acoes}</div>
+  </div>`;
+}
+
+function pedAcao(a, id) {
+  if (!/^[-A-Za-z0-9_]{8,40}$/.test(String(id))) return;
+  switch (a) {
+    case 'aceitar':  return pedAceitar(id);
+    case 'pronto':   return pedMudar(id, 'pronto');
+    case 'saiu':     return pedMudar(id, 'saiu');
+    case 'entregue': return pedEntregar(id);
+    case 'cancelar': return pedCancelar(id);
+    case 'whats':    return pedWhats(id);
+    case 'imprimir': return pedImprimir(id);
+    case 'caixa':    return pedLancarCaixa(id);
+  }
+}
+
+/* ---------- Status ---------- */
+function pedMudar(id, st, extra) {
+  if (!_lojaAtiva) return Promise.resolve();
+  const upd = Object.assign({ status: st, atualizadoEm: firebase.database.ServerValue.TIMESTAMP }, extra || {});
+  upd['hist/' + st] = firebase.database.ServerValue.TIMESTAMP;
+  return _pedRef(id).update(upd).catch(e => {
+    console.error(e);
+    showToast(e && /permission/i.test(e.message || e.code || '')
+      ? 'Sem permissão. Publique as regras atualizadas do Firebase (firebase/firebase-database.rules.json).'
+      : 'Erro ao atualizar o pedido', false);
+  });
+}
+
+function pedAceitar(id) {
+  const p = _pedGet(id); if (!p) return;
+  const cfg = _pedCfg() || {};
+  const upd = {};
+  const faltando = [];
+  let sub = 0;
+  _pedItens(p).forEach(i => {
+    if (!i.noCardapio) faltando.push(i.n);
+    upd['itens/' + i.id + '/p'] = i.preco;
+    sub += i.preco * i.q;
+  });
+  upd.taxa = p.tipo === 'entrega' ? (parseFloat(cfg.taxaEntrega) || 0) : 0;
+  upd.total = _pedRound(sub + upd.taxa);
+  if (cfg.tempoEstimado) upd.previsao = String(cfg.tempoEstimado).slice(0, 40);
+  const confirmar = () => pedMudar(id, 'preparo', upd).then(() => {
+    showToast('Pedido ' + (p.codigo || '') + ' aceito: ' + fmt(upd.total));
+  });
+  if (faltando.length) {
+    showModal('Itens fora do cardápio',
+      'Estes itens não estão mais no cardápio e ficarão com <strong>valor R$ 0,00</strong>:<br><br>• ' + faltando.map(escapeHtml).join('<br>• ') + '<br><br>Aceitar mesmo assim?',
+      [{ label: 'Aceitar assim mesmo', style: 'primary', action: confirmar }, { label: 'Voltar', style: 'secondary' }]);
+  } else confirmar();
+}
+
+function pedCancelar(id) {
+  const p = _pedGet(id); if (!p) return;
+  showModal('Cancelar pedido ' + (p.codigo || ''),
+    'O cliente verá que o pedido foi cancelado. Informe o motivo (opcional):<br><br><input id="ped-motivo" class="input-base" maxlength="200" placeholder="Ex.: Item em falta" style="width:100%">',
+    [{ label: 'Cancelar pedido', style: 'danger', action: () => {
+        const m = (document.getElementById('ped-motivo') || {}).value || '';
+        pedMudar(id, 'cancelado', m.trim() ? { motivo: m.trim().slice(0, 200) } : {});
+    }}, { label: 'Voltar', style: 'secondary' }]);
+}
+
+function pedEntregar(id) {
+  const p = _pedGet(id); if (!p) return;
+  pedMudar(id, 'entregue');
+  if (!p.lancado) {
+    const t = _pedTotais(p);
+    showModal('Lançar no caixa?',
+      'Pedido <strong>' + escapeHtml(p.codigo || '') + '</strong> finalizado. Lançar <strong>' + fmt(t.total) + '</strong> (' + (PED_PAG[p.pagamento] || '') + ') no caixa de hoje?<br><small style="color:var(--text3)">Entra como venda no dia, igual a uma comanda fechada.</small>',
+      [{ label: 'Lançar no caixa', style: 'primary', action: () => pedLancarCaixa(id) }, { label: 'Agora não', style: 'secondary' }]);
+  }
+}
+
+/** Fecha uma comanda "Online #COD" paga e lança o valor no caixa do dia (mesmo fluxo das mesas). */
+function pedLancarCaixa(id) {
+  const p = _pedGet(id); if (!p || p.lancado || _pedLancando.has(id)) return;
+  const hoje = _cmdHoje();
+  if (!_cmdGarantirCaixaAberto(hoje)) return;
+  _pedLancando.add(id);
+  const t = _pedTotais(p), agora = new Date().toISOString();
+  const itens = {};
+  t.itens.forEach(i => { itens[i.id] = { id: i.id, nome: i.n, preco: i.preco, qtd: i.q }; });
+  if (t.taxa > 0) itens.taxa_entrega = { id: 'taxa_entrega', nome: 'Taxa de entrega', preco: t.taxa, qtd: 1 };
+  const forma = p.pagamento === 'cartao' ? 'cartao' : (p.pagamento === 'pix' ? 'pix' : 'dinheiro');
+  const pagamentos = { dinheiro: 0, pix: 0, cartao: 0 }; pagamentos[forma] = t.total;
+  const cid = 'ped_' + id;
+  const c = { id: cid, mesa: 'Online ' + (p.codigo || ''), pessoas: '', garcom: '', status: 'fechada',
+    abertaEm: agora, fechadaEm: agora, data: hoje, servicoPct: 0, desconto: 0, itens,
+    subtotal: t.total, servico: 0, total: t.total, pagamentos, troco: 0, origem: 'pedido_online', pedidoId: id };
+  _cmdRef(cid).set(c).then(() => {
+    _cmdLancAplicar({ id: cid, data: hoje, pagamentos }, +1);
+    return _pedRef(id).update({ lancado: true });
+  }).then(() => showToast('Pedido ' + (p.codigo || '') + ' lançado no caixa: ' + fmt(t.total)))
+    .catch(e => { console.error(e); showToast('Erro ao lançar no caixa', false); })
+    .then(() => _pedLancando.delete(id));
+}
+
+/* ---------- WhatsApp e impressão ---------- */
+function _pedFone(tel) {
+  let d = String(tel || '').replace(/\D/g, '');
+  if (!d) return '';
+  if (d.length <= 11) d = '55' + d;
+  return d;
+}
+function pedWhats(id) {
+  const p = _pedGet(id); if (!p) return;
+  const cfg = _pedCfg() || {};
+  const nome = ((p.cliente || {}).nome || '').split(' ')[0];
+  const cod = p.codigo || '';
+  const prev = p.previsao ? ' Previsão: ' + p.previsao + '.' : '';
+  const ent = p.tipo === 'entrega';
+  const msgs = {
+    novo:      'Olá ' + nome + '! Recebemos o seu pedido ' + cod + '.',
+    preparo:   'Olá ' + nome + '! Seu pedido ' + cod + ' foi aceito e já está em preparo.' + prev,
+    pronto:    ent ? 'Olá ' + nome + '! Seu pedido ' + cod + ' está pronto e já vai sair para entrega.' : 'Olá ' + nome + '! Seu pedido ' + cod + ' está pronto para retirada.',
+    saiu:      'Olá ' + nome + '! Seu pedido ' + cod + ' saiu para entrega 🛵',
+    entregue:  'Olá ' + nome + '! Obrigado pela preferência. Bom apetite! 😋',
+    cancelado: 'Olá ' + nome + '. Infelizmente precisamos cancelar o seu pedido ' + cod + '.' + (p.motivo ? ' Motivo: ' + p.motivo + '.' : ''),
+  };
+  const texto = (msgs[p.status] || msgs.novo) + (p.status !== 'entregue' && p.status !== 'cancelado' ? '\nAcompanhe: ' + _pedLinkAcomp(p) : '') + (cfg.nome ? '\n— ' + cfg.nome : '');
+  const fone = _pedFone((p.cliente || {}).telefone);
+  window.open('https://wa.me/' + fone + '?text=' + encodeURIComponent(texto), '_blank', 'noopener');
+}
+function pedImprimir(id) {
+  const p = _pedGet(id); if (!p) return;
+  const t = _pedTotais(p), cfg = _pedCfg() || {}, cli = p.cliente || {}, e = p.endereco || {};
+  const linhas = t.itens.map(i => `<tr><td>${i.q}× ${escapeHtml(i.n)}</td><td style="text-align:right">${fmt(i.preco * i.q)}</td></tr>`).join('');
+  const html = `<!doctype html><html><head><meta charset="utf-8"><title>Pedido ${escapeHtml(p.codigo || '')}</title>
+    <style>body{font:13px/1.35 monospace;margin:0;padding:8px;width:72mm}h1{font-size:16px;margin:0 0 4px;text-align:center}
+    hr{border:0;border-top:1px dashed #000;margin:6px 0}table{width:100%;border-collapse:collapse}td{padding:2px 0;vertical-align:top}
+    .c{text-align:center}.b{font-weight:bold}</style></head><body>
+    <h1>${escapeHtml(cfg.nome || 'Pedido online')}</h1>
+    <div class="c b" style="font-size:20px">#${escapeHtml(p.codigo || '')}</div>
+    <div class="c">${new Date(p.ts || Date.now()).toLocaleString('pt-BR')}</div><hr>
+    <div class="b">${p.tipo === 'entrega' ? 'ENTREGA' : 'RETIRADA NA LOJA'}</div>
+    <div>${escapeHtml(cli.nome || '')} — ${escapeHtml(cli.telefone || '')}</div>
+    ${p.tipo === 'entrega' ? `<div>${escapeHtml((e.rua || '') + ', ' + (e.numero || '') + ' - ' + (e.bairro || ''))}</div>${e.complemento ? '<div>' + escapeHtml(e.complemento) + '</div>' : ''}${e.referencia ? '<div>Ref.: ' + escapeHtml(e.referencia) + '</div>' : ''}` : ''}
+    <hr><table>${linhas}</table><hr>
+    <table><tr><td>Subtotal</td><td style="text-align:right">${fmt(t.sub)}</td></tr>
+    ${p.tipo === 'entrega' ? `<tr><td>Taxa de entrega</td><td style="text-align:right">${fmt(t.taxa)}</td></tr>` : ''}
+    <tr class="b"><td>TOTAL</td><td style="text-align:right">${fmt(t.total)}</td></tr></table>
+    <div>Pagamento: ${escapeHtml((PED_PAG[p.pagamento] || '').replace(/^\S+\s/, ''))}${p.pagamento === 'dinheiro' && p.troco ? ' (troco p/ ' + fmt(p.troco) + ')' : ''}</div>
+    ${p.obs ? '<hr><div class="b">OBS: ' + escapeHtml(p.obs) + '</div>' : ''}
+    <script>window.onload=function(){setTimeout(function(){window.print()},250)}<\/script></body></html>`;
+  const w = window.open('', '_blank', 'width=380,height=640');
+  if (!w) { showToast('Permita pop-ups para imprimir o pedido', false); return; }
+  w.document.open(); w.document.write(html); w.document.close();
+}
+
+/* ---------- Link e configuração ---------- */
+function pedCopiarLink() {
+  const link = _pedLinkCliente();
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(link).then(() => showToast('Link copiado!'), () => showToast(link));
+  else { const i = document.getElementById('ped-link-input'); if (i) { i.select(); try { document.execCommand('copy'); showToast('Link copiado!'); } catch (e) { showToast(link); } } }
+}
+function pedAbrirLink() { window.open(_pedLinkCliente(), '_blank', 'noopener'); }
+function pedCompartilharLink() {
+  const cfg = _pedCfg() || {};
+  window.open('https://wa.me/?text=' + encodeURIComponent('Faça seu pedido' + (cfg.nome ? ' no ' + cfg.nome : '') + ' pelo link: ' + _pedLinkCliente()), '_blank', 'noopener');
+}
+function pedToggleAberto() {
+  const cfg = _pedCfg(); if (!cfg || !_lojaAtiva) return;
+  const novo = !(cfg.aberto === true);
+  _dbRef('pedidosConfig/' + _lojaAtiva + '/aberto').set(novo)
+    .then(() => showToast(novo ? 'Pedidos abertos para os clientes' : 'Pedidos pausados'))
+    .catch(e => { console.error(e); showToast('Sem permissão para alterar. Publique as regras do Firebase.', false); });
+}
+function pedConfigAbrir() {
+  if (!_lojaAtiva) { showToast('Aguarde o carregamento do restaurante', false); return; }
+  const c = _pedCfg() || {};
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+  const money = v => (v === undefined || v === null || v === '') ? '' : String(v).replace('.', ',');
+  const loja = (typeof getLojaAtiva === 'function' && getLojaAtiva()) || {};
+  set('pc-nome', c.nome || 'Select Sabor');
+  set('pc-tempo', c.tempoEstimado || '');
+  set('pc-taxa', money(c.taxaEntrega));
+  set('pc-min', money(c.pedidoMinimo));
+  set('pc-whats', c.whatsapp || '');
+  set('pc-aviso', c.aviso || '');
+  document.getElementById('pc-entrega').checked  = c.aceitaEntrega !== false;
+  document.getElementById('pc-retirada').checked = c.aceitaRetirada !== false;
+  document.getElementById('pc-aberto').checked   = _pedCfg() ? c.aberto === true : true;
+  const box = document.getElementById('ped-config');
+  box.style.display = '';
+  box.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if (_currentSection !== 'pedidos') showSection('pedidos', document.getElementById('nav-pedidos'));
+}
+function pedConfigFechar() { const b = document.getElementById('ped-config'); if (b) b.style.display = 'none'; }
+function pedConfigSalvar() {
+  if (!_lojaAtiva) return;
+  const v = id => (document.getElementById(id).value || '').trim();
+  const entrega = document.getElementById('pc-entrega').checked, retirada = document.getElementById('pc-retirada').checked;
+  if (!entrega && !retirada) { showToast('Marque pelo menos entrega ou retirada', false); return; }
+  const cfg = {
+    aberto: document.getElementById('pc-aberto').checked,
+    nome: v('pc-nome').slice(0, 80) || 'Select Sabor',
+    taxaEntrega: _pedRound(_pedNum(v('pc-taxa'))),
+    pedidoMinimo: _pedRound(_pedNum(v('pc-min'))),
+    aceitaEntrega: entrega, aceitaRetirada: retirada,
+  };
+  if (v('pc-tempo'))  cfg.tempoEstimado = v('pc-tempo').slice(0, 40);
+  if (v('pc-whats'))  cfg.whatsapp = v('pc-whats').replace(/[^\d()+ -]/g, '').slice(0, 20);
+  if (v('pc-aviso'))  cfg.aviso = v('pc-aviso').slice(0, 200);
+  _dbRef('pedidosConfig/' + _lojaAtiva).set(cfg)
+    .then(() => { showToast('Configuração salva!'); pedConfigFechar(); })
+    .catch(e => { console.error(e); showToast('Sem permissão para salvar. Publique as regras do Firebase (firebase/firebase-database.rules.json).', false); });
 }
 
 /* ============================================================

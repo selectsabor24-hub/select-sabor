@@ -16,7 +16,7 @@
 // isso não é mais um problema para ele. Ainda assim, a cada atualização
 // grande, é boa prática mudar o número abaixo (ex.: v1 → v2) para
 // forçar a limpeza dos caches antigos no 'activate'.
-const CACHE_NAME = 'caixa-v4';
+const CACHE_NAME = 'caixa-v5';
 
 // Recursos do shell que devem ser cacheados na instalação
 const SHELL_URLS = [
@@ -95,6 +95,10 @@ self.addEventListener('fetch', event => {
     event.respondWith(fetch(event.request));
     return;
   }
+
+  // 3.5) Página pública de pedidos dos clientes → nunca passa pelo cache do app
+  //      (o navegador busca sempre a versão mais recente na rede).
+  if (url.pathname.endsWith('/pedido.html')) return;
 
   // 4) Protocolo não-http (blob:, chrome-extension:, etc.) → ignora
   if (!url.protocol.startsWith('http')) return;

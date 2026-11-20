@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Faça seu pedido</title>
+<meta name="theme-color" content="#2F5233">
+<meta name="robots" content="noindex">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<script src="https://cdn.jsdelivr.net/npm/firebase@10.12.2/firebase-app-compat.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/firebase@10.12.2/firebase-database-compat.min.js"></script>
+<style>
+/* ============================================================
+   Página pública de pedidos — feita para qualquer tamanho de tela
+   ============================================================ */
+:root {
+  --verde: #2F5233; --verde2: #3F7A47; --verde-bg: #E8F1E9;
+  --laranja: #B8742F; --laranja-bg: #FBF1E3;
+  --bg: #F7F4EF; --card: #FFFFFF; --txt: #1F2A22; --mut: #6B7280;
+  --borda: #E7E2D9; --vermelho: #B91C1C; --vermelho-bg: #FEE2E2;
+  --raio: 14px;
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-t: env(safe-area-inset-top, 0px);
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--txt);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 16px; line-height: 1.4; min-height: 100vh; overflow-x: hidden;
+}
+@supports (height: 100dvh) { body { min-height: 100dvh; } }
+button { font: inherit; cursor: pointer; max-width: 100%; }
+input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
+.wrap { width: 100%; max-width: 640px; margin: 0 auto; padding: 0 14px; }
+.hide { display: none !important; }
+
+/* Cabeçalho */
+.top { background: linear-gradient(160deg, var(--verde), var(--verde2)); color: #fff; padding: calc(14px + var(--safe-t)) 0 18px; }
+.top .wrap { display: flex; align-items: center; gap: 12px; }
+.top img { width: 64px; height: 64px; border-radius: 50%; background: #fff; flex-shrink: 0; box-shadow: 0 0 0 3px rgba(255,255,255,.35); }
+.top h1 { margin: 0; font-size: clamp(18px, 5.4vw, 24px); line-height: 1.15; word-break: break-word; }
+.top .sub { margin-top: 4px; font-size: 13px; opacity: .92; display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.chip-st { display: inline-block; font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 99px; margin-top: 6px; }
+.chip-st.on { background: #DCFCE7; color: #14532D; }
+.chip-st.off { background: var(--vermelho-bg); color: var(--vermelho); }
+
+/* Avisos */
+.aviso { margin: 12px 0 0; padding: 10px 12px; border-radius: 12px; font-size: 14px; background: var(--laranja-bg); color: #7C4A12; border: 1px solid #F0D9B5; }
+.aviso.erro { background: var(--vermelho-bg); color: var(--vermelho); border-color: #FCA5A5; }
+.banner-andamento { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin: 12px 0 0; padding: 10px 12px; border-radius: 12px; background: var(--verde-bg); border: 1px solid #BBD7BF; font-size: 14px; }
+.banner-andamento button { background: var(--verde); color: #fff; border: 0; border-radius: 10px; padding: 8px 14px; font-weight: 600; }
+
+/* Categorias (rolagem lateral) */
+.cats { position: sticky; top: 0; z-index: 20; background: var(--bg); border-bottom: 1px solid var(--borda); padding: calc(8px + 0px) 0; }
+.cats .scroll { display: flex; gap: 8px; overflow-x: auto; padding: 2px 14px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.cats .scroll::-webkit-scrollbar { display: none; }
+.cats button { flex: 0 0 auto; border: 1px solid var(--borda); background: #fff; border-radius: 99px; padding: 8px 14px; font-size: 14px; font-weight: 600; color: var(--txt); }
+.cats button.on { background: var(--verde); color: #fff; border-color: var(--verde); }
+
+/* Itens */
+.cat-titulo { margin: 20px 0 8px; font-size: 18px; font-weight: 800; color: var(--verde); }
+.item { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--card); border: 1px solid var(--borda); border-radius: var(--raio); padding: 12px 14px; margin-bottom: 8px; }
+.item .info { min-width: 0; flex: 1; }
+.item .nome { font-weight: 700; overflow-wrap: anywhere; }
+.item .preco { margin-top: 2px; color: var(--laranja); font-weight: 800; }
+.add { flex-shrink: 0; background: var(--verde); color: #fff; border: 0; border-radius: 12px; padding: 10px 16px; font-weight: 700; min-height: 44px; }
+.add[disabled] { background: #C9CFC9; cursor: not-allowed; }
+.stepper { flex-shrink: 0; display: inline-flex; align-items: center; background: var(--verde-bg); border-radius: 12px; }
+.stepper button { width: 44px; height: 44px; border: 0; background: transparent; font-size: 22px; font-weight: 700; color: var(--verde); }
+.stepper span { min-width: 26px; text-align: center; font-weight: 800; }
+.vazio { text-align: center; color: var(--mut); padding: 40px 10px; }
+
+/* Barra da sacola */
+.barra { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; padding: 10px 14px calc(10px + var(--safe-b)); background: linear-gradient(to top, var(--bg) 70%, rgba(247,244,239,0)); }
+.barra button { display: flex; width: 100%; max-width: 640px; margin: 0 auto; align-items: center; justify-content: space-between; gap: 10px; background: var(--verde); color: #fff; border: 0; border-radius: 16px; padding: 14px 16px; font-weight: 700; box-shadow: 0 6px 18px rgba(47,82,51,.35); }
+.espaco-barra { height: calc(96px + var(--safe-b)); }
+
+/* Telas internas */
+.tela-topo { position: sticky; top: 0; z-index: 20; background: var(--bg); padding: calc(10px + var(--safe-t)) 0 10px; border-bottom: 1px solid var(--borda); }
+.tela-topo .wrap { display: flex; align-items: center; gap: 10px; }
+.tela-topo h2 { margin: 0; font-size: 19px; }
+.voltar { border: 1px solid var(--borda); background: #fff; border-radius: 12px; padding: 9px 13px; font-weight: 600; }
+.bloco { background: var(--card); border: 1px solid var(--borda); border-radius: var(--raio); padding: 14px; margin-top: 12px; }
+.bloco h3 { margin: 0 0 10px; font-size: 15px; text-transform: uppercase; letter-spacing: .4px; color: var(--mut); }
+.linha { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px dashed var(--borda); }
+.linha:last-child { border-bottom: 0; }
+.linha .n { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.linha .v { flex: 0 1 auto; min-width: 0; text-align: right; overflow-wrap: anywhere; font-weight: 700; }
+.opcoes { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 130px), 1fr)); gap: 8px; }
+.opcoes button { border: 2px solid var(--borda); background: #fff; border-radius: 12px; padding: 12px 8px; font-weight: 700; color: var(--txt); min-height: 52px; }
+.opcoes button.on { border-color: var(--verde); background: var(--verde-bg); color: var(--verde); }
+.campo { margin-top: 10px; }
+.campo:first-of-type { margin-top: 0; }
+.campo label { display: block; font-size: 13px; font-weight: 700; color: var(--mut); margin-bottom: 4px; }
+.campo input, .campo textarea { width: 100%; border: 1.5px solid var(--borda); border-radius: 12px; padding: 12px; background: #fff; color: var(--txt); }
+.campo input:focus, .campo textarea:focus { outline: 0; border-color: var(--verde2); box-shadow: 0 0 0 3px rgba(63,122,71,.18); }
+.campo .dupla { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 120px), 1fr)); gap: 10px; }
+.total-linha { display: flex; justify-content: space-between; padding: 4px 0; }
+.total-linha.forte { font-size: 20px; font-weight: 800; color: var(--verde); border-top: 2px solid var(--borda); margin-top: 6px; padding-top: 10px; }
+.nota { font-size: 13px; color: var(--mut); margin: 8px 0 0; }
+.btn-enviar { display: block; width: 100%; background: var(--verde); color: #fff; border: 0; border-radius: 16px; padding: 16px; font-weight: 800; font-size: 17px; margin-top: 14px; box-shadow: 0 6px 18px rgba(47,82,51,.3); }
+.btn-enviar[disabled] { opacity: .6; }
+.btn-sec { display: block; width: 100%; background: #fff; color: var(--verde); border: 2px solid var(--verde); border-radius: 14px; padding: 13px; font-weight: 700; margin-top: 10px; text-align: center; text-decoration: none; }
+.erro-ck { margin-top: 12px; }
+.bloco, .opcoes button, .campo, .erro-ck { scroll-margin-top: 84px; scroll-margin-bottom: 90px; }
+
+/* Acompanhamento */
+.codigo { text-align: center; padding: 18px 10px 6px; }
+.codigo .rot { font-size: 13px; color: var(--mut); text-transform: uppercase; letter-spacing: .5px; }
+.codigo .cod { font-size: 40px; font-weight: 900; letter-spacing: 4px; color: var(--verde); }
+.status-card { text-align: center; border-radius: var(--raio); padding: 20px 14px; margin-top: 8px; background: var(--verde-bg); border: 1px solid #BBD7BF; }
+.status-card .ic { font-size: 46px; line-height: 1; }
+.status-card .tt { font-size: 22px; font-weight: 800; margin-top: 8px; color: var(--verde); }
+.status-card .ds { margin-top: 4px; color: var(--txt); }
+.status-card.cancel { background: var(--vermelho-bg); border-color: #FCA5A5; }
+.status-card.cancel .tt { color: var(--vermelho); }
+.status-card .prev { margin-top: 10px; display: inline-block; background: #fff; border-radius: 99px; padding: 5px 12px; font-weight: 700; font-size: 14px; }
+.linha-tempo { list-style: none; margin: 0; padding: 0; }
+.linha-tempo li { display: flex; gap: 12px; align-items: flex-start; padding: 8px 0; position: relative; color: var(--mut); }
+.linha-tempo li::before { content: ""; position: absolute; left: 11px; top: 30px; bottom: -8px; width: 2px; background: var(--borda); }
+.linha-tempo li:last-child::before { display: none; }
+.linha-tempo .bola { flex-shrink: 0; width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--borda); background: #fff; display: grid; place-items: center; font-size: 13px; font-weight: 800; }
+.linha-tempo li.feito { color: var(--txt); }
+.linha-tempo li.feito .bola { background: var(--verde); border-color: var(--verde); color: #fff; }
+.linha-tempo li.atual .bola { background: var(--laranja); border-color: var(--laranja); color: #fff; box-shadow: 0 0 0 5px rgba(184,116,47,.2); }
+.linha-tempo li.atual { color: var(--txt); font-weight: 700; }
+.linha-tempo .hr { margin-left: auto; font-size: 13px; color: var(--mut); font-weight: 600; flex-shrink: 0; }
+.carregando { text-align: center; padding: 60px 10px; color: var(--mut); }
+.toast { position: fixed; left: 50%; bottom: calc(24px + var(--safe-b)); transform: translateX(-50%); background: #1F2A22; color: #fff; padding: 10px 16px; border-radius: 99px; font-size: 14px; z-index: 60; max-width: 92vw; text-align: center; }
+@media (max-width: 340px) {
+  .top img { width: 52px; height: 52px; }
+  .item { padding: 10px; }
+  .stepper button { width: 40px; }
+  .codigo .cod { font-size: 32px; letter-spacing: 3px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ============ TELA 1: CARDÁPIO ============ -->
+<div id="v-menu" class="hide">
+  <header class="top">
+    <div class="wrap">
+      <img id="logo" src="logo.png" alt="">
+      <div style="min-width:0">
+        <h1 id="loja-nome">Cardápio</h1>
+        <div class="sub" id="loja-info"></div>
+        <span class="chip-st" id="loja-chip"></span>
+      </div>
+    </div>
+  </header>
+  <div class="wrap">
+    <div id="banner-andamento" class="banner-andamento hide"></div>
+    <div id="aviso" class="aviso hide"></div>
+  </div>
+  <nav class="cats hide" id="cats"><div class="scroll" id="cats-scroll"></div></nav>
+  <main class="wrap" id="menu-lista"></main>
+  <div class="espaco-barra"></div>
+  <div class="barra hide" id="barra"><button id="btn-sacola"></button></div>
+</div>
+
+<!-- ============ TELA 2: SACOLA / DADOS ============ -->
+<div id="v-ck" class="hide">
+  <div class="tela-topo"><div class="wrap"><button class="voltar" id="ck-voltar">← Cardápio</button><h2>Seu pedido</h2></div></div>
+  <div class="wrap">
+    <div class="bloco"><h3>Itens</h3><div id="ck-itens"></div></div>
+
+    <div class="bloco" id="bl-modo"><h3>Como quer receber?</h3>
+      <div class="opcoes" id="op-modo"></div>
+      <p class="nota hide" id="nota-modo"></p>
+    </div>
+
+    <div class="bloco"><h3>Seus dados</h3>
+      <div class="campo"><label for="f-nome">Nome</label><input id="f-nome" autocomplete="name" maxlength="60" placeholder="Seu nome"></div>
+      <div class="campo"><label for="f-tel">WhatsApp / telefone</label><input id="f-tel" type="tel" inputmode="tel" autocomplete="tel" maxlength="16" placeholder="(31) 99999-0000"></div>
+    </div>
+
+    <div class="bloco" id="bl-end"><h3>Endereço de entrega</h3>
+      <div class="campo"><label for="f-rua">Rua / avenida</label><input id="f-rua" autocomplete="address-line1" maxlength="120"></div>
+      <div class="campo"><div class="dupla">
+        <div><label for="f-num">Número</label><input id="f-num" maxlength="20" autocomplete="off"></div>
+        <div><label for="f-bairro">Bairro</label><input id="f-bairro" maxlength="80" autocomplete="off"></div>
+      </div></div>
+      <div class="campo"><label for="f-comp">Complemento (opcional)</label><input id="f-comp" maxlength="120" placeholder="Apto, bloco, casa dos fundos…"></div>
+      <div class="campo"><label for="f-ref">Ponto de referência (opcional)</label><input id="f-ref" maxlength="120" placeholder="Perto de…"></div>
+    </div>
+
+    <div class="bloco"><h3>Pagamento na entrega / retirada</h3>
+      <div class="opcoes" id="op-pag">
+        <button type="button" data-v="dinheiro">💵 Dinheiro</button>
+        <button type="button" data-v="cartao">💳 Cartão</button>
+        <button type="button" data-v="pix">📲 Pix</button>
+      </div>
+      <div class="campo hide" id="bl-troco"><label for="f-troco">Troco para quanto? (opcional)</label><input id="f-troco" inputmode="decimal" placeholder="Ex.: 50,00" maxlength="9"></div>
+      <p class="nota">O pagamento é feito somente quando você receber ou retirar o pedido.</p>
+    </div>
+
+    <div class="bloco"><h3>Observações (opcional)</h3>
+      <div class="campo"><textarea id="f-obs" rows="2" maxlength="300" placeholder="Ex.: sem cebola, ponto da carne…"></textarea></div>
+    </div>
+
+    <div class="bloco"><h3>Resumo</h3>
+      <div class="total-linha"><span>Subtotal</span><span id="r-sub"></span></div>
+      <div class="total-linha" id="r-taxa-l"><span>Taxa de entrega</span><span id="r-taxa"></span></div>
+      <div class="total-linha forte"><span>Total</span><span id="r-total"></span></div>
+      <p class="nota">O valor final é confirmado pela loja quando aceitar o pedido.</p>
+    </div>
+
+    <div class="aviso erro erro-ck hide" id="ck-erro"></div>
+    <button class="btn-enviar" id="btn-enviar">Enviar pedido</button>
+    <div style="height:calc(30px + var(--safe-b))"></div>
+  </div>
+</div>
+
+<!-- ============ TELA 3: ACOMPANHAR ============ -->
+<div id="v-track" class="hide">
+  <div class="tela-topo"><div class="wrap"><button class="voltar" id="tr-voltar">← Cardápio</button><h2>Acompanhar pedido</h2></div></div>
+  <div class="wrap" id="tr-corpo"><div class="carregando">Carregando…</div></div>
+</div>
+
+<!-- Erro geral -->
+<div id="v-erro" class="hide"><div class="wrap"><div class="vazio" id="erro-msg" style="padding-top:80px"></div></div></div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ---------- Configuração (mesmo projeto Firebase do Controle de Caixa) ---------- */
+  var FIREBASE_CONFIG = {
+    apiKey: "AIzaSyA2SuwKCvrvReKI4Q61hWHych-HPY8c1Tg",
+    authDomain: "caixa-select-sabor.firebaseapp.com",
+    databaseURL: "https://caixa-select-sabor-default-rtdb.firebaseio.com",
+    projectId: "caixa-select-sabor"
+  };
+  var CATS_PADRAO = ['Pratos', 'Bebidas', 'Sobremesas', 'Porções', 'Outros'];
+  var STATUS_FINAIS = ['entregue', 'cancelado'];
+
+  /* ---------- Utilidades ---------- */
+  var $ = function (s) { return document.querySelector(s); };
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+  var brl = function (v) { return (Number(v) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); };
+  var round2 = function (v) { return Math.round((Number(v) + Number.EPSILON) * 100) / 100; };
+  var lsGet = function (k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
+  var lsSet = function (k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+  var hora = function (ts) { if (!ts) return ''; var d = new Date(ts); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
+  var digitos = function (s) { return String(s || '').replace(/\D/g, ''); };
+  function toast(msg) {
+    var t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.appendChild(t);
+    setTimeout(function () { t.remove(); }, 3200);
+  }
+  function mostrar(id) {
+    ['v-menu', 'v-ck', 'v-track', 'v-erro'].forEach(function (v) { $('#' + v).classList.toggle('hide', v !== id); });
+    window.scrollTo(0, 0);
+  }
+  function erroGeral(msg) { $('#erro-msg').textContent = msg; mostrar('v-erro'); }
+
+  /* ---------- Estado ---------- */
+  var params = new URLSearchParams(location.search);
+  var LOJA = (params.get('loja') || '').trim();
+  var PED_ID = (params.get('p') || '').trim();
+  var db = null, cfg = null, cardapio = [], cart = {}, modo = 'entrega', pag = '', catAtiva = '';
+  var pedido = null, refPedido = null, ultimoStatus = null, pendenteId = null, enviando = false;
+
+  if (!/^[A-Za-z0-9_-]{1,60}$/.test(LOJA)) {
+    erroGeral('Link inválido. Peça o link do cardápio para a loja.');
+    return;
+  }
+  if (typeof firebase === 'undefined') {
+    erroGeral('Não foi possível carregar o sistema. Verifique sua internet e tente de novo.');
+    return;
+  }
+  firebase.initializeApp(FIREBASE_CONFIG);
+  db = firebase.database();
+  var base = function (p) { return db.ref('caixa/' + p); };
+
+  /* ---------- Cardápio ---------- */
+  function itensAtivos() { return cardapio.filter(function (i) { return i.tipo !== 'cat' && i.ativo !== false && i.nome; }); }
+  function precoDe(id) { var i = cardapio.find(function (x) { return x.id === id; }); return i ? Number(i.preco) || 0 : 0; }
+  function categorias() {
+    var out = CATS_PADRAO.slice();
+    var tem = function (n) { return out.some(function (c) { return c.toLowerCase() === String(n).toLowerCase(); }); };
+    cardapio.filter(function (i) { return i.tipo === 'cat'; })
+      .sort(function (a, b) { return String(a.id).localeCompare(String(b.id)); })
+      .forEach(function (c) { if (c.nome && !tem(c.nome)) out.push(c.nome); });
+    itensAtivos().forEach(function (i) { var n = i.cat || 'Outros'; if (!tem(n)) out.push(n); });
+    return out;
+  }
+  function aberta() { return !!(cfg && cfg.aberto === true); }
+  function aceitaEntrega() { return !cfg || cfg.aceitaEntrega !== false; }
+  function aceitaRetirada() { return !cfg || cfg.aceitaRetirada !== false; }
+  function taxa() { return (modo === 'entrega' && cfg) ? (Number(cfg.taxaEntrega) || 0) : 0; }
+
+  /* ---------- Sacola ---------- */
+  function salvarCart() { lsSet('cart:' + LOJA, cart); }
+  function qtdTotal() { return Object.keys(cart).reduce(function (s, k) { return s + cart[k]; }, 0); }
+  function subtotal() { return round2(Object.keys(cart).reduce(function (s, k) { return s + precoDe(k) * cart[k]; }, 0)); }
+  function limparCartInvalido() {
+    var ids = {}; itensAtivos().forEach(function (i) { ids[i.id] = 1; });
+    Object.keys(cart).forEach(function (k) { if (!ids[k] || cart[k] < 1) delete cart[k]; });
+  }
+  function mudar(id, delta) {
+    if (!aberta()) { toast('A loja está fechada no momento.'); return; }
+    var q = (cart[id] || 0) + delta;
+    if (q <= 0) delete cart[id]; else cart[id] = Math.min(q, 99);
+    salvarCart(); desenharMenu(); desenharBarra();
+    if (!$('#v-ck').classList.contains('hide')) desenharCheckout();
+  }
+
+  /* ---------- Tela 1: menu ---------- */
+  function desenharCabecalho() {
+    $('#loja-nome').textContent = (cfg && cfg.nome) || 'Cardápio';
+    document.title = ((cfg && cfg.nome) ? cfg.nome + ' · ' : '') + 'Faça seu pedido';
+    var info = [];
+    if (cfg && cfg.tempoEstimado) info.push('⏱ ' + esc(cfg.tempoEstimado));
+    if (aceitaEntrega() && cfg && Number(cfg.taxaEntrega) > 0) info.push('🛵 Entrega ' + brl(cfg.taxaEntrega));
+    else if (aceitaEntrega() && cfg) info.push('🛵 Entrega grátis');
+    if (cfg && Number(cfg.pedidoMinimo) > 0) info.push('Pedido mín. ' + brl(cfg.pedidoMinimo));
+    $('#loja-info').innerHTML = info.map(function (t) { return '<span>' + t + '</span>'; }).join('');
+    var chip = $('#loja-chip');
+    chip.className = 'chip-st ' + (aberta() ? 'on' : 'off');
+    chip.textContent = aberta() ? '● Aberto para pedidos' : '● Fechado no momento';
+    var av = $('#aviso');
+    var txt = !aberta() ? 'Estamos fechados no momento. Você pode ver o cardápio, mas só dá para enviar pedidos quando abrirmos.' : (cfg && cfg.aviso) || '';
+    av.textContent = txt; av.classList.toggle('hide', !txt);
+  }
+  function desenharMenu() {
+    var itens = itensAtivos();
+    var wrap = $('#menu-lista');
+    if (!itens.length) { wrap.innerHTML = '<div class="vazio">O cardápio ainda não tem itens disponíveis.</div>'; $('#cats').classList.add('hide'); return; }
+    var porCat = {};
+    itens.forEach(function (i) { var c = i.cat || 'Outros'; (porCat[c] = porCat[c] || []).push(i); });
+    var cats = categorias().filter(function (c) { return porCat[c]; });
+    // categorias (chips)
+    var sc = $('#cats-scroll');
+    sc.innerHTML = cats.map(function (c, ix) { return '<button type="button" data-cat="' + ix + '" class="' + (c === catAtiva ? 'on' : '') + '">' + esc(c) + '</button>'; }).join('');
+    $('#cats').classList.toggle('hide', cats.length < 2);
+    var h = '';
+    cats.forEach(function (c, ix) {
+      h += '<h2 class="cat-titulo" id="cat-' + ix + '">' + esc(c) + '</h2>';
+      porCat[c].sort(function (a, b) { return String(a.nome).localeCompare(String(b.nome), 'pt-BR'); }).forEach(function (i) {
+        var q = cart[i.id] || 0;
+        h += '<div class="item"><div class="info"><div class="nome">' + esc(i.nome) + '</div><div class="preco">' + brl(i.preco) + '</div></div>' +
+          (q > 0
+            ? '<div class="stepper"><button type="button" data-m="-1" data-id="' + esc(i.id) + '" aria-label="Diminuir">−</button><span>' + q + '</span><button type="button" data-m="1" data-id="' + esc(i.id) + '" aria-label="Aumentar">+</button></div>'
+            : '<button type="button" class="add" data-m="1" data-id="' + esc(i.id) + '"' + (aberta() ? '' : ' disabled') + '>Adicionar</button>') +
+          '</div>';
+      });
+    });
+    wrap.innerHTML = h;
+  }
+  function desenharBarra() {
+    var n = qtdTotal(), b = $('#barra');
+    b.classList.toggle('hide', n === 0);
+    $('#btn-sacola').innerHTML = '<span>🛒 Ver sacola · ' + n + (n === 1 ? ' item' : ' itens') + '</span><span>' + brl(subtotal()) + '</span>';
+  }
+
+  /* ---------- Tela 2: checkout ---------- */
+  function desenharCheckout() {
+    var ids = Object.keys(cart);
+    $('#ck-itens').innerHTML = ids.length ? ids.map(function (id) {
+      var i = cardapio.find(function (x) { return x.id === id; }) || {};
+      return '<div class="linha"><div class="n"><strong>' + esc(i.nome || 'Item') + '</strong><br><small style="color:var(--mut)">' + brl(precoDe(id)) + ' cada</small></div>' +
+        '<div class="stepper"><button type="button" data-m="-1" data-id="' + esc(id) + '" aria-label="Diminuir">−</button><span>' + cart[id] + '</span><button type="button" data-m="1" data-id="' + esc(id) + '" aria-label="Aumentar">+</button></div></div>';
+    }).join('') : '<div class="vazio" style="padding:14px">Sua sacola está vazia.</div>';
+    // modo
+    var op = [];
+    if (aceitaEntrega()) op.push('<button type="button" data-modo="entrega" class="' + (modo === 'entrega' ? 'on' : '') + '">🛵 Entrega' + (cfg && Number(cfg.taxaEntrega) > 0 ? '<br><small>+ ' + brl(cfg.taxaEntrega) + '</small>' : '') + '</button>');
+    if (aceitaRetirada()) op.push('<button type="button" data-modo="retirada" class="' + (modo === 'retirada' ? 'on' : '') + '">🏪 Retirar na loja</button>');
+    $('#op-modo').innerHTML = op.join('');
+    $('#bl-end').classList.toggle('hide', modo !== 'entrega');
+    $('#r-taxa-l').classList.toggle('hide', modo !== 'entrega');
+    document.querySelectorAll('#op-pag button').forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-v') === pag); });
+    $('#bl-troco').classList.toggle('hide', pag !== 'dinheiro');
+    var sub = subtotal(), tx = taxa();
+    $('#r-sub').textContent = brl(sub);
+    $('#r-taxa').textContent = tx > 0 ? brl(tx) : 'Grátis';
+    $('#r-total').textContent = brl(round2(sub + tx));
+    $('#btn-enviar').textContent = 'Enviar pedido · ' + brl(round2(sub + tx));
+  }
+  function setErro(msg) { var e = $('#ck-erro'); e.textContent = msg || ''; e.classList.toggle('hide', !msg); if (msg) e.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+  function abrirCheckout() {
+    if (!qtdTotal()) return;
+    if (!aberta()) { toast('A loja está fechada no momento.'); return; }
+    if (modo === 'entrega' && !aceitaEntrega()) modo = 'retirada';
+    if (modo === 'retirada' && !aceitaRetirada()) modo = 'entrega';
+    var salvo = lsGet('cliente') || {};
+    if (!$('#f-nome').value) $('#f-nome').value = salvo.nome || '';
+    if (!$('#f-tel').value) $('#f-tel').value = salvo.tel || '';
+    if (!$('#f-rua').value) { $('#f-rua').value = salvo.rua || ''; $('#f-num').value = salvo.num || ''; $('#f-bairro').value = salvo.bairro || ''; $('#f-comp').value = salvo.comp || ''; $('#f-ref').value = salvo.ref || ''; }
+    setErro(''); desenharCheckout(); mostrar('v-ck');
+  }
+  function mascaraTel(v) {
+    var d = digitos(v).slice(0, 11);
+    if (d.length > 6) return '(' + d.slice(0, 2) + ') ' + d.slice(2, d.length - 4) + '-' + d.slice(-4);
+    if (d.length > 2) return '(' + d.slice(0, 2) + ') ' + d.slice(2);
+    return d;
+  }
+  function validar() {
+    if (!aberta()) return 'A loja está fechada no momento.';
+    if (!qtdTotal()) return 'Sua sacola está vazia.';
+    var min = cfg ? Number(cfg.pedidoMinimo) || 0 : 0;
+    if (subtotal() < min) return 'O pedido mínimo é ' + brl(min) + '. Adicione mais itens.';
+    var nome = $('#f-nome').value.trim(), tel = digitos($('#f-tel').value);
+    if (nome.length < 2) return 'Informe seu nome.';
+    if (tel.length < 10 || tel.length > 11) return 'Informe um telefone com DDD, por exemplo (31) 99999-0000.';
+    if (modo === 'entrega') {
+      if ($('#f-rua').value.trim().length < 2) return 'Informe a rua do endereço de entrega.';
+      if (!$('#f-num').value.trim()) return 'Informe o número do endereço (ou S/N).';
+      if ($('#f-bairro').value.trim().length < 2) return 'Informe o bairro.';
+    }
+    if (!pag) return 'Escolha a forma de pagamento.';
+    if (pag === 'dinheiro' && $('#f-troco').value.trim()) {
+      var t = parseFloat($('#f-troco').value.replace(/\./g, '').replace(',', '.'));
+      if (!(t > 0)) return 'Valor do troco inválido.';
+      if (t < round2(subtotal() + taxa())) return 'O valor do troco precisa ser maior ou igual ao total do pedido.';
+    }
+    return '';
+  }
+  function codigoCurto() {
+    var A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789', s = '';
+    for (var i = 0; i < 4; i++) s += A.charAt(Math.floor(Math.random() * A.length));
+    return s;
+  }
+  function montarPedido() {
+    var itens = {};
+    Object.keys(cart).forEach(function (id) {
+      var i = cardapio.find(function (x) { return x.id === id; });
+      itens[id] = { q: cart[id], n: String((i && i.nome) || 'Item').slice(0, 80) };
+    });
+    var p = {
+      ts: firebase.database.ServerValue.TIMESTAMP,
+      codigo: pendenteCodigo,
+      status: 'novo', tipo: modo, pagamento: pag, itens: itens,
+      cliente: { nome: $('#f-nome').value.trim(), telefone: mascaraTel($('#f-tel').value) }
+    };
+    if (modo === 'entrega') {
+      p.endereco = { rua: $('#f-rua').value.trim(), numero: $('#f-num').value.trim(), bairro: $('#f-bairro').value.trim() };
+      if ($('#f-comp').value.trim()) p.endereco.complemento = $('#f-comp').value.trim();
+      if ($('#f-ref').value.trim()) p.endereco.referencia = $('#f-ref').value.trim();
+    }
+    if (pag === 'dinheiro' && $('#f-troco').value.trim()) p.troco = parseFloat($('#f-troco').value.replace(/\./g, '').replace(',', '.'));
+    if ($('#f-obs').value.trim()) p.obs = $('#f-obs').value.trim().slice(0, 300);
+    return p;
+  }
+  var pendenteCodigo = null;
+  function enviar() {
+    if (enviando) return;
+    var e = validar(); setErro(e); if (e) return;
+    enviando = true;
+    var btn = $('#btn-enviar'); btn.disabled = true; btn.textContent = 'Enviando…';
+    if (!pendenteId) { pendenteId = base('pedidos/' + LOJA).push().key; pendenteCodigo = codigoCurto(); }
+    var dados = montarPedido();
+    var ref = base('pedidos/' + LOJA + '/' + pendenteId);
+    var temporizador = new Promise(function (_, rej) { setTimeout(function () { rej({ code: 'TIMEOUT' }); }, 15000); });
+    Promise.race([ref.set(dados), temporizador]).then(function () {
+      lsSet('cliente', { nome: dados.cliente.nome, tel: dados.cliente.telefone, rua: $('#f-rua').value.trim(), num: $('#f-num').value.trim(), bairro: $('#f-bairro').value.trim(), comp: $('#f-comp').value.trim(), ref: $('#f-ref').value.trim() });
+      var lista = lsGet('meusPedidos') || [];
+      lista.unshift({ loja: LOJA, id: pendenteId, codigo: pendenteCodigo, ts: Date.now() });
+      lsSet('meusPedidos', lista.slice(0, 10));
+      var id = pendenteId; pendenteId = null; pendenteCodigo = null;
+      cart = {}; salvarCart(); $('#f-obs').value = ''; $('#f-troco').value = '';
+      enviando = false; btn.disabled = false;
+      abrirAcompanhamento(id, true);
+    }).catch(function (er) {
+      enviando = false; btn.disabled = false; desenharCheckout();
+      var code = (er && (er.code || er.message)) || '';
+      if (/PERMISSION/i.test(code)) {
+        // Se o pedido já existe (envio anterior que demorou), vai direto para o acompanhamento
+        ref.once('value').then(function (s) {
+          if (s.exists()) { var id = pendenteId; pendenteId = null; cart = {}; salvarCart(); abrirAcompanhamento(id, true); }
+          else { pendenteId = null; setErro('Não foi possível enviar. A loja pode ter fechado ou o cardápio mudou. Atualize a página e tente de novo.'); }
+        }).catch(function () { setErro('Não foi possível enviar. Atualize a página e tente de novo.'); });
+      } else {
+        setErro('Sem conexão com a loja. Verifique sua internet e toque em "Enviar pedido" de novo — não será enviado em duplicidade.');
+      }
+    });
+  }
+
+  /* ---------- Tela 3: acompanhamento ---------- */
+  var ROTULOS = {
+    novo:      { ic: '📨', t: 'Pedido recebido', d: 'Aguardando a loja confirmar o seu pedido.' },
+    preparo:   { ic: '👩‍🍳', t: 'Em preparo', d: 'Estamos preparando o seu pedido.' },
+    pronto:    { ic: '✅', t: 'Pedido pronto', dEntrega: 'Pronto! Em instantes sai para a entrega.', dRetirada: 'Pronto! Pode vir retirar na loja.' },
+    saiu:      { ic: '🛵', t: 'Saiu para entrega', d: 'O entregador está a caminho do seu endereço.' },
+    entregue:  { ic: '🎉', t: 'Pedido entregue', tRetirada: 'Pedido retirado', d: 'Obrigado pela preferência! Bom apetite.' },
+    cancelado: { ic: '✖️', t: 'Pedido cancelado', d: 'Este pedido foi cancelado.' }
+  };
+  function passos(tipo) {
+    return tipo === 'entrega'
+      ? [['novo', 'Pedido recebido'], ['preparo', 'Em preparo'], ['pronto', 'Pronto'], ['saiu', 'Saiu para entrega'], ['entregue', 'Entregue']]
+      : [['novo', 'Pedido recebido'], ['preparo', 'Em preparo'], ['pronto', 'Pronto para retirar'], ['entregue', 'Retirado']];
+  }
+  function abrirAcompanhamento(id, novo) {
+    PED_ID = id;
+    try { history.replaceState(null, '', '?loja=' + encodeURIComponent(LOJA) + '&p=' + encodeURIComponent(id)); } catch (e) {}
+    if (refPedido) refPedido.off();
+    pedido = null; ultimoStatus = null;
+    $('#tr-corpo').innerHTML = '<div class="carregando">Carregando seu pedido…</div>';
+    mostrar('v-track');
+    refPedido = base('pedidos/' + LOJA + '/' + id);
+    refPedido.on('value', function (snap) {
+      pedido = snap.val(); desenharAcompanhamento(novo);
+      novo = false;
+    }, function () {
+      $('#tr-corpo').innerHTML = '<div class="vazio">Não foi possível carregar o pedido agora. Verifique sua internet.</div>';
+    });
+  }
+  function foneLoja() {
+    var d = digitos(cfg && cfg.whatsapp);
+    if (!d) return '';
+    if (d.length <= 11) d = '55' + d;
+    return d;
+  }
+  function desenharAcompanhamento(novo) {
+    var corpo = $('#tr-corpo');
+    if (!pedido) { corpo.innerHTML = '<div class="vazio">Pedido não encontrado. Confira o link ou faça um novo pedido.</div><button class="btn-sec" id="tr-novo2">Fazer um pedido</button>'; var b = $('#tr-novo2'); if (b) b.onclick = voltarMenu; return; }
+    var st = pedido.status || 'novo', r = ROTULOS[st] || ROTULOS.novo, entrega = pedido.tipo === 'entrega';
+    var titulo = (st === 'entregue' && !entrega) ? r.tRetirada : r.t;
+    var desc = st === 'pronto' ? (entrega ? r.dEntrega : r.dRetirada) : r.d;
+    if (st === 'cancelado' && pedido.motivo) desc = 'Motivo: ' + pedido.motivo;
+    var h = '<div class="codigo"><div class="rot">Pedido</div><div class="cod">' + esc(pedido.codigo || '') + '</div><div style="color:var(--mut);font-size:14px">' + esc((cfg && cfg.nome) || '') + (pedido.ts ? ' · ' + hora(pedido.ts) : '') + '</div></div>';
+    h += '<div class="status-card ' + (st === 'cancelado' ? 'cancel' : '') + '"><div class="ic">' + r.ic + '</div><div class="tt">' + esc(titulo) + '</div><div class="ds">' + esc(desc) + '</div>' +
+      (pedido.previsao && STATUS_FINAIS.indexOf(st) < 0 ? '<div class="prev">⏱ Previsão: ' + esc(pedido.previsao) + '</div>' : '') + '</div>';
+    if (st !== 'cancelado') {
+      var ps = passos(pedido.tipo), ix = ps.findIndex(function (p) { return p[0] === st; });
+      h += '<div class="bloco"><h3>Andamento</h3><ul class="linha-tempo">' + ps.map(function (p, i) {
+        var cls = i < ix || st === 'entregue' ? 'feito' : (i === ix ? 'atual' : '');
+        var ts = p[0] === 'novo' ? pedido.ts : (pedido.hist && pedido.hist[p[0]]);
+        return '<li class="' + cls + '"><span class="bola">' + (cls === 'feito' ? '✓' : (i + 1)) + '</span><span>' + esc(p[1]) + '</span><span class="hr">' + (ts ? hora(ts) : '') + '</span></li>';
+      }).join('') + '</ul></div>';
+    }
+    // itens e valores
+    var itens = Object.keys(pedido.itens || {}).map(function (id) { return { id: id, q: pedido.itens[id].q, n: pedido.itens[id].n, p: pedido.itens[id].p }; });
+    var confirmado = typeof pedido.total === 'number';
+    var sub = round2(itens.reduce(function (s, i) { return s + (typeof i.p === 'number' ? i.p : precoDe(i.id)) * i.q; }, 0));
+    var tx = confirmado ? (Number(pedido.taxa) || 0) : (entrega && cfg ? Number(cfg.taxaEntrega) || 0 : 0);
+    var total = confirmado ? pedido.total : round2(sub + tx);
+    h += '<div class="bloco"><h3>Seu pedido</h3>' + itens.map(function (i) {
+      var pr = typeof i.p === 'number' ? i.p : precoDe(i.id);
+      return '<div class="linha"><span class="n">' + i.q + '× ' + esc(i.n) + '</span><span class="v">' + brl(pr * i.q) + '</span></div>';
+    }).join('') +
+      '<div class="total-linha"><span>Subtotal</span><span>' + brl(sub) + '</span></div>' +
+      (entrega ? '<div class="total-linha"><span>Taxa de entrega</span><span>' + (tx > 0 ? brl(tx) : 'Grátis') + '</span></div>' : '') +
+      '<div class="total-linha forte"><span>Total' + (confirmado ? '' : ' (estimado)') + '</span><span>' + brl(total) + '</span></div></div>';
+    // detalhes
+    var pg = { dinheiro: 'Dinheiro', cartao: 'Cartão', pix: 'Pix' }[pedido.pagamento] || '';
+    var det = '<div class="linha"><span>Recebimento</span><span class="v">' + (entrega ? '🛵 Entrega' : '🏪 Retirada na loja') + '</span></div>';
+    if (entrega && pedido.endereco) {
+      var e = pedido.endereco;
+      det += '<div class="linha"><span class="n">Endereço</span><span class="v" style="text-align:right;font-weight:600">' + esc(e.rua + ', ' + e.numero + ' — ' + e.bairro + (e.complemento ? ' (' + e.complemento + ')' : '')) + '</span></div>';
+    }
+    det += '<div class="linha"><span>Pagamento</span><span class="v">' + esc(pg) + (pedido.pagamento === 'dinheiro' && pedido.troco ? ' · troco p/ ' + brl(pedido.troco) : '') + '</span></div>';
+    if (pedido.obs) det += '<div class="linha"><span class="n">Observações</span><span class="v" style="text-align:right;font-weight:600">' + esc(pedido.obs) + '</span></div>';
+    h += '<div class="bloco"><h3>Detalhes</h3>' + det + '<p class="nota">O pagamento é feito na ' + (entrega ? 'entrega' : 'retirada') + '.</p></div>';
+    var fl = foneLoja();
+    if (fl) h += '<a class="btn-sec" target="_blank" rel="noopener" href="https://wa.me/' + fl + '?text=' + encodeURIComponent('Olá! Sobre o meu pedido ' + (pedido.codigo || '')) + '">💬 Falar com a loja</a>';
+    h += '<button class="btn-sec" id="tr-copiar">🔗 Copiar link deste acompanhamento</button>';
+    h += '<button class="btn-sec" id="tr-novo">🍽 Fazer um novo pedido</button><div style="height:calc(30px + var(--safe-b))"></div>';
+    corpo.innerHTML = h;
+    $('#tr-copiar').onclick = function () {
+      var url = location.href;
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(function () { toast('Link copiado!'); }, function () { toast(url); });
+      else toast(url);
+    };
+    $('#tr-novo').onclick = voltarMenu;
+    // aviso quando o status muda
+    if (ultimoStatus && ultimoStatus !== st) {
+      if (navigator.vibrate) { try { navigator.vibrate([200, 100, 200]); } catch (x) {} }
+      toast(titulo);
+    }
+    ultimoStatus = st;
+    document.title = (pedido.codigo ? 'Pedido ' + pedido.codigo + ' · ' : '') + titulo;
+  }
+  function voltarMenu() {
+    if (refPedido) { refPedido.off(); refPedido = null; }
+    PED_ID = '';
+    try { history.replaceState(null, '', '?loja=' + encodeURIComponent(LOJA)); } catch (e) {}
+    desenharCabecalho(); desenharMenu(); desenharBarra(); verPedidoEmAndamento();
+    mostrar('v-menu');
+  }
+
+  /* Banner "você tem um pedido em andamento" */
+  function verPedidoEmAndamento() {
+    var b = $('#banner-andamento'); b.classList.add('hide');
+    var lista = (lsGet('meusPedidos') || []).filter(function (p) { return p.loja === LOJA && Date.now() - p.ts < 36e5 * 24; });
+    if (!lista.length) return;
+    var u = lista[0];
+    base('pedidos/' + LOJA + '/' + u.id + '/status').once('value').then(function (s) {
+      var st = s.val();
+      if (!st || STATUS_FINAIS.indexOf(st) >= 0) return;
+      b.innerHTML = '<span>Você tem um pedido em andamento (<strong>' + esc(u.codigo) + '</strong>).</span><button type="button" id="bt-acomp">Acompanhar</button>';
+      b.classList.remove('hide');
+      $('#bt-acomp').onclick = function () { abrirAcompanhamento(u.id, false); };
+    }).catch(function () {});
+  }
+
+  /* ---------- Eventos ---------- */
+  document.addEventListener('click', function (ev) {
+    var t = ev.target.closest('button'); if (!t) return;
+    if (t.hasAttribute('data-m') && t.hasAttribute('data-id')) { mudar(t.getAttribute('data-id'), parseInt(t.getAttribute('data-m'), 10)); return; }
+    if (t.hasAttribute('data-cat')) {
+      var el = document.getElementById('cat-' + t.getAttribute('data-cat'));
+      if (el) { var y = el.getBoundingClientRect().top + window.pageYOffset - 64; window.scrollTo({ top: y, behavior: 'smooth' }); }
+      return;
+    }
+    if (t.hasAttribute('data-modo')) { modo = t.getAttribute('data-modo'); setErro(''); desenharCheckout(); return; }
+    if (t.parentElement && t.parentElement.id === 'op-pag') { pag = t.getAttribute('data-v'); setErro(''); desenharCheckout(); return; }
+  });
+  $('#btn-sacola').onclick = abrirCheckout;
+  $('#ck-voltar').onclick = function () { desenharMenu(); desenharBarra(); mostrar('v-menu'); };
+  $('#tr-voltar').onclick = voltarMenu;
+  $('#btn-enviar').onclick = enviar;
+  $('#f-tel').addEventListener('input', function () { this.value = mascaraTel(this.value); });
+
+  /* ---------- Carga inicial ---------- */
+  cart = lsGet('cart:' + LOJA) || {};
+  var cfgPronto = false, cardPronto = false;
+  function iniciar() {
+    if (!cfgPronto || !cardPronto) return;
+    if (!cfg) { erroGeral('Os pedidos online ainda não estão disponíveis para esta loja.'); return; }
+    limparCartInvalido();
+    if (PED_ID && !iniciar.feito) {
+      iniciar.feito = true;
+      desenharCabecalho();
+      abrirAcompanhamento(PED_ID, false);
+      return;
+    }
+    if (!iniciar.feito) { iniciar.feito = true; verPedidoEmAndamento(); mostrar('v-menu'); }
+    desenharCabecalho(); desenharMenu(); desenharBarra();
+    if (!$('#v-ck').classList.contains('hide')) { desenharCheckout(); }
+    if (!$('#v-track').classList.contains('hide') && pedido) desenharAcompanhamento(false);
+  }
+  base('pedidosConfig/' + LOJA).on('value', function (s) { cfg = s.val(); cfgPronto = true; iniciar(); },
+    function () { cfgPronto = true; cfg = null; iniciar(); });
+  base('cardapio/' + LOJA).on('value', function (s) {
+    var v = s.val(); cardapio = v ? Object.keys(v).map(function (k) { var o = v[k] || {}; if (!o.id) o.id = k; return o; }) : [];
+    cardPronto = true; iniciar();
+  }, function () { cardPronto = true; cardapio = []; iniciar(); });
+})();
+</script>
+</body>
+</html>
