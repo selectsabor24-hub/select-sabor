@@ -691,13 +691,21 @@ button { cursor: pointer; }
   });
 
   /* ---------- Push: avisos com a tela bloqueada ---------- */
-  var VAPID_PUBLIC = "BMDXtShYYtIn3grq3paLBpprRf0Lq_5uURiNYIj4AgmQagYiSiqOLe1g5EpvzePm6QJ7uAGEv0JMcyRW_SX-aHk";
+  var VAPID_PUBLIC = "BF_N7x8x57_Y7dh4MgIWZTHQI0v8LfwD_K00MP28vbHTYRT7mDp_RclIuT52PtgniehX3m524TsKiLAHm4nCITA";
   function b64uParaBytes(s) { s = s.replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '='; var b = atob(s), u = new Uint8Array(b.length); for (var i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; }
   function ativarPush() {
     if (!eu || !('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window) || Notification.permission !== 'granted') return;
     navigator.serviceWorker.ready.then(function (reg) {
       return reg.pushManager.getSubscription().then(function (sub) {
-        return sub || reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64uParaBytes(VAPID_PUBLIC) });
+        var chave = b64uParaBytes(VAPID_PUBLIC);
+        if (sub) {
+          /* se a inscrição foi feita com outra chave VAPID (troca de chaves), refaz */
+          var atual = sub.options && sub.options.applicationServerKey ? new Uint8Array(sub.options.applicationServerKey) : null;
+          var igual = atual && atual.length === chave.length && atual.every(function (v, i) { return v === chave[i]; });
+          if (!atual || igual) return sub;
+          return sub.unsubscribe().then(function () { return reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: chave }); });
+        }
+        return reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: chave });
       });
     }).then(function (sub) {
       var j = sub.toJSON();
