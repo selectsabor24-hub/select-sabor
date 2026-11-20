@@ -76,21 +76,24 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
 }
 .aviso.destaque.com-foto { flex-direction: column; align-items: stretch; gap: 0; padding: 0; text-align: center; }
 .aviso.destaque.com-foto::before { display: none; }
-.aviso.destaque .aviso-img { display: block; width: 100%; aspect-ratio: 2 / 1; object-fit: cover; background: #9A5C1C; }
-.aviso.destaque .aviso-txt { padding: 12px 18px 14px; }
+.aviso.destaque .aviso-foto { position: relative; height: 150px; overflow: hidden; background: #7A4A14; }
+.aviso.destaque .aviso-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: blur(16px) brightness(.72); transform: scale(1.2); }
+.aviso.destaque .aviso-img { position: relative; display: block; width: 100%; height: 100%; object-fit: contain; object-position: center; }
+@media (min-width: 700px) { .aviso.destaque .aviso-foto { height: 190px; } }
+.aviso.destaque .aviso-txt { padding: 9px 16px 11px; font-size: 14px; }
 .aviso.destaque .aviso-txt:empty { display: none; }
-.aviso.destaque .aviso-txt:not(:last-child) { padding-bottom: 6px; }
+.aviso.destaque .aviso-txt:not(:last-child) { padding-bottom: 4px; }
 .aviso.destaque .dest-badge { position: absolute; top: 10px; left: 10px; z-index: 1; background: rgba(0,0,0,.6); color: #fff; font-size: 12px; font-weight: 800; padding: 5px 11px; border-radius: 999px; }
 .aviso.destaque .dest-badge.sem { position: static; align-self: flex-start; margin: 14px 0 0 18px; background: rgba(0,0,0,.3); }
-.aviso.destaque .dest-linha { display: flex; align-items: center; gap: 12px; padding: 4px 16px 16px 18px; text-align: left; }
+.aviso.destaque .dest-linha { display: flex; align-items: center; gap: 12px; padding: 2px 14px 12px 16px; text-align: left; }
 .aviso.destaque .dest-info { flex: 1; min-width: 0; }
-.aviso.destaque .dest-nome { font-size: 17px; font-weight: 800; line-height: 1.2; }
-.aviso.destaque .dest-desc { font-size: 12.5px; font-weight: 500; opacity: .92; margin-top: 3px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.aviso.destaque .dest-preco { font-size: 16px; font-weight: 800; margin-top: 4px; }
-.aviso.destaque .dest-btn { flex: 0 0 auto; border: 0; cursor: pointer; background: #fff; color: #8A4F12; font-weight: 800; font-size: 14px; padding: 11px 20px; border-radius: 999px; box-shadow: 0 2px 8px rgba(0,0,0,.2); }
+.aviso.destaque .dest-nome { font-size: 15px; font-weight: 800; line-height: 1.2; }
+.aviso.destaque .dest-desc { font-size: 12px; font-weight: 500; opacity: .92; margin-top: 3px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.aviso.destaque .dest-preco { font-size: 14px; font-weight: 800; margin-top: 2px; }
+.aviso.destaque .dest-btn { flex: 0 0 auto; border: 0; cursor: pointer; background: #fff; color: #8A4F12; font-weight: 800; font-size: 13px; padding: 9px 16px; border-radius: 999px; box-shadow: 0 2px 8px rgba(0,0,0,.2); }
 .aviso.destaque .dest-btn:disabled { opacity: .6; }
 .aviso.destaque .dest-step { flex: 0 0 auto; display: flex; align-items: center; gap: 4px; background: #fff; color: #8A4F12; border-radius: 999px; padding: 3px; font-weight: 800; box-shadow: 0 2px 8px rgba(0,0,0,.2); }
-.aviso.destaque .dest-step button { width: 34px; height: 34px; border: 0; border-radius: 50%; background: #FBF1E3; color: #8A4F12; font-size: 20px; font-weight: 800; cursor: pointer; line-height: 1; }
+.aviso.destaque .dest-step button { width: 30px; height: 30px; border: 0; border-radius: 50%; background: #FBF1E3; color: #8A4F12; font-size: 20px; font-weight: 800; cursor: pointer; line-height: 1; }
 .aviso.destaque .dest-step span { min-width: 24px; text-align: center; font-size: 15px; }
 @keyframes avisoPulso { 0%,100% { transform: scale(1); } 50% { transform: scale(1.12); } }
 @keyframes avisoBrilho { 0%,60% { left: -60%; } 100% { left: 130%; } }
@@ -668,7 +671,13 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     var foto = aberta() ? ((dest && dest.fotoV && FOTOS[dest.id]) || avisoFoto()) : null;
     av.textContent = '';
     if (dest) { var bd = document.createElement('span'); bd.className = 'dest-badge' + (foto ? '' : ' sem'); bd.textContent = '⭐ Destaque'; av.appendChild(bd); }
-    if (foto) { var im = document.createElement('img'); im.className = 'aviso-img'; im.alt = ''; im.src = foto; av.appendChild(im); }
+    if (foto) {
+      // foto inteira, centralizada, sem cortar: o fundo desfocado preenche as sobras
+      var fw = document.createElement('div'); fw.className = 'aviso-foto';
+      var bg = document.createElement('img'); bg.className = 'aviso-bg'; bg.alt = ''; bg.src = foto; bg.setAttribute('aria-hidden', 'true');
+      var im = document.createElement('img'); im.className = 'aviso-img'; im.alt = ''; im.src = foto;
+      fw.appendChild(bg); fw.appendChild(im); av.appendChild(fw);
+    }
     var tx = document.createElement('span'); tx.className = 'aviso-txt'; tx.textContent = txt; av.appendChild(tx);
     if (dest) {
       var q = cart[dest.id] || 0, id = esc(dest.id);

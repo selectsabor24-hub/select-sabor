@@ -20075,10 +20075,13 @@ function _cdpFotoRedimensionar(file) {
     const url = URL.createObjectURL(file), img = new Image();
     img.onload = () => {
       try {
-        const T = 360, w = img.naturalWidth, h = img.naturalHeight, lado = Math.min(w, h);
-        const c = document.createElement('canvas'); c.width = T; c.height = T;
-        const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, T, T);
-        g.drawImage(img, (w - lado) / 2, (h - lado) / 2, lado, lado, 0, 0, T, T);
+        // Mantém a proporção original (não corta): o maior lado fica com no máx. 520 px.
+        // As miniaturas da lista e do cardápio se ajustam sozinhas (object-fit); o destaque mostra a foto inteira.
+        const M = 520, w = img.naturalWidth, h = img.naturalHeight, esc = Math.min(1, M / Math.max(w, h));
+        const cw = Math.max(1, Math.round(w * esc)), ch = Math.max(1, Math.round(h * esc));
+        const c = document.createElement('canvas'); c.width = cw; c.height = ch;
+        const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, cw, ch);
+        g.drawImage(img, 0, 0, w, h, 0, 0, cw, ch);
         URL.revokeObjectURL(url);
         let tipo = 'image/webp', q = 0.78, d = c.toDataURL(tipo, q);
         if (d.indexOf('data:image/webp') !== 0) { tipo = 'image/jpeg'; d = c.toDataURL(tipo, q); }
