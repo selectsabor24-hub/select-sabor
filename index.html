@@ -1084,6 +1084,12 @@ body.is-offline #login-screen {
 .cdp-row .cdp-f-desc textarea { width: 100%; box-sizing: border-box; resize: vertical; padding: 9px 12px; border: 1.5px solid var(--border); border-radius: var(--radius-sm); background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: var(--text-base); }
 .cdp-item .cdp-c-desc { grid-column: 1 / -1; }
 .cdp-item .cdp-c-desc textarea { width: 100%; box-sizing: border-box; resize: vertical; font-size: 13px; }
+.cdp-item .cdp-c-desc { display: flex; gap: 10px; align-items: flex-start; }
+.cdp-item .cdp-c-desc textarea { flex: 1 1 auto; width: auto; min-width: 0; }
+.cdp-foto { flex: 0 0 72px; width: 72px; }
+.cdp-foto-btn { width: 72px; height: 72px; border-radius: 12px; border: 1.5px dashed var(--border); background: var(--bg); color: var(--text2); font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 600; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 0; overflow: hidden; }
+.cdp-foto-btn img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cdp-foto-x { display: block; margin: 4px auto 0; background: none; border: 0; color: #B91C1C; font-size: 11px; font-weight: 600; cursor: pointer; padding: 0; }
 @media (max-width: 600px) {
   .cdp-row .cdp-f-preco { flex: 1 1 100%; }
   .cdp-row .btn { width: 100%; justify-content: center; }
@@ -19470,6 +19476,7 @@ function renderCardapio() {
         <div class="form-group cdp-f-preco"><label>Preço (R$)</label><input id="cdp-preco" type="number" step="0.01" min="0" placeholder="0,00" onkeydown="if(event.key==='Enter')cmdCardapioAdd()"></div>
         <div class="form-group cdp-f-cat"><label>Categoria</label><select id="cdp-cat" onchange="_cdpCatSel=this.value">${opts}</select></div>
         <div class="form-group cdp-f-desc"><label>O que vem <span style="font-weight:400;color:var(--text3)">(opcional — aparece para o cliente)</span></label><textarea id="cdp-desc" rows="2" maxlength="300" placeholder="Ex: Arroz, feijão, bife acebolado, farofa e salada"></textarea></div>
+        <div class="form-group cdp-f-desc"><label>Foto <span style="font-weight:400;color:var(--text3)">(opcional — aparece para o cliente)</span></label><input id="cdp-foto" type="file" accept="image/*"></div>
         <button class="btn btn-primary" onclick="cmdCardapioAdd()">Adicionar ao cardápio</button>
       </div>
     </div>`;
@@ -19498,6 +19505,7 @@ function cdpFiltrar() {
 function _cdpRenderLista() {
   const el = document.getElementById('cdp-lista');
   if (!el) return;
+  _cdpFotosCarregar();
   const q = _cdpBusca.toLowerCase();
   const itens = _cmdCardapio().filter(i =>
     (!q || String(i.nome).toLowerCase().includes(q)) &&
@@ -19517,7 +19525,7 @@ function _cdpRenderLista() {
         <div><input class="cdp-in cdp-preco" type="number" step="0.01" min="0" value="${(parseFloat(i.preco) || 0).toFixed(2)}" onchange="cmdCardapioPreco('${i.id}', this.value)"></div>
         <div><button class="cdp-status${i.ativo === false ? ' off' : ''}" onclick="cmdCardapioAtivo('${i.id}')">${i.ativo === false ? 'Indisponível' : 'Disponível'}</button></div>
         <div class="cdp-c-del" style="text-align:right"><button class="cmd-x" title="Remover" onclick="cmdCardapioDel('${i.id}')">×</button></div>
-        <div class="cdp-c-desc"><textarea class="cdp-in" rows="2" maxlength="300" placeholder="O que vem neste item (Ex: arroz, feijão, bife, salada…)" onchange="cmdCardapioDesc('${i.id}', this.value)">${escapeHtml(i.desc || '')}</textarea></div>
+        <div class="cdp-c-desc"><div class="cdp-foto">${_cdpFotoBtn(i)}</div><textarea class="cdp-in" rows="2" maxlength="300" placeholder="O que vem neste item (Ex: arroz, feijão, bife, salada…)" onchange="cmdCardapioDesc('${i.id}', this.value)">${escapeHtml(i.desc || '')}</textarea></div>
       </div>`).join('') + `</div>`;
   });
   el.innerHTML = html;
@@ -19529,6 +19537,7 @@ function cmdCardapioAdd() {
   const preco = parseFloat(document.getElementById('cdp-preco').value);
   const cat   = document.getElementById('cdp-cat').value || 'Outros';
   const desc  = ((document.getElementById('cdp-desc') || {}).value || '').trim().slice(0, 300);
+  const arqFoto = ((document.getElementById('cdp-foto') || {}).files || [])[0] || null;
   if (!nome) { showToast('Informe o nome do item', false); return; }
   if (isNaN(preco) || preco < 0) { showToast('Informe um preço válido', false); return; }
   if (_cmdCardapio().some(i => String(i.nome).toLowerCase() === nome.toLowerCase() && (i.cat || 'Outros') === cat)) {
@@ -19538,6 +19547,7 @@ function cmdCardapioAdd() {
   _dbRef('cardapio/' + _lojaAtiva + '/' + id).set(Object.assign({ id, nome, preco: _cmdRound(preco), cat, ativo: true }, desc ? { desc } : {}))
     .then(() => {
       showToast('Item adicionado ao cardápio');
+      if (arqFoto) _cdpFotoSalvar(id, arqFoto);
       renderCardapio();
       const n = document.getElementById('cdp-nome');
       if (n) n.focus();
@@ -19601,10 +19611,82 @@ function cmdCardapioDel(id) {
   const it = _cmdCardapio().find(i => i.id === id);
   showModal('Remover do cardápio', `Remover <strong>${escapeHtml(it ? it.nome : 'item')}</strong> do cardápio? Comandas já lançadas não são alteradas.`, [
     { label: 'Remover', style: 'danger', action: () => {
-        _dbRef('cardapio/' + _lojaAtiva + '/' + id).remove().catch(e => { console.error(e); showToast('Erro ao remover', false); });
+        _dbRef('cardapio/' + _lojaAtiva + '/' + id).remove()
+          .then(() => { delete _cdpFotos[id]; return _dbRef('cardapioFotos/' + _lojaAtiva + '/' + id).remove().catch(() => {}); })
+          .catch(e => { console.error(e); showToast('Erro ao remover', false); });
     }},
     { label: 'Cancelar', style: 'secondary' }
   ]);
+}
+
+/* ───────── Fotos do cardápio ─────────
+   A foto é reduzida no navegador (quadrada, ~360 px, WebP/JPEG leve) e guardada em
+   cardapioFotos/<loja>/<item>. O item guarda só "fotoV" (versão), então o cliente carrega o
+   cardápio rápido e baixa a foto uma única vez (depois fica salva no celular dele). */
+let _cdpFotos = {}, _cdpFotosLoja = '';
+function _cdpFotosCarregar() {
+  if (!_lojaAtiva || _cdpFotosLoja === _lojaAtiva) return;
+  const loja = _lojaAtiva; _cdpFotosLoja = loja; _cdpFotos = {};
+  _dbRef('cardapioFotos/' + loja).once('value').then(s => {
+    if (_lojaAtiva !== loja) return;
+    _cdpFotos = s.val() || {}; _cdpRenderLista();
+  }).catch(e => { console.warn('[fotos] sem acesso (publique as regras novas do Firebase):', e && e.message); });
+}
+function _cdpFotoBtn(i) {
+  const f = _cdpFotos[i.id];
+  if (f && String(f).indexOf('data:image/') === 0) {
+    return `<button type="button" class="cdp-foto-btn" title="Trocar foto" onclick="cdpFotoEscolher('${i.id}')"><img src="${f}" alt=""></button><button type="button" class="cdp-foto-x" onclick="cdpFotoRemover('${i.id}')">remover</button>`;
+  }
+  return `<button type="button" class="cdp-foto-btn" title="Adicionar foto" onclick="cdpFotoEscolher('${i.id}')"><span style="font-size:20px">📷</span>Foto</button>`;
+}
+function _cdpFotoRedimensionar(file) {
+  return new Promise((resolve, reject) => {
+    if (!file || !/^image\//.test(file.type || '')) { reject(new Error('tipo')); return; }
+    const url = URL.createObjectURL(file), img = new Image();
+    img.onload = () => {
+      try {
+        const T = 360, w = img.naturalWidth, h = img.naturalHeight, lado = Math.min(w, h);
+        const c = document.createElement('canvas'); c.width = T; c.height = T;
+        const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, T, T);
+        g.drawImage(img, (w - lado) / 2, (h - lado) / 2, lado, lado, 0, 0, T, T);
+        URL.revokeObjectURL(url);
+        let tipo = 'image/webp', q = 0.78, d = c.toDataURL(tipo, q);
+        if (d.indexOf('data:image/webp') !== 0) { tipo = 'image/jpeg'; d = c.toDataURL(tipo, q); }
+        while (d.length > 60000 && q > 0.4) { q -= 0.1; d = c.toDataURL(tipo, q); }
+        if (d.length > 65000) { reject(new Error('grande')); return; }
+        resolve(d);
+      } catch (e) { reject(e); }
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('imagem')); };
+    img.src = url;
+  });
+}
+function cdpFotoEscolher(id) {
+  let inp = document.getElementById('cdp-foto-input');
+  if (!inp) { inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*'; inp.id = 'cdp-foto-input'; inp.style.display = 'none'; document.body.appendChild(inp); }
+  inp.value = '';
+  inp.onchange = () => { const f = inp.files && inp.files[0]; if (f) _cdpFotoSalvar(id, f); };
+  inp.click();
+}
+function _cdpFotoSalvar(id, file) {
+  if (_cmdSemLoja()) return;
+  const loja = _lojaAtiva;
+  showToast('Enviando foto…');
+  _cdpFotoRedimensionar(file).then(d =>
+    _dbRef('cardapioFotos/' + loja + '/' + id).set(d)
+      .then(() => _dbRef('cardapio/' + loja + '/' + id + '/fotoV').set(Date.now()))
+      .then(() => { if (_cdpFotosLoja === loja) _cdpFotos[id] = d; _cdpRenderLista(); showToast('Foto salva ✔'); })
+  ).catch(e => {
+    console.error(e);
+    showToast(e && e.message === 'grande' ? 'Foto muito detalhada. Tente outra.' :
+      (e && /permission/i.test(e.message || e.code || '') ? 'Sem permissão. Publique as regras atualizadas do Firebase.' : 'Não foi possível enviar a foto'), false);
+  });
+}
+function cdpFotoRemover(id) {
+  _dbRef('cardapioFotos/' + _lojaAtiva + '/' + id).remove()
+    .then(() => _dbRef('cardapio/' + _lojaAtiva + '/' + id + '/fotoV').remove())
+    .then(() => { delete _cdpFotos[id]; _cdpRenderLista(); showToast('Foto removida'); })
+    .catch(e => { console.error(e); showToast('Erro ao remover a foto', false); });
 }
 
 /* ───────── Modal (nova / comanda / pagar) ───────── */

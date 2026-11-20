@@ -68,6 +68,10 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
 .cat-titulo { margin: 20px 0 8px; font-size: 18px; font-weight: 800; color: var(--verde); }
 .item { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--card); border: 1px solid var(--borda); border-radius: var(--raio); padding: 12px 14px; margin-bottom: 8px; }
 .item .info { min-width: 0; flex: 1; }
+.item .ft { flex: 0 0 84px; width: 84px; height: 84px; border-radius: 12px; overflow: hidden; background: #E9ECE9; }
+.item .ft.sk { animation: ftbrilho 1.2s ease-in-out infinite; }
+.item .ft img { width: 100%; height: 100%; object-fit: cover; display: block; }
+@keyframes ftbrilho { 50% { opacity: .55; } }
 .item .nome { font-weight: 700; overflow-wrap: anywhere; }
 .item .desc { margin-top: 3px; font-size: 13px; color: var(--mut); line-height: 1.35; overflow-wrap: anywhere; }
 .item .preco { margin-top: 2px; color: var(--laranja); font-weight: 800; }
@@ -423,6 +427,39 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
 
   /* ---------- Cardápio ---------- */
   function itensAtivos() { return cardapio.filter(function (i) { return i.tipo !== 'cat' && i.ativo !== false && i.nome; }); }
+  /* ---------- Fotos do cardápio ----------
+     O cardápio (texto) abre na hora. As fotos vêm de cardapioFotos/ e ficam salvas no celular
+     (localStorage) com a versão "fotoV": nas visitas seguintes aparecem junto com o cardápio, sem rede. */
+  var FOTOS = {}, fotosBuscando = {};
+  function fotoCacheLer() { return lsGet('fotosCard_' + LOJA) || {}; }
+  function fotoCacheSalvar(c) { try { localStorage.setItem('fotosCard_' + LOJA, JSON.stringify(c)); return true; } catch (e) { return false; } }
+  function pintarFoto(id) {
+    var d = FOTOS[id]; if (!d) return;
+    Array.prototype.forEach.call(document.querySelectorAll('.ft[data-f]'), function (el) {
+      if (el.getAttribute('data-f') !== id) return;
+      el.classList.remove('sk');
+      el.innerHTML = '<img src="' + d + '" alt="" width="84" height="84" decoding="async">';
+    });
+  }
+  function fotosSincronizar() {
+    var cache = fotoCacheLer(), manter = {};
+    itensAtivos().forEach(function (i) {
+      if (!i.fotoV) { delete FOTOS[i.id]; return; }
+      var c = cache[i.id];
+      if (c && c.v === i.fotoV && typeof c.d === 'string' && c.d.indexOf('data:image/') === 0) { FOTOS[i.id] = c.d; manter[i.id] = c; return; }
+      delete FOTOS[i.id];
+      if (fotosBuscando[i.id] === i.fotoV) return;
+      fotosBuscando[i.id] = i.fotoV;
+      base('cardapioFotos/' + LOJA + '/' + i.id).once('value').then(function (sn) {
+        var d = sn.val();
+        if (typeof d !== 'string' || d.indexOf('data:image/') !== 0) return;
+        FOTOS[i.id] = d; pintarFoto(i.id);
+        var c2 = fotoCacheLer(); c2[i.id] = { v: i.fotoV, d: d };
+        if (!fotoCacheSalvar(c2)) { var so = {}; so[i.id] = c2[i.id]; fotoCacheSalvar(so); }
+      }).catch(function () { delete fotosBuscando[i.id]; });
+    });
+    fotoCacheSalvar(manter); // descarta do celular as fotos de itens que saíram do cardápio
+  }
   function precoDe(id) { var i = cardapio.find(function (x) { return x.id === id; }); return i ? Number(i.preco) || 0 : 0; }
   function categorias() {
     var out = CATS_PADRAO.slice();
@@ -592,7 +629,8 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
       h += '<h2 class="cat-titulo" id="cat-' + ix + '">' + esc(c) + '</h2>';
       porCat[c].sort(function (a, b) { return String(a.nome).localeCompare(String(b.nome), 'pt-BR'); }).forEach(function (i) {
         var q = cart[i.id] || 0;
-        h += '<div class="item"><div class="info"><div class="nome">' + esc(i.nome) + '</div>' + (i.desc ? '<div class="desc">' + esc(i.desc) + '</div>' : '') + '<div class="preco">' + brl(i.preco) + '</div></div>' +
+        var ft = i.fotoV ? '<div class="ft' + (FOTOS[i.id] ? '' : ' sk') + '" data-f="' + esc(i.id) + '">' + (FOTOS[i.id] ? '<img src="' + FOTOS[i.id] + '" alt="" width="84" height="84" decoding="async">' : '') + '</div>' : '';
+        h += '<div class="item">' + ft + '<div class="info"><div class="nome">' + esc(i.nome) + '</div>' + (i.desc ? '<div class="desc">' + esc(i.desc) + '</div>' : '') + '<div class="preco">' + brl(i.preco) + '</div></div>' +
           (q > 0
             ? '<div class="stepper"><button type="button" data-m="-1" data-id="' + esc(i.id) + '" aria-label="Diminuir">−</button><span>' + q + '</span><button type="button" data-m="1" data-id="' + esc(i.id) + '" aria-label="Aumentar">+</button></div>'
             : '<button type="button" class="add" data-m="1" data-id="' + esc(i.id) + '"' + (aberta() ? '' : ' disabled') + '>Adicionar</button>') +
@@ -1031,6 +1069,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     function () { cfgPronto = true; cfg = null; iniciar(); });
   base('cardapio/' + LOJA).on('value', function (s) {
     var v = s.val(); cardapio = v ? Object.keys(v).map(function (k) { var o = v[k] || {}; if (!o.id) o.id = k; return o; }) : [];
+    try { fotosSincronizar(); } catch (e) {}
     cardPronto = true; iniciar();
   }, function () { cardPronto = true; cardapio = []; iniciar(); });
 })();

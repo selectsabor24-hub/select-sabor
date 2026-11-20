@@ -35,7 +35,10 @@
         "$lojaId": {
           "$itemId": {
             ".write": "auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true)",
-            ".validate": "newData.val() == null || newData.hasChildren(['id','nome'])"
+            ".validate": "newData.val() == null || newData.hasChildren(['id','nome'])",
+            "fotoV": {
+              ".validate": "newData.isNumber()"
+            }
           },
           ".read": true
         }
@@ -411,6 +414,15 @@
               ".write": "(auth != null && root.child('caixa/motoqueirosUid/' + auth.uid + '/ativo').val() === true && root.child('caixa/motoqueirosUid/' + auth.uid + '/lojaId').val() === $lojaId) && auth.uid === $uid && $pedidoId.matches(/^[-A-Za-z0-9_]{8,40}$/)",
               ".validate": "newData.val() === null || newData.isNumber()"
             }
+          }
+        }
+      },
+      "cardapioFotos": {
+        "$lojaId": {
+          ".read": true,
+          "$itemId": {
+            ".write": "auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true)",
+            ".validate": "newData.val() === null || (newData.isString() && newData.val().beginsWith('data:image/') && newData.val().length <= 70000)"
           }
         }
       }
