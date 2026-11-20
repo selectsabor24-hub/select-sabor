@@ -805,6 +805,28 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     mostrar('v-menu');
   }
 
+  /* Último pedido deste aparelho nesta loja (últimas 24h), guardado em 'meusPedidos' */
+  function pedidoAtivoSalvo() {
+    var lista = (lsGet('meusPedidos') || []).filter(function (p) { return p && p.loja === LOJA && p.id && Date.now() - p.ts < 36e5 * 24; });
+    return lista.length ? lista[0] : null;
+  }
+  /* Reabre o acompanhamento se o pedido ainda estiver em andamento; senão mostra o cardápio */
+  function retomarPedido(u) {
+    desenharCabecalho(); desenharMenu(); desenharBarra();
+    $('#tr-corpo').innerHTML = '<div class="carregando">Carregando seu pedido…</div>';
+    mostrar('v-track');
+    var resolvido = false;
+    function abrir() { if (resolvido) return; resolvido = true; abrirAcompanhamento(u.id, false); }
+    var tempo = setTimeout(abrir, 4000); // sem internet: abre mesmo assim e atualiza quando voltar
+    base('pedidos/' + LOJA + '/' + u.id + '/status').once('value').then(function (s) {
+      clearTimeout(tempo);
+      if (resolvido) return;
+      var st = s.val();
+      if (st && STATUS_FINAIS.indexOf(st) < 0) abrir();
+      else { resolvido = true; voltarMenu(); }
+    }).catch(function () { clearTimeout(tempo); abrir(); });
+  }
+
   /* Banner "você tem um pedido em andamento" */
   function verPedidoEmAndamento() {
     var b = $('#banner-andamento'); b.classList.add('hide');
@@ -878,7 +900,13 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
       abrirAcompanhamento(PED_ID, false);
       return;
     }
-    if (!iniciar.feito) { iniciar.feito = true; verPedidoEmAndamento(); mostrar('v-menu'); }
+    if (!iniciar.feito) {
+      iniciar.feito = true;
+      // Cliente atualizou a tela ou reabriu o app: volta direto para o pedido em andamento
+      var ativo = pedidoAtivoSalvo();
+      if (ativo) { retomarPedido(ativo); return; }
+      verPedidoEmAndamento(); mostrar('v-menu');
+    }
     desenharCabecalho(); desenharMenu(); desenharBarra();
     if (!$('#v-ck').classList.contains('hide')) { desenharCheckout(); }
     if (!$('#v-track').classList.contains('hide') && pedido) desenharAcompanhamento(false);
