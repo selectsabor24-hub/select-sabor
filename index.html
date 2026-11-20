@@ -3277,6 +3277,32 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
   .ped-acoes .btn { flex: 1 1 calc(50% - 8px); }
   .ped-hora { margin-left: 0; width: 100%; }
 }
+
+/* ============================================================
+   14) MOTOQUEIRO (aba de entregas)
+   ============================================================ */
+.mot-topo { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.mot-topo input { flex: 1 1 170px; min-width: 0; }
+.mot-card { border-left: 6px solid var(--mot-cor, #7C3AED); }
+.mot-end { margin-top: 10px; font-size: 18px; font-weight: 800; line-height: 1.3; overflow-wrap: anywhere; }
+.mot-end small { display: block; margin-top: 2px; font-size: 13px; font-weight: 500; color: var(--text3); }
+.mot-cli { margin-top: 8px; }
+.mot-links { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.mot-links .btn { flex: 1 1 calc(33% - 8px); text-align: center; text-decoration: none; }
+.mot-cobrar { margin-top: 12px; padding: 10px 12px; border-radius: 10px; font-weight: 700; line-height: 1.35; }
+.mot-cobrar small { display: block; font-weight: 500; margin-top: 2px; }
+.mot-cobrar.dinheiro { background: #FEF3C7; color: #78350F; }
+.mot-cobrar.pix { background: #CFFAFE; color: #164E63; }
+.mot-cobrar.cartao { background: #E0E7FF; color: #312E81; }
+.mot-itens { margin-top: 10px; font-size: 14px; color: var(--text2); overflow-wrap: anywhere; }
+.mot-acoes { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.mot-acoes .btn { flex: 1 1 140px; min-height: 50px; font-size: 16px; font-weight: 700; }
+.mot-resumo-l { display: flex; flex-direction: column; gap: 2px; padding: 8px 0; border-bottom: 1px dashed var(--border); }
+.mot-resumo-l:last-child { border-bottom: 0; }
+.mot-resumo-l span { font-size: 13px; color: var(--text3); }
+@media (max-width: 600px) {
+  .mot-links .btn { flex: 1 1 calc(50% - 8px); }
+}
 </style>
 
 </head>
@@ -3442,6 +3468,10 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
     <button class="nav-item" id="nav-pedidos" onclick="showSection('pedidos', this)">
       <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg></span> Pedidos online
       <span class="ped-badge" id="ped-badge-nav"></span>
+    </button>
+    <button class="nav-item" id="nav-motoqueiro" onclick="showSection('motoqueiro', this)">
+      <span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="5.5" cy="17.5" r="3"/><circle cx="18.5" cy="17.5" r="3"/><path d="M8.5 17.5H14l3-8h-4"/><path d="M13 5h3"/></svg></span> Motoqueiro
+      <span class="ped-badge" id="mot-badge-nav"></span>
     </button>
     <button class="nav-item" id="nav-comandas" onclick="showSection('comandas', this)">
       <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"/></svg></span> Comandas / Mesas
@@ -4602,6 +4632,30 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
       <div id="ped-lista"></div>
     </div>
 
+    <!-- SEÇÃO: MOTOQUEIRO -->
+    <div id="sec-motoqueiro" class="section">
+      <div class="page-header">
+        <div>
+          <div class="page-title">🏍️ Motoqueiro</div>
+          <div class="page-sub">Entregas prontas para sair, entregas na rua e o resumo do dia.</div>
+        </div>
+        <div class="mot-topo">
+          <input id="mot-nome" class="input-base" maxlength="40" placeholder="Seu nome (opcional)" autocomplete="name" oninput="_motNomeSalvar(this.value)">
+          <button class="btn btn-secondary btn-md" id="mot-som-btn" onclick="pedSomToggle(); renderMotoqueiro()">🔔 Som ligado</button>
+        </div>
+      </div>
+
+      <div class="metrics-grid" id="mot-metricas"></div>
+
+      <div class="cmd-tabs" id="mot-tabs">
+        <button id="mot-tab-sair"   onclick="motSetTab('sair')">Para sair</button>
+        <button id="mot-tab-rua"    onclick="motSetTab('rua')">Na rua</button>
+        <button id="mot-tab-feitas" onclick="motSetTab('feitas')">Entregues hoje</button>
+      </div>
+
+      <div id="mot-lista"></div>
+    </div>
+
     <!-- SEÇÃO: FUNCIONÁRIOS -->
     <div id="sec-funcionarios" class="section">
       <div class="page-header">
@@ -5532,6 +5586,10 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
       <span class="drawer-item-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg></span>Pedidos online
       <span class="ped-badge" id="ped-badge-di"></span>
     </button>
+    <button class="drawer-item" id="di-motoqueiro" onclick="drawerNav('motoqueiro', this)">
+      <span class="drawer-item-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="5.5" cy="17.5" r="3"/><circle cx="18.5" cy="17.5" r="3"/><path d="M8.5 17.5H14l3-8h-4"/><path d="M13 5h3"/></svg></span>Motoqueiro
+      <span class="ped-badge" id="mot-badge-di"></span>
+    </button>
     <button class="drawer-item" id="di-funcionarios" onclick="drawerNav('funcionarios', this)">
       <span class="drawer-item-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>Funcionários
     </button>
@@ -6406,19 +6464,22 @@ function setLojaAtiva(id) {
   _cache.pedidos = [];
   _cache.pedidosCfg = null;
   _pedVistos = null; // a 1ª carga não dispara alerta
+  _motProntos = null;
   const refPedidos = _dbRef('pedidos/' + id).orderByChild('ts').limitToLast(200);
   refPedidos.on('value', snap => {
     const v = snap.val() || {};
     _cache.pedidos = Object.keys(v).filter(k => /^[-A-Za-z0-9_]{8,40}$/.test(k)).map(k => Object.assign({ id: k }, v[k]));
     _pedDetectarNovos();
     _pedAtualizarBadge();
-    if (_currentSection === 'pedidos') _refreshCurrentSection();
+    _motDetectar();
+    _motAtualizarBadge();
+    if (_currentSection === 'pedidos' || _currentSection === 'motoqueiro') _refreshCurrentSection();
   }, e => console.warn('[pedidos] sem acesso:', e && e.message));
   _listenersLoja.push(refPedidos);
   const refPedCfg = _dbRef('pedidosConfig/' + id);
   refPedCfg.on('value', snap => {
     _cache.pedidosCfg = snap.val();
-    if (_currentSection === 'pedidos') _refreshCurrentSection();
+    if (_currentSection === 'pedidos' || _currentSection === 'motoqueiro') _refreshCurrentSection();
   });
   _listenersLoja.push(refPedCfg);
 
@@ -6453,6 +6514,7 @@ function _refreshCurrentSection() {
       case 'cartoes':        renderCartoes();       break;
       case 'comandas':       renderComandas();      break;
       case 'pedidos':        renderPedidos();       break;
+      case 'motoqueiro':     renderMotoqueiro();    break;
       case 'cardapio':       renderCardapio();      break;
       }
     } finally {
@@ -8141,6 +8203,7 @@ function _showSectionInternal(id, btn) {
     case 'planilhas':      renderPlanilhas();     break;
     case 'comandas':       renderComandas();      break;
     case 'pedidos':        renderPedidos();       break;
+      case 'motoqueiro':     renderMotoqueiro();    break;
     case 'cardapio':       renderCardapio();      break;
     case 'cartoes': {
       // Pré-selecionar mês e ano atual na primeira vez
@@ -17886,6 +17949,223 @@ function pedConfigSalvar() {
   _dbRef('pedidosConfig/' + _lojaAtiva).set(cfg)
     .then(() => { showToast('Configuração salva!'); pedConfigFechar(); })
     .catch(e => { console.error(e); showToast('Sem permissão para salvar. Publique as regras do Firebase (firebase/firebase-database.rules.json).', false); });
+}
+
+/* ============================================================
+   3.31 MOTOQUEIRO (v5.1)
+   ============================================================
+   Aba para quem faz as entregas. Usa os mesmos pedidos da seção 3.30
+   (caixa/pedidos/{lojaId}) e os mesmos status: pronto → saiu → entregue.
+   Só aparecem pedidos do tipo "entrega". O nome do motoqueiro fica salvo
+   neste aparelho e é gravado no pedido (campo "motoqueiro") ao sair.
+   O lançamento no caixa continua na aba Pedidos online.
+   ============================================================ */
+let _motTab = 'sair';
+let _motProntos = null;
+const MOT_COR = { sair: '#7C3AED', rua: '#0891B2', feitas: '#16A34A' };
+
+function _motNome() { try { return (localStorage.getItem('motNome') || '').trim().slice(0, 40); } catch (e) { return ''; } }
+function _motNomeSalvar(v) { try { localStorage.setItem('motNome', String(v || '').trim().slice(0, 40)); } catch (e) {} }
+function _motEntregas() { return _pedLista().filter(p => p.tipo === 'entrega'); }
+function _motTsEntrega(p) { return (p.hist && p.hist.entregue) || p.atualizadoEm || p.ts || 0; }
+function _motEntregueHoje(p) { return p.status === 'entregue' && _pedEhHoje(_motTsEntrega(p)); }
+
+function _motAtualizarBadge() {
+  const n = _motEntregas().filter(p => p.status === 'pronto').length;
+  ['mot-badge-nav', 'mot-badge-di'].forEach(id => {
+    const el = document.getElementById(id); if (!el) return;
+    el.textContent = n; el.style.display = n ? 'inline-flex' : 'none';
+  });
+}
+
+/** Avisa (som + vibração) quando um pedido de entrega fica pronto — só com a aba aberta. */
+function _motDetectar() {
+  const prontos = _motEntregas().filter(p => p.status === 'pronto');
+  const ids = new Set(prontos.map(p => p.id));
+  if (_motProntos === null) { _motProntos = ids; return; }
+  const novos = prontos.filter(p => !_motProntos.has(p.id));
+  _motProntos = ids;
+  if (!novos.length || _currentSection !== 'motoqueiro') return;
+  showToast('🛵 Pedido ' + (novos[0].codigo || '') + ' pronto para entrega' + (novos.length > 1 ? ' (+' + (novos.length - 1) + ')' : ''));
+  _pedBeep();
+  try { if (navigator.vibrate) navigator.vibrate([200, 100, 200]); } catch (e) {}
+}
+
+function motSetTab(t) { _motTab = t; renderMotoqueiro(); }
+
+function renderMotoqueiro() {
+  const lista = document.getElementById('mot-lista'); if (!lista) return;
+  const met = document.getElementById('mot-metricas');
+  const inp = document.getElementById('mot-nome');
+  if (inp && document.activeElement !== inp && inp.value !== _motNome()) inp.value = _motNome();
+  const som = document.getElementById('mot-som-btn');
+  if (som) som.textContent = _pedSom ? '🔔 Som ligado' : '🔕 Som desligado';
+  const tabs = document.getElementById('mot-tabs');
+
+  if (!_lojaAtiva) {
+    met.innerHTML = ''; tabs.style.display = 'none';
+    lista.innerHTML = '<div class="card" style="text-align:center;color:var(--text3)">Aguarde o carregamento do restaurante.</div>';
+    return;
+  }
+  if (!_pedCfg()) {
+    met.innerHTML = ''; tabs.style.display = 'none';
+    lista.innerHTML = `<div class="card ped-vazio"><div style="font-size:34px">🛵</div>
+      <div style="font-weight:800;margin:6px 0">Pedidos online ainda não configurados</div>
+      <div style="color:var(--text3);margin-bottom:12px">Ative os pedidos online para as entregas aparecerem aqui.</div>
+      <button class="btn btn-primary btn-md" onclick="pedConfigAbrir()">Configurar e ativar</button></div>`;
+    return;
+  }
+  tabs.style.display = '';
+
+  const todas  = _motEntregas();
+  const sair   = todas.filter(p => p.status === 'pronto').sort((a, b) => (a.ts || 0) - (b.ts || 0));
+  const rua    = todas.filter(p => p.status === 'saiu').sort((a, b) => (a.ts || 0) - (b.ts || 0));
+  const feitas = todas.filter(_motEntregueHoje).sort((a, b) => _motTsEntrega(b) - _motTsEntrega(a));
+  const cozinha = todas.filter(p => p.status === 'novo' || p.status === 'preparo').length;
+
+  met.innerHTML = `
+    <div class="metric-card"><div class="metric-label">Para sair</div><div class="metric-value">${sair.length}</div></div>
+    <div class="metric-card"><div class="metric-label">Na rua</div><div class="metric-value">${rua.length}</div></div>
+    <div class="metric-card"><div class="metric-label">Na cozinha</div><div class="metric-value">${cozinha}</div></div>
+    <div class="metric-card"><div class="metric-label">Entregues hoje</div><div class="metric-value">${feitas.length}</div></div>`;
+
+  const cont = { sair: sair.length, rua: rua.length, feitas: feitas.length };
+  const nomes = { sair: 'Para sair', rua: 'Na rua', feitas: 'Entregues hoje' };
+  ['sair', 'rua', 'feitas'].forEach(t => {
+    const b = document.getElementById('mot-tab-' + t); if (!b) return;
+    b.classList.toggle('active', t === _motTab);
+    b.textContent = nomes[t] + (cont[t] ? ' (' + cont[t] + ')' : '');
+  });
+
+  const arr = { sair, rua, feitas }[_motTab] || sair;
+  const vazio = { sair: 'Nenhuma entrega pronta para sair.', rua: 'Nenhuma entrega na rua.', feitas: 'Nenhuma entrega concluída hoje.' }[_motTab];
+  let html = arr.length ? arr.map(_motCardHtml).join('') : `<div class="card" style="text-align:center;color:var(--text3);padding:28px 12px">${vazio}</div>`;
+  if (_motTab === 'feitas') html = _motResumoHtml(feitas) + html;
+  lista.innerHTML = html;
+}
+
+/** Resumo do dia por motoqueiro: entregas, taxas e quanto entrou em cada forma de pagamento. */
+function _motResumoHtml(feitas) {
+  if (!feitas.length) return '';
+  const g = {};
+  feitas.forEach(p => {
+    const k = String(p.motoqueiro || '').trim() || 'Sem nome';
+    const t = _pedTotais(p);
+    const r = g[k] = g[k] || { n: 0, taxas: 0, dinheiro: 0, pix: 0, cartao: 0 };
+    r.n++; r.taxas += t.taxa;
+    r[p.pagamento === 'pix' ? 'pix' : (p.pagamento === 'cartao' ? 'cartao' : 'dinheiro')] += t.total;
+  });
+  const linhas = Object.keys(g).sort().map(k => {
+    const r = g[k];
+    return `<div class="mot-resumo-l"><strong>${escapeHtml(k)}</strong>
+      <span>${r.n} entrega${r.n > 1 ? 's' : ''} · taxas de entrega ${fmt(_pedRound(r.taxas))}</span>
+      <span>💵 ${fmt(_pedRound(r.dinheiro))} · 📲 ${fmt(_pedRound(r.pix))} · 💳 ${fmt(_pedRound(r.cartao))}</span></div>`;
+  }).join('');
+  return `<div class="card"><div class="card-title">Resumo de hoje</div>${linhas}</div>`;
+}
+
+function _motCardHtml(p) {
+  const id = escapeHtml(p.id);
+  const t = _pedTotais(p), cli = p.cliente || {}, e = p.endereco || {};
+  const cor = p.status === 'pronto' ? MOT_COR.sair : (p.status === 'saiu' ? MOT_COR.rua : MOT_COR.feitas);
+  const fone = String(cli.telefone || '').replace(/[^\d+]/g, '');
+  const endTxt = [[e.rua, e.numero].filter(Boolean).join(', '), e.bairro].filter(Boolean).join(' — ');
+  const mapa = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent([e.rua, e.numero, e.bairro].filter(Boolean).join(', '));
+  const extra = [e.complemento, e.referencia ? 'ref.: ' + e.referencia : ''].filter(Boolean).join(' · ');
+  const fin = p.status === 'entregue';
+
+  let cobrar = '';
+  if (p.pagamento === 'dinheiro') {
+    const devolver = p.troco ? Math.max(0, _pedRound(p.troco - t.total)) : 0;
+    cobrar = `<div class="mot-cobrar dinheiro">💵 ${fin ? 'Recebido' : 'Receber'} em dinheiro: ${fmt(t.total)}
+      <small>${p.troco ? 'Cliente paga com ' + fmt(p.troco) + ' → ' + (devolver > 0 ? 'devolver ' + fmt(devolver) + ' de troco' : 'sem troco') : 'Sem troco informado'}</small></div>`;
+  } else if (p.pagamento === 'pix') {
+    cobrar = `<div class="mot-cobrar pix">📲 Pix na entrega: ${fmt(t.total)}<small>Confira o comprovante antes de entregar</small></div>`;
+  } else {
+    cobrar = `<div class="mot-cobrar cartao">💳 Cartão na entrega: ${fmt(t.total)}<small>Leve a maquininha</small></div>`;
+  }
+
+  const quando = fin
+    ? '✓ Entregue às ' + _pedHora(_motTsEntrega(p)) + (p.motoqueiro ? ' · ' + escapeHtml(p.motoqueiro) : '')
+    : (p.status === 'saiu' && p.hist && p.hist.saiu ? 'Saiu às ' + _pedHora(p.hist.saiu) + (p.motoqueiro ? ' · ' + escapeHtml(p.motoqueiro) : '') : _pedHora(p.ts) + ' · ' + _pedHa(p.ts));
+
+  const btn = (a, rot, cls) => `<button class="btn ${cls || 'btn-secondary'} btn-md" data-ped="${id}" onclick="motAcao('${a}', this.dataset.ped)">${rot}</button>`;
+  let acoes = '';
+  if (p.status === 'pronto') acoes = btn('sair', '🛵 Saí para entrega', 'btn-primary');
+  else if (p.status === 'saiu') acoes = btn('entregue', '✅ Entregue', 'btn-primary') + btn('voltar', '↩ Ainda não saí');
+
+  const links = fin ? '' : `<div class="mot-links">
+      <a class="btn btn-secondary btn-md" href="${escapeHtml(mapa)}" target="_blank" rel="noopener">🗺 Mapa</a>
+      ${fone ? `<a class="btn btn-secondary btn-md" href="tel:${escapeHtml(fone)}">📞 Ligar</a>` : ''}
+      ${fone ? btn('whats', '💬 WhatsApp') : ''}
+    </div>`;
+
+  return `<div class="card mot-card" style="--mot-cor:${cor}">
+    <div class="ped-head">
+      <span class="ped-cod">#${escapeHtml(p.codigo || '')}</span>
+      <span class="ped-hora">${quando}</span>
+    </div>
+    <div class="mot-end">📍 ${escapeHtml(endTxt)}${extra ? `<small>${escapeHtml(extra)}</small>` : ''}</div>
+    <div class="mot-cli"><strong>${escapeHtml(cli.nome || '')}</strong>${cli.telefone ? ' · ' + escapeHtml(cli.telefone) : ''}</div>
+    ${links}
+    ${cobrar}
+    <div class="mot-itens">${t.itens.map(i => i.q + '× ' + escapeHtml(i.n)).join(' · ')}</div>
+    ${p.obs ? `<div class="ped-obs">📝 ${escapeHtml(p.obs)}</div>` : ''}
+    ${acoes ? `<div class="mot-acoes">${acoes}</div>` : ''}
+  </div>`;
+}
+
+/* ---------- Ações ---------- */
+function motAcao(a, id) {
+  if (!/^[-A-Za-z0-9_]{8,40}$/.test(String(id))) return;
+  const p = _pedGet(id); if (!p) return;
+  switch (a) {
+    case 'sair':
+      return _motMudar(id, 'saiu', _motNome()).then(ok => { if (ok) { _motTab = 'rua'; renderMotoqueiro(); showToast('Pedido ' + (p.codigo || '') + ' saiu para entrega'); } });
+    case 'entregue': return _motConfirmarEntrega(p);
+    case 'voltar':   return _motMudar(id, 'pronto').then(ok => { if (ok) { _motTab = 'sair'; renderMotoqueiro(); } });
+    case 'whats':    return _motWhats(p);
+  }
+}
+
+function _motConfirmarEntrega(p) {
+  const t = _pedTotais(p);
+  const forma = { dinheiro: 'dinheiro', pix: 'Pix', cartao: 'cartão' }[p.pagamento] || '';
+  showModal('Confirmar entrega',
+    'Pedido <strong>' + escapeHtml(p.codigo || '') + '</strong> entregue?<br><br>Valor: <strong>' + fmt(t.total) + '</strong> em ' + forma + '.',
+    [{ label: 'Sim, entregue', style: 'primary', action: () => {
+        _motMudar(p.id, 'entregue', p.motoqueiro ? '' : _motNome()).then(ok => {
+          if (ok) { showToast('Pedido ' + (p.codigo || '') + ' entregue ✅'); renderMotoqueiro(); }
+        });
+    }}, { label: 'Voltar', style: 'secondary' }]);
+}
+
+/** Muda o status. Se o Firebase ainda não tiver o campo "motoqueiro" nas regras, repete sem o nome. */
+function _motMudar(id, st, nome) {
+  if (!_lojaAtiva) return Promise.resolve(false);
+  const TS = firebase.database.ServerValue.TIMESTAMP;
+  const base = { status: st, atualizadoEm: TS };
+  base['hist/' + st] = TS;
+  const comNome = nome ? Object.assign({ motoqueiro: String(nome).slice(0, 40) }, base) : base;
+  return _pedRef(id).update(comNome)
+    .catch(e => (nome ? _pedRef(id).update(base) : Promise.reject(e)))
+    .then(() => true)
+    .catch(e => {
+      console.error(e);
+      showToast(e && /permission/i.test(e.message || e.code || '')
+        ? 'Sem permissão para alterar o pedido. Verifique o login e as regras do Firebase.'
+        : 'Erro ao atualizar o pedido', false);
+      return false;
+    });
+}
+
+function _motWhats(p) {
+  const cfg = _pedCfg() || {};
+  const cli = p.cliente || {};
+  const nome = String(cli.nome || '').split(' ')[0];
+  const eu = _motNome();
+  const texto = 'Olá ' + nome + '! ' + (eu ? 'Sou o ' + eu + ', motoqueiro' : 'Sou o motoqueiro') + (cfg.nome ? ' do ' + cfg.nome : '') + '. Estou a caminho com o seu pedido ' + (p.codigo || '') + ' 🛵';
+  window.open('https://wa.me/' + _pedFone(cli.telefone) + '?text=' + encodeURIComponent(texto), '_blank', 'noopener');
 }
 
 /* ============================================================

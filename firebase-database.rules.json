@@ -238,6 +238,9 @@
             "atualizadoEm": {
               ".validate": "(auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true)) && newData.isNumber()"
             },
+            "motoqueiro": {
+              ".validate": "(auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true)) && newData.isString() && newData.val().length <= 40"
+            },
             "hist": {
               "$st": {
                 ".validate": "(auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true)) && newData.isNumber()"
