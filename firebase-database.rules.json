@@ -141,6 +141,29 @@
           "aviso": {
             ".validate": "newData.isString() && newData.val().length <= 200"
           },
+          "lojaEndereco": {
+            ".validate": "newData.isString() && newData.val().length <= 200"
+          },
+          "lojaLat": {
+            ".validate": "newData.isNumber() && newData.val() >= -90 && newData.val() <= 90"
+          },
+          "lojaLng": {
+            ".validate": "newData.isNumber() && newData.val() >= -180 && newData.val() <= 180"
+          },
+          "faixas": {
+            "$i": {
+              ".validate": "newData.hasChildren(['ate','valor'])",
+              "ate": {
+                ".validate": "newData.isNumber() && newData.val() > 0 && newData.val() <= 500"
+              },
+              "valor": {
+                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1000"
+              },
+              "$outro": {
+                ".validate": "false"
+              }
+            }
+          },
           "$outro": {
             ".validate": "false"
           }
@@ -201,6 +224,12 @@
               },
               "referencia": {
                 ".validate": "newData.isString() && newData.val().length <= 120"
+              },
+              "distanciaKm": {
+                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 500"
+              },
+              "distAprox": {
+                ".validate": "newData.isBoolean()"
               },
               "$outro": {
                 ".validate": "false"

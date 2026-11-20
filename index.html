@@ -4669,10 +4669,30 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
         <div class="form-grid">
           <div class="form-group"><label>Nome que o cliente vê</label><input id="pc-nome" class="input-base" maxlength="80" placeholder="Ex.: Select Sabor"></div>
           <div class="form-group"><label>Tempo estimado</label><input id="pc-tempo" class="input-base" maxlength="40" placeholder="Ex.: 40–50 min"></div>
-          <div class="form-group"><label>Taxa de entrega (R$)</label><input id="pc-taxa" class="input-base" inputmode="decimal" placeholder="0,00"></div>
+          <div class="form-group"><label>Taxa padrão de entrega (R$)</label><input id="pc-taxa" class="input-base" inputmode="decimal" placeholder="0,00"></div>
           <div class="form-group"><label>Pedido mínimo (R$)</label><input id="pc-min" class="input-base" inputmode="decimal" placeholder="0,00"></div>
           <div class="form-group"><label>WhatsApp da loja (com DDD)</label><input id="pc-whats" class="input-base" inputmode="tel" maxlength="16" placeholder="(31) 99999-0000" oninput="this.value=_maskFone(this.value)"></div>
           <div class="form-group"><label>Aviso no topo do cardápio (opcional)</label><input id="pc-aviso" class="input-base" maxlength="200" placeholder="Ex.: Hoje temos feijoada!"></div>
+        </div>
+        <div class="card-title" style="margin-top:18px;font-size:15px">Taxa de entrega por distância (km)</div>
+        <p style="font-size:13px;color:var(--text-muted,#6b7280);margin:4px 0 10px">O sistema calcula o trajeto de carro entre o restaurante e o endereço do cliente e cobra pela faixa. Se nenhuma faixa for preenchida, vale só a taxa padrão acima. Acima do último km, a entrega não é aceita (o cliente pode retirar na loja).</p>
+        <div class="form-grid">
+          <div class="form-group" style="grid-column:1/-1"><label>Endereço do restaurante</label><input id="pc-end" class="input-base" maxlength="200" placeholder="Rua, número, bairro, cidade - UF"></div>
+          <div class="form-group"><label>Latitude</label><input id="pc-lat" class="input-base" inputmode="decimal" placeholder="-19.9667"></div>
+          <div class="form-group"><label>Longitude</label><input id="pc-lng" class="input-base" inputmode="decimal" placeholder="-44.1983"></div>
+        </div>
+        <div class="form-actions" style="margin:8px 0 4px">
+          <button class="btn btn-secondary btn-md" type="button" onclick="pedConfigLocalizar()">📍 Localizar pelo endereço</button>
+          <a id="pc-mapa" class="btn btn-secondary btn-md" target="_blank" rel="noopener" style="display:none">Conferir no mapa</a>
+        </div>
+        <small id="pc-loc-msg" style="display:block;margin-bottom:10px;font-size:13px"></small>
+        <div style="font-weight:600;font-size:13px;margin:6px 0">Faixas (preencha só as que quiser)</div>
+        <div id="pc-faixas">
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap"><span style="width:64px;font-size:13px">Até (km)</span><input id="pc-fk-0" class="input-base" inputmode="decimal" placeholder="Ex.: 3" style="width:90px"><span style="font-size:13px">cobrar R$</span><input id="pc-fv-0" class="input-base" inputmode="decimal" placeholder="0,00" style="width:110px"></div>
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap"><span style="width:64px;font-size:13px">Até (km)</span><input id="pc-fk-1" class="input-base" inputmode="decimal" placeholder="Ex.: 3" style="width:90px"><span style="font-size:13px">cobrar R$</span><input id="pc-fv-1" class="input-base" inputmode="decimal" placeholder="0,00" style="width:110px"></div>
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap"><span style="width:64px;font-size:13px">Até (km)</span><input id="pc-fk-2" class="input-base" inputmode="decimal" placeholder="Ex.: 3" style="width:90px"><span style="font-size:13px">cobrar R$</span><input id="pc-fv-2" class="input-base" inputmode="decimal" placeholder="0,00" style="width:110px"></div>
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap"><span style="width:64px;font-size:13px">Até (km)</span><input id="pc-fk-3" class="input-base" inputmode="decimal" placeholder="Ex.: 3" style="width:90px"><span style="font-size:13px">cobrar R$</span><input id="pc-fv-3" class="input-base" inputmode="decimal" placeholder="0,00" style="width:110px"></div>
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap"><span style="width:64px;font-size:13px">Até (km)</span><input id="pc-fk-4" class="input-base" inputmode="decimal" placeholder="Ex.: 3" style="width:90px"><span style="font-size:13px">cobrar R$</span><input id="pc-fv-4" class="input-base" inputmode="decimal" placeholder="0,00" style="width:110px"></div>
         </div>
         <div class="ped-checks">
           <label><input type="checkbox" id="pc-entrega"> Aceitar entrega</label>
@@ -17690,12 +17710,49 @@ function _pedItens(p) {
     return { id: k, q: parseInt(it.q) || 0, n: it.n || (card && card.nome) || 'Item', preco, fixo, noCardapio: !!card };
   });
 }
+/* ---------- Taxa por distância (km) ---------- */
+function _pedFaixas(cfg) {
+  const f = cfg && cfg.faixas; if (!f) return [];
+  const a = Array.isArray(f) ? f : Object.keys(f).map(k => f[k]);
+  return a.filter(x => x && Number(x.ate) > 0 && Number(x.valor) >= 0).map(x => ({ ate: Number(x.ate), valor: Number(x.valor) })).sort((a, b) => a.ate - b.ate);
+}
+function _pedTaxaPedido(cfg, p) {
+  const fs = _pedFaixas(cfg), km = p && p.endereco && p.endereco.distanciaKm;
+  if (fs.length && typeof km === 'number') { const f = fs.find(x => km <= x.ate + 1e-9); return f ? f.valor : fs[fs.length - 1].valor; }
+  return parseFloat(cfg && cfg.taxaEntrega) || 0;
+}
+function _pedKmTxt(e) {
+  return (e && typeof e.distanciaKm === 'number') ? ' · 🚗 ' + String(e.distanciaKm).replace('.', ',') + ' km' + (e.distAprox ? ' (aprox.)' : '') : '';
+}
+function _pedMapaLink() {
+  const a = document.getElementById('pc-mapa'); if (!a) return;
+  const la = (document.getElementById('pc-lat').value || '').replace(',', '.'), lo = (document.getElementById('pc-lng').value || '').replace(',', '.');
+  if (la && lo && isFinite(parseFloat(la)) && isFinite(parseFloat(lo))) { a.href = 'https://www.google.com/maps?q=' + encodeURIComponent(la + ',' + lo); a.style.display = ''; }
+  else a.style.display = 'none';
+}
+function pedConfigLocalizar() {
+  const end = (document.getElementById('pc-end').value || '').trim();
+  const msg = document.getElementById('pc-loc-msg');
+  if (end.length < 6) { msg.style.color = '#B91C1C'; msg.textContent = 'Digite o endereço completo do restaurante (rua, número, bairro, cidade e UF).'; return; }
+  msg.style.color = ''; msg.textContent = 'Procurando o endereço…';
+  fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=br&q=' + encodeURIComponent(end + ', Brasil') + '&_fresh=1')
+    .then(r => r.json())
+    .then(a => {
+      if (!a || !a[0]) { msg.style.color = '#B91C1C'; msg.textContent = 'Não encontrei esse endereço. Tente sem o número ou cole a latitude/longitude do Google Maps (clique com o botão direito no local e copie as coordenadas).'; return; }
+      document.getElementById('pc-lat').value = (Math.round(parseFloat(a[0].lat) * 1e6) / 1e6).toString();
+      document.getElementById('pc-lng').value = (Math.round(parseFloat(a[0].lon) * 1e6) / 1e6).toString();
+      msg.style.color = ''; msg.textContent = '✓ Encontrado: ' + (a[0].display_name || '') + '. Confira no mapa se o ponto está certo antes de salvar.';
+      _pedMapaLink();
+    })
+    .catch(() => { msg.style.color = '#B91C1C'; msg.textContent = 'Não foi possível consultar o mapa agora. Tente de novo ou cole a latitude/longitude manualmente.'; });
+}
+
 function _pedTotais(p) {
   const itens = _pedItens(p);
   const sub = _pedRound(itens.reduce((s, i) => s + i.preco * i.q, 0));
   const cfg = _pedCfg() || {};
   const confirmado = typeof p.total === 'number';
-  const taxa = confirmado ? (parseFloat(p.taxa) || 0) : (p.tipo === 'entrega' ? (parseFloat(cfg.taxaEntrega) || 0) : 0);
+  const taxa = confirmado ? (parseFloat(p.taxa) || 0) : (p.tipo === 'entrega' ? _pedTaxaPedido(cfg, p) : 0);
   const total = confirmado ? p.total : _pedRound(sub + taxa);
   return { itens, sub, taxa, total, confirmado };
 }
@@ -17851,7 +17908,7 @@ function _pedCardHtml(p) {
       <span class="ped-hora">${_pedHora(p.ts)} · ${_pedHa(p.ts)}</span>
     </div>
     <div class="ped-cli"><strong>${escapeHtml(cli.nome || '')}</strong> · <a href="tel:${escapeHtml(String(cli.telefone || '').replace(/[^\d+]/g, ''))}">${escapeHtml(cli.telefone || '')}</a></div>
-    ${ent ? `<div class="ped-end">📍 ${escapeHtml((e.rua || '') + ', ' + (e.numero || '') + ' — ' + (e.bairro || '') + (e.cep ? ' · CEP ' + e.cep : ''))}${e.complemento ? ' · ' + escapeHtml(e.complemento) : ''}${e.referencia ? ' · ref.: ' + escapeHtml(e.referencia) : ''}</div>` : ''}
+    ${ent ? `<div class="ped-end">📍 ${escapeHtml((e.rua || '') + ', ' + (e.numero || '') + ' — ' + (e.bairro || '') + (e.cep ? ' · CEP ' + e.cep : ''))}${_pedKmTxt(e)}${e.complemento ? ' · ' + escapeHtml(e.complemento) : ''}${e.referencia ? ' · ref.: ' + escapeHtml(e.referencia) : ''}</div>` : ''}
     ${_pedCodEntregaHtml(p)}
     <ul class="ped-itens">${itens}</ul>
     ${p.obs ? `<div class="ped-obs">📝 ${escapeHtml(p.obs)}</div>` : ''}
@@ -17905,7 +17962,7 @@ function pedAceitar(id) {
     upd['itens/' + i.id + '/p'] = i.preco;
     sub += i.preco * i.q;
   });
-  upd.taxa = p.tipo === 'entrega' ? (parseFloat(cfg.taxaEntrega) || 0) : 0;
+  upd.taxa = p.tipo === 'entrega' ? _pedTaxaPedido(cfg, p) : 0;
   upd.total = _pedRound(sub + upd.taxa);
   if (cfg.tempoEstimado) upd.previsao = String(cfg.tempoEstimado).slice(0, 40);
   const confirmar = () => pedMudar(id, 'preparo', upd).then(() => {
@@ -18040,7 +18097,7 @@ function pedImprimir(id) {
     <div class="c">${new Date(p.ts || Date.now()).toLocaleString('pt-BR')}</div><hr>
     <div class="b">${p.tipo === 'entrega' ? 'ENTREGA' : 'RETIRADA NA LOJA'}</div>
     <div>${escapeHtml(cli.nome || '')} — ${escapeHtml(cli.telefone || '')}</div>
-    ${p.tipo === 'entrega' ? `<div>${escapeHtml((e.rua || '') + ', ' + (e.numero || '') + ' - ' + (e.bairro || '') + (e.cep ? ' - CEP ' + e.cep : ''))}</div>${e.complemento ? '<div>' + escapeHtml(e.complemento) + '</div>' : ''}${e.referencia ? '<div>Ref.: ' + escapeHtml(e.referencia) + '</div>' : ''}` : ''}
+    ${p.tipo === 'entrega' ? `<div>${escapeHtml((e.rua || '') + ', ' + (e.numero || '') + ' - ' + (e.bairro || '') + (e.cep ? ' - CEP ' + e.cep : ''))}</div>${_pedKmTxt(e) ? '<div>' + _pedKmTxt(e).replace(' · ', '') + '</div>' : ''}${e.complemento ? '<div>' + escapeHtml(e.complemento) + '</div>' : ''}${e.referencia ? '<div>Ref.: ' + escapeHtml(e.referencia) + '</div>' : ''}` : ''}
     <hr><table>${linhas}</table><hr>
     <table><tr><td>Subtotal</td><td style="text-align:right">${fmt(t.sub)}</td></tr>
     ${p.tipo === 'entrega' ? `<tr><td>Taxa de entrega</td><td style="text-align:right">${fmt(t.taxa)}</td></tr>` : ''}
@@ -18083,6 +18140,12 @@ function pedConfigAbrir() {
   set('pc-min', money(c.pedidoMinimo));
   set('pc-whats', _maskFone(c.whatsapp || ''));
   set('pc-aviso', c.aviso || '');
+  set('pc-end', c.lojaEndereco || '');
+  set('pc-lat', c.lojaLat != null ? String(c.lojaLat) : '');
+  set('pc-lng', c.lojaLng != null ? String(c.lojaLng) : '');
+  const fx = _pedFaixas(c);
+  for (let i = 0; i < 5; i++) { set('pc-fk-' + i, fx[i] ? String(fx[i].ate).replace('.', ',') : ''); set('pc-fv-' + i, fx[i] ? money(fx[i].valor) : ''); }
+  _pedMapaLink();
   document.getElementById('pc-entrega').checked  = c.aceitaEntrega !== false;
   document.getElementById('pc-retirada').checked = c.aceitaRetirada !== false;
   document.getElementById('pc-aberto').checked   = _pedCfg() ? c.aberto === true : true;
@@ -18107,6 +18170,23 @@ function pedConfigSalvar() {
   if (v('pc-tempo'))  cfg.tempoEstimado = v('pc-tempo').slice(0, 40);
   if (v('pc-whats'))  cfg.whatsapp = v('pc-whats').replace(/[^\d()+ -]/g, '').slice(0, 20);
   if (v('pc-aviso'))  cfg.aviso = v('pc-aviso').slice(0, 200);
+  // taxa por distância (km)
+  const fxs = [];
+  for (let i = 0; i < 5; i++) {
+    const k = v('pc-fk-' + i), val = v('pc-fv-' + i);
+    if (!k && !val) continue;
+    const ate = _pedNum(k);
+    if (!(ate > 0) || val === '') { showToast('Faixa ' + (i + 1) + ': informe o km e o valor', false); return; }
+    fxs.push({ ate: Math.round(ate * 10) / 10, valor: _pedRound(_pedNum(val)) });
+  }
+  fxs.sort((a, b) => a.ate - b.ate);
+  for (let i = 1; i < fxs.length; i++) if (fxs[i].ate === fxs[i - 1].ate) { showToast('Há duas faixas com o mesmo km', false); return; }
+  const lat = parseFloat(v('pc-lat').replace(',', '.')), lng = parseFloat(v('pc-lng').replace(',', '.'));
+  const coordOk = v('pc-lat') !== '' && v('pc-lng') !== '' && isFinite(lat) && isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
+  if (fxs.length && !coordOk) { showToast('Para cobrar por km, localize o endereço do restaurante (botão 📍)', false); return; }
+  if (fxs.length) cfg.faixas = fxs;
+  if (coordOk) { cfg.lojaLat = Math.round(lat * 1e6) / 1e6; cfg.lojaLng = Math.round(lng * 1e6) / 1e6; }
+  if (v('pc-end')) cfg.lojaEndereco = v('pc-end').slice(0, 200);
   _dbRef('pedidosConfig/' + _lojaAtiva).set(cfg)
     .then(() => { showToast('Configuração salva!'); pedConfigFechar(); })
     .catch(e => { console.error(e); showToast('Sem permissão para salvar. Publique as regras do Firebase (firebase/firebase-database.rules.json).', false); });

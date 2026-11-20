@@ -225,6 +225,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
         <div><label for="f-num">Número</label><input id="f-num" maxlength="20" autocomplete="off"></div>
         <div><label for="f-bairro">Bairro</label><input id="f-bairro" maxlength="80" autocomplete="off"></div>
       </div></div>
+      <div class="campo"><small id="dist-msg" class="hide" style="display:block;font-size:13px;color:var(--mut)"></small></div>
       <div class="campo"><label for="f-comp">Complemento (opcional)</label><input id="f-comp" maxlength="120" placeholder="Apto, bloco, casa dos fundos…"></div>
       <div class="campo"><label for="f-ref">Ponto de referência (opcional)</label><input id="f-ref" maxlength="120" placeholder="Perto de…"></div>
     </div>
@@ -433,7 +434,109 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
   function aberta() { return !!(cfg && cfg.aberto === true); }
   function aceitaEntrega() { return !cfg || cfg.aceitaEntrega !== false; }
   function aceitaRetirada() { return !cfg || cfg.aceitaRetirada !== false; }
-  function taxa() { return (modo === 'entrega' && cfg) ? (Number(cfg.taxaEntrega) || 0) : 0; }
+  /* ---------- Taxa por distância (km) ----------
+     A loja cadastra o endereço (lat/lng) e faixas "até X km = R$ Y". O app calcula a distância
+     de carro (OSRM) entre a loja e o endereço do cliente (localizado via OpenStreetMap). */
+  var dist = { km: null, aprox: false, estado: 'idle', chave: '' }, cepCidade = '', cepUF = '', distTimer = null, distSeq = 0;
+  function faixas() {
+    var f = cfg && cfg.faixas; if (!f) return [];
+    var a = Array.isArray(f) ? f : Object.keys(f).map(function (k) { return f[k]; });
+    return a.filter(function (x) { return x && Number(x.ate) > 0 && Number(x.valor) >= 0; })
+      .map(function (x) { return { ate: Number(x.ate), valor: Number(x.valor) }; })
+      .sort(function (a, b) { return a.ate - b.ate; });
+  }
+  function temCoord() { return !!(cfg && typeof cfg.lojaLat === 'number' && typeof cfg.lojaLng === 'number'); }
+  function usaFaixas() { return modo === 'entrega' && faixas().length > 0 && temCoord(); }
+  function porKmAtivo() { return faixas().length > 0 && temCoord(); }
+  function taxaPorKm(km) { var f = faixas(); for (var i = 0; i < f.length; i++) { if (km <= f[i].ate + 1e-9) return f[i].valor; } return null; }
+  function kmMax() { var f = faixas(); return f.length ? f[f.length - 1].ate : 0; }
+  function menorTaxa() { var f = faixas(); return f.reduce(function (m, x) { return Math.min(m, x.valor); }, Infinity); }
+  function fmtKm(k) { return String(k).replace('.', ','); }
+  function taxa() {
+    if (modo !== 'entrega' || !cfg) return 0;
+    if (usaFaixas() && dist.km != null) { var t = taxaPorKm(dist.km); if (t != null) return t; }
+    return Number(cfg.taxaEntrega) || 0;
+  }
+  /* taxa de um pedido já enviado (usa a distância gravada nele) */
+  function taxaPedido(ped) {
+    var km = ped && ped.endereco && ped.endereco.distanciaKm;
+    if (porKmAtivo() && typeof km === 'number') { var t = taxaPorKm(km); if (t != null) return t; var f = faixas(); return f[f.length - 1].valor; }
+    return cfg ? Number(cfg.taxaEntrega) || 0 : 0;
+  }
+  function distMsg(t, erro) { var m = $('#dist-msg'); if (!m) return; m.textContent = t || ''; m.style.color = erro ? '#B91C1C' : 'var(--mut)'; m.classList.toggle('hide', !t); }
+  function fetchJson(url, ms) {
+    var ctl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    var to = setTimeout(function () { if (ctl) ctl.abort(); }, ms || 8000);
+    return fetch(url, ctl ? { signal: ctl.signal } : undefined).then(function (r) { clearTimeout(to); if (!r.ok) throw new Error('http'); return r.json(); }, function (e) { clearTimeout(to); throw e; });
+  }
+  function nominatim(q) {
+    return fetchJson('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=br&' + q, 9000)
+      .then(function (a) { return (a && a[0]) ? { lat: parseFloat(a[0].lat), lng: parseFloat(a[0].lon) } : null; });
+  }
+  function geocodificarCliente(rua, num, bai, cep) {
+    var enc = encodeURIComponent, L = [];
+    if (cepCidade) {
+      var loc = '&city=' + enc(cepCidade) + (cepUF ? '&state=' + enc(cepUF) : '');
+      L.push('street=' + enc(num + ' ' + rua) + loc);
+      L.push('street=' + enc(rua) + loc);
+    } else L.push('q=' + enc(rua + ', ' + num + ', ' + bai + ', Brasil'));
+    L.push('postalcode=' + enc(mascaraCep(cep)));
+    var i = 0;
+    function prox() {
+      if (i >= L.length) return Promise.resolve(null);
+      return nominatim(L[i++]).then(function (pt) {
+        if (pt) return pt;
+        return new Promise(function (r) { setTimeout(r, 1100); }).then(prox); // limite do serviço: 1 consulta/segundo
+      });
+    }
+    return prox();
+  }
+  function linhaReta(a, b) {
+    var R = 6371, rad = Math.PI / 180, dLa = (b.lat - a.lat) * rad, dLo = (b.lng - a.lng) * rad;
+    var x = Math.sin(dLa / 2) * Math.sin(dLa / 2) + Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLo / 2) * Math.sin(dLo / 2);
+    return 2 * R * Math.asin(Math.sqrt(x));
+  }
+  function rotaKm(pt) {
+    var loja = { lat: cfg.lojaLat, lng: cfg.lojaLng };
+    return fetchJson('https://router.project-osrm.org/route/v1/driving/' + loja.lng + ',' + loja.lat + ';' + pt.lng + ',' + pt.lat + '?overview=false', 8000)
+      .then(function (j) {
+        var m = j && j.routes && j.routes[0] && j.routes[0].distance;
+        if (typeof m !== 'number') throw new Error('rota');
+        return { km: Math.round(m / 100) / 10, aprox: false };
+      })
+      .catch(function () { return { km: Math.round(linhaReta(loja, pt) * 1.3 * 10) / 10, aprox: true }; }); // sem rota: linha reta + 30%
+  }
+  function chaveEnd() { return [digitos($('#f-cep').value), $('#f-rua').value.trim(), $('#f-num').value.trim(), $('#f-bairro').value.trim()].join('|').toLowerCase(); }
+  function agendarDist() {
+    clearTimeout(distTimer);
+    if (!usaFaixas()) { distMsg(''); return; }
+    distTimer = setTimeout(calcDist, 900);
+  }
+  function calcDist() {
+    if (!usaFaixas()) return;
+    var rua = $('#f-rua').value.trim(), num = $('#f-num').value.trim(), bai = $('#f-bairro').value.trim(), cep = digitos($('#f-cep').value);
+    if (rua.length < 2 || !num || cep.length !== 8) { dist.km = null; dist.chave = ''; dist.estado = 'idle'; distMsg(''); desenharCheckout(); return; }
+    var chave = chaveEnd();
+    if (chave === dist.chave && dist.estado !== 'idle') return;
+    dist.chave = chave; dist.estado = 'calc'; dist.km = null;
+    var seq = ++distSeq;
+    distMsg('Calculando a distância até o seu endereço…'); desenharCheckout();
+    geocodificarCliente(rua, num, bai, cep).then(function (pt) {
+      if (!pt) throw new Error('geo');
+      return rotaKm(pt);
+    }).then(function (r) {
+      if (seq !== distSeq) return;
+      dist.km = r.km; dist.aprox = r.aprox; dist.estado = 'ok';
+      if (taxaPorKm(r.km) == null) distMsg('📍 ' + fmtKm(r.km) + ' km — fora da área de entrega (máximo ' + fmtKm(kmMax()) + ' km). Escolha "Retirar na loja".', true);
+      else distMsg('📍 Distância até você: ' + (r.aprox ? 'cerca de ' : '') + fmtKm(r.km) + ' km');
+      desenharCheckout();
+    }).catch(function () {
+      if (seq !== distSeq) return;
+      dist.km = null; dist.estado = 'erro';
+      distMsg('Não conseguimos calcular a distância pelo endereço. Será usada a taxa padrão e a loja confirma com você.', true);
+      desenharCheckout();
+    });
+  }
 
   /* ---------- Sacola ---------- */
   function salvarCart() { lsSet('cart:' + LOJA, cart); }
@@ -458,7 +561,8 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     document.title = ((cfg && cfg.nome) ? cfg.nome + ' · ' : '') + 'Faça seu pedido';
     var info = [];
     if (cfg && cfg.tempoEstimado) info.push('⏱ ' + esc(cfg.tempoEstimado));
-    if (aceitaEntrega() && cfg && Number(cfg.taxaEntrega) > 0) info.push('🛵 Entrega ' + brl(cfg.taxaEntrega));
+    if (aceitaEntrega() && porKmAtivo()) info.push('🛵 Entrega a partir de ' + brl(menorTaxa()));
+    else if (aceitaEntrega() && cfg && Number(cfg.taxaEntrega) > 0) info.push('🛵 Entrega ' + brl(cfg.taxaEntrega));
     else if (aceitaEntrega() && cfg) info.push('🛵 Entrega grátis');
     if (cfg && Number(cfg.pedidoMinimo) > 0) info.push('Pedido mín. ' + brl(cfg.pedidoMinimo));
     $('#loja-info').innerHTML = info.map(function (t) { return '<span>' + t + '</span>'; }).join('');
@@ -510,7 +614,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     }).join('') : '<div class="vazio" style="padding:14px">Sua sacola está vazia.</div>';
     // modo
     var op = [];
-    if (aceitaEntrega()) op.push('<button type="button" data-modo="entrega" class="' + (modo === 'entrega' ? 'on' : '') + '">🛵 Entrega' + (cfg && Number(cfg.taxaEntrega) > 0 ? '<br><small>+ ' + brl(cfg.taxaEntrega) + '</small>' : '') + '</button>');
+    if (aceitaEntrega()) op.push('<button type="button" data-modo="entrega" class="' + (modo === 'entrega' ? 'on' : '') + '">🛵 Entrega' + (porKmAtivo() ? '<br><small>a partir de ' + brl(menorTaxa()) + '</small>' : (cfg && Number(cfg.taxaEntrega) > 0 ? '<br><small>+ ' + brl(cfg.taxaEntrega) + '</small>' : '')) + '</button>');
     if (aceitaRetirada()) op.push('<button type="button" data-modo="retirada" class="' + (modo === 'retirada' ? 'on' : '') + '">🏪 Retirar na loja</button>');
     $('#op-modo').innerHTML = op.join('');
     $('#bl-end').classList.toggle('hide', modo !== 'entrega');
@@ -533,7 +637,8 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     if (!$('#f-nome').value) $('#f-nome').value = salvo.nome || '';
     if (!$('#f-tel').value) $('#f-tel').value = salvo.tel || '';
     if (!$('#f-rua').value) { $('#f-cep').value = salvo.cep || ''; $('#f-rua').value = salvo.rua || ''; $('#f-num').value = salvo.num || ''; $('#f-bairro').value = salvo.bairro || ''; $('#f-comp').value = salvo.comp || ''; $('#f-ref').value = salvo.ref || ''; }
-    setErro(''); desenharCheckout(); mostrar('v-ck');
+    cepCidade = salvo.cid || cepCidade; cepUF = salvo.uf || cepUF;
+    setErro(''); desenharCheckout(); mostrar('v-ck'); agendarDist();
   }
   function mascaraCep(v) { var d = digitos(v).slice(0, 8); return d.length > 5 ? d.slice(0, 5) + '-' + d.slice(5) : d; }
   function mascaraTel(v) {
@@ -555,6 +660,11 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
       if ($('#f-rua').value.trim().length < 2) return 'Informe a rua do endereço de entrega.';
       if (!$('#f-num').value.trim()) return 'Informe o número do endereço (ou S/N).';
       if ($('#f-bairro').value.trim().length < 2) return 'Informe o bairro.';
+      if (usaFaixas()) {
+        if (chaveEnd() !== dist.chave) { calcDist(); return 'Calculando a distância até o seu endereço… toque em "Enviar pedido" de novo em instantes.'; }
+        if (dist.estado === 'calc') return 'Aguarde: estamos calculando a distância até o seu endereço.';
+        if (dist.km != null && taxaPorKm(dist.km) == null) return 'Seu endereço está fora da área de entrega (máximo ' + fmtKm(kmMax()) + ' km). Escolha "Retirar na loja".';
+      }
     }
     if (!pag) return 'Escolha a forma de pagamento.';
     if (pag === 'dinheiro' && $('#f-troco').value.trim()) {
@@ -599,6 +709,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
       p.endereco = { cep: mascaraCep($('#f-cep').value), rua: $('#f-rua').value.trim(), numero: $('#f-num').value.trim(), bairro: $('#f-bairro').value.trim() };
       if ($('#f-comp').value.trim()) p.endereco.complemento = $('#f-comp').value.trim();
       if ($('#f-ref').value.trim()) p.endereco.referencia = $('#f-ref').value.trim();
+      if (usaFaixas() && dist.km != null) { p.endereco.distanciaKm = dist.km; if (dist.aprox) p.endereco.distAprox = true; }
     }
     if (pag === 'dinheiro' && $('#f-troco').value.trim()) p.troco = parseFloat($('#f-troco').value.replace(/\./g, '').replace(',', '.'));
     if ($('#f-obs').value.trim()) p.obs = $('#f-obs').value.trim().slice(0, 300);
@@ -621,7 +732,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
       envio = base('').update(up); // pedido + código gravados juntos
     } else envio = ref.set(dados);
     Promise.race([envio, temporizador]).then(function () {
-      lsSet('cliente', { nome: dados.cliente.nome, tel: dados.cliente.telefone, cep: mascaraCep($('#f-cep').value), rua: $('#f-rua').value.trim(), num: $('#f-num').value.trim(), bairro: $('#f-bairro').value.trim(), comp: $('#f-comp').value.trim(), ref: $('#f-ref').value.trim() });
+      lsSet('cliente', { nome: dados.cliente.nome, tel: dados.cliente.telefone, cep: mascaraCep($('#f-cep').value), rua: $('#f-rua').value.trim(), num: $('#f-num').value.trim(), bairro: $('#f-bairro').value.trim(), comp: $('#f-comp').value.trim(), ref: $('#f-ref').value.trim(), cid: cepCidade, uf: cepUF });
       var lista = lsGet('meusPedidos') || [];
       lista.unshift({ loja: LOJA, id: pendenteId, codigo: pendenteCodigo, ts: Date.now() });
       lsSet('meusPedidos', lista.slice(0, 10));
@@ -708,7 +819,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     var itens = Object.keys(pedido.itens || {}).map(function (id) { return { id: id, q: pedido.itens[id].q, n: pedido.itens[id].n, p: pedido.itens[id].p }; });
     var confirmado = typeof pedido.total === 'number';
     var sub = round2(itens.reduce(function (s, i) { return s + (typeof i.p === 'number' ? i.p : precoDe(i.id)) * i.q; }, 0));
-    var tx = confirmado ? (Number(pedido.taxa) || 0) : (entrega && cfg ? Number(cfg.taxaEntrega) || 0 : 0);
+    var tx = confirmado ? (Number(pedido.taxa) || 0) : (entrega && cfg ? taxaPedido(pedido) : 0);
     var total = confirmado ? pedido.total : round2(sub + tx);
     h += '<div class="bloco"><h3>Seu pedido</h3>' + itens.map(function (i) {
       var pr = typeof i.p === 'number' ? i.p : precoDe(i.id);
@@ -851,7 +962,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
       if (el) { var y = el.getBoundingClientRect().top + window.pageYOffset - 64; window.scrollTo({ top: y, behavior: 'smooth' }); }
       return;
     }
-    if (t.hasAttribute('data-modo')) { modo = t.getAttribute('data-modo'); setErro(''); desenharCheckout(); return; }
+    if (t.hasAttribute('data-modo')) { modo = t.getAttribute('data-modo'); setErro(''); desenharCheckout(); agendarDist(); return; }
     if (t.parentElement && t.parentElement.id === 'op-pag') { pag = t.getAttribute('data-v'); setErro(''); desenharCheckout(); return; }
   });
   $('#btn-sacola').onclick = abrirCheckout;
@@ -876,6 +987,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
         if (j.logradouro && (!rua.value.trim() || rua.value === cepAuto.rua)) { rua.value = j.logradouro; cepAuto.rua = j.logradouro; }
         if (j.bairro && (!bai.value.trim() || bai.value === cepAuto.bairro)) { bai.value = j.bairro; cepAuto.bairro = j.bairro; }
         cepMsg('✓ Endereço encontrado. Confira e informe o número.');
+        cepCidade = j.localidade || ''; cepUF = j.uf || ''; agendarDist();
         var n = $('#f-num'); if (n && !n.value.trim()) n.focus();
       })
       .catch(function () { clearTimeout(to); cepUlt = ''; cepMsg('Não foi possível buscar o CEP agora. Preencha o endereço abaixo.', true); });
@@ -886,6 +998,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     if (d.length === 8) buscarCep(d); else { cepUlt = ''; cepMsg(''); }
   });
   $('#f-tel').addEventListener('input', function () { this.value = mascaraTel(this.value); });
+  ['#f-rua', '#f-num', '#f-bairro'].forEach(function (s) { $(s).addEventListener('input', agendarDist); });
 
   /* ---------- Carga inicial ---------- */
   cart = lsGet('cart:' + LOJA) || {};
