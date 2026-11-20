@@ -4705,6 +4705,13 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
           <label><input type="checkbox" id="pc-retirada"> Aceitar retirada na loja</label>
           <label><input type="checkbox" id="pc-aberto"> Receber pedidos agora</label>
         </div>
+        <div class="card-title" style="margin-top:18px;font-size:15px">🔔 Som de novo pedido <span style="font-weight:400;font-size:12px;color:var(--text-muted,#6b7280)">(vale só neste aparelho, salva sozinho)</span></div>
+        <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin:8px 0 12px">
+          <select id="ps-tipo" class="input-base" style="width:auto" onchange="pedSomCfgSalvar()"><option value="1">Campainha</option><option value="2">Alerta (bipes)</option><option value="3">Sirene</option></select>
+          <label style="display:flex;align-items:center;gap:6px;font-size:13px">Volume <input id="ps-vol" type="range" min="20" max="100" step="10" value="80" oninput="pedSomCfgSalvar()"></label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:13px"><input id="ps-rep" type="checkbox" checked onchange="pedSomCfgSalvar()"> Repetir até aceitar o pedido</label>
+          <button class="btn btn-secondary btn-md" type="button" onclick="pedSomTestar()">▶ Testar som</button>
+        </div>
         <div class="form-actions" style="margin-top:12px">
           <button class="btn btn-primary btn-md" onclick="pedConfigSalvar()">Salvar</button>
           <button class="btn btn-secondary btn-md" onclick="pedConfigFechar()">Cancelar</button>
@@ -17796,7 +17803,7 @@ function _pedTotais(p) {
 /* ---------- Alerta de pedido novo ---------- */
 function _pedDetectarNovos() {
   const lista = _pedLista();
-  if (_pedVistos === null) { _pedVistos = new Set(lista.map(p => p.id)); return; }
+  if (_pedVistos === null) { _pedVistos = new Set(lista.map(p => p.id)); if (_pedTemNovoPendente()) _pedLoopIniciar(); return; }
   const novos = lista.filter(p => !_pedVistos.has(p.id));
   novos.forEach(p => _pedVistos.add(p.id));
   const reais = novos.filter(p => p.status === 'novo');
@@ -17805,9 +17812,64 @@ function _pedDetectarNovos() {
 function _pedAlertar(novos) {
   const p = novos[0];
   showToast('🛵 Novo pedido online ' + (p.codigo || '') + (novos.length > 1 ? ' (+' + (novos.length - 1) + ')' : ''));
-  _pedBeep();
+  _pedSomPedido();
+  _pedLoopIniciar();
   try { if (navigator.vibrate) navigator.vibrate([200, 100, 200]); } catch (e) {}
 }
+/* ---------- Som de novo pedido: toque escolhido, volume e repetição ---------- */
+function _pedSomCfg() {
+  let c = {}; try { c = JSON.parse(localStorage.getItem('pedSomCfg') || '{}') || {}; } catch (e) {}
+  return { tipo: [1, 2, 3].includes(c.tipo) ? c.tipo : 1, vol: (c.vol >= 0.2 && c.vol <= 1) ? c.vol : 0.8, repetir: c.repetir !== false };
+}
+function pedSomCfgSalvar() {
+  const tipo = parseInt(document.getElementById('ps-tipo').value, 10) || 1;
+  const vol = (parseInt(document.getElementById('ps-vol').value, 10) || 80) / 100;
+  const repetir = document.getElementById('ps-rep').checked;
+  try { localStorage.setItem('pedSomCfg', JSON.stringify({ tipo, vol, repetir })); } catch (e) {}
+}
+function pedSomCfgAbrir() {
+  const c = _pedSomCfg();
+  const t = document.getElementById('ps-tipo'), v = document.getElementById('ps-vol'), r = document.getElementById('ps-rep');
+  if (t) t.value = String(c.tipo); if (v) v.value = String(Math.round(c.vol * 100)); if (r) r.checked = c.repetir;
+}
+function pedSomTestar() { pedSomCfgSalvar(); _pedSomPedido(true); }
+function _pedSomPedido(forcar) {
+  if (!_pedSom && !forcar) return;
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
+    _pedAudio = _pedAudio || new AC();
+    if (_pedAudio.state === 'suspended') _pedAudio.resume();
+    const c = _pedSomCfg(), t0 = _pedAudio.currentTime + 0.02;
+    const nota = (freq, ini, dur, onda, ganho) => {
+      const o = _pedAudio.createOscillator(), g = _pedAudio.createGain();
+      o.type = onda; o.frequency.value = freq;
+      g.gain.setValueAtTime(0.0001, t0 + ini);
+      g.gain.exponentialRampToValueAtTime(Math.max(0.001, ganho * c.vol), t0 + ini + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + ini + dur);
+      o.connect(g); g.connect(_pedAudio.destination);
+      o.start(t0 + ini); o.stop(t0 + ini + dur + 0.02);
+    };
+    if (c.tipo === 1) { // campainha "ding-dong", duas vezes
+      [0, 0.9].forEach(b => { nota(880, b, 0.55, 'triangle', 0.6); nota(659, b + 0.35, 0.7, 'triangle', 0.6); });
+    } else if (c.tipo === 2) { // alerta: bipes rápidos
+      for (let i = 0; i < 6; i++) nota(i % 2 ? 1175 : 1046, i * 0.16, 0.12, 'square', 0.35);
+    } else { // sirene: sobe e desce
+      for (let i = 0; i < 4; i++) { nota(660, i * 0.45, 0.22, 'sawtooth', 0.3); nota(880, i * 0.45 + 0.22, 0.22, 'sawtooth', 0.3); }
+    }
+  } catch (e) {}
+}
+let _pedLoopTimer = null;
+// pedido "novo" (ainda não aceito) das últimas 2 horas; pedidos antigos esquecidos não ficam tocando
+function _pedTemNovoPendente() { const lim = Date.now() - 36e5 * 2; return _pedLista().some(p => p.status === 'novo' && (!p.ts || p.ts > lim)); }
+function _pedLoopIniciar() {
+  if (_pedLoopTimer || !_pedSomCfg().repetir) return;
+  _pedLoopTimer = setInterval(() => {
+    if (!_pedSom || !_pedSomCfg().repetir || !_pedTemNovoPendente()) { _pedLoopParar(); return; }
+    _pedSomPedido();
+    try { if (navigator.vibrate) navigator.vibrate([200, 100, 200]); } catch (e) {}
+  }, 6000);
+}
+function _pedLoopParar() { if (_pedLoopTimer) { clearInterval(_pedLoopTimer); _pedLoopTimer = null; } }
 function _pedBeep() {
   if (!_pedSom) return;
   try {
@@ -18184,6 +18246,7 @@ function pedConfigAbrir() {
   for (let i = 0; i < 5; i++) { set('pc-fk-' + i, fx[i] ? String(fx[i].ate).replace('.', ',') : ''); set('pc-fv-' + i, fx[i] ? money(fx[i].valor) : ''); }
   set('pc-acima', c.taxaAcima != null ? money(c.taxaAcima) : '');
   _pedMapaLink();
+  pedSomCfgAbrir();
   document.getElementById('pc-entrega').checked  = c.aceitaEntrega !== false;
   document.getElementById('pc-retirada').checked = c.aceitaRetirada !== false;
   document.getElementById('pc-aberto').checked   = _pedCfg() ? c.aberto === true : true;
