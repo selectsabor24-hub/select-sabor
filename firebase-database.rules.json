@@ -164,6 +164,9 @@
               }
             }
           },
+          "taxaAcima": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1000"
+          },
           "$outro": {
             ".validate": "false"
           }

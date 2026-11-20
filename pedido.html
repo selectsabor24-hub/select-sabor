@@ -448,7 +448,8 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
   function temCoord() { return !!(cfg && typeof cfg.lojaLat === 'number' && typeof cfg.lojaLng === 'number'); }
   function usaFaixas() { return modo === 'entrega' && faixas().length > 0 && temCoord(); }
   function porKmAtivo() { return faixas().length > 0 && temCoord(); }
-  function taxaPorKm(km) { var f = faixas(); for (var i = 0; i < f.length; i++) { if (km <= f[i].ate + 1e-9) return f[i].valor; } return null; }
+  function taxaAcima() { return (cfg && typeof cfg.taxaAcima === 'number' && cfg.taxaAcima >= 0) ? cfg.taxaAcima : null; }
+  function taxaPorKm(km) { var f = faixas(); for (var i = 0; i < f.length; i++) { if (km <= f[i].ate + 1e-9) return f[i].valor; } return taxaAcima(); } // acima do último km: taxa fixa (se a loja definiu); senão null = fora da área
   function kmMax() { var f = faixas(); return f.length ? f[f.length - 1].ate : 0; }
   function menorTaxa() { var f = faixas(); return f.reduce(function (m, x) { return Math.min(m, x.valor); }, Infinity); }
   function fmtKm(k) { return String(k).replace('.', ','); }
