@@ -4716,6 +4716,7 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
           <select id="ps-tipo" class="input-base" style="width:auto" onchange="pedSomCfgSalvar()"><option value="1">Campainha</option><option value="2">Alerta (bipes)</option><option value="3">Sirene</option></select>
           <label style="display:flex;align-items:center;gap:6px;font-size:13px">Volume <input id="ps-vol" type="range" min="20" max="100" step="10" value="80" oninput="pedSomCfgSalvar()"></label>
           <label style="display:flex;align-items:center;gap:6px;font-size:13px"><input id="ps-rep" type="checkbox" checked onchange="pedSomCfgSalvar()"> Repetir até aceitar o pedido</label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:13px"><input id="ps-vib" type="checkbox" checked onchange="pedSomCfgSalvar()"> 📳 Vibrar ao receber pedido</label>
           <button class="btn btn-secondary btn-md" type="button" onclick="pedSomTestar()">▶ Testar som</button>
         </div>
         <div class="form-actions" style="margin-top:12px">
@@ -17824,25 +17825,31 @@ function _pedAlertar(novos) {
   showToast('🛵 Novo pedido online ' + (p.codigo || '') + (novos.length > 1 ? ' (+' + (novos.length - 1) + ')' : ''));
   _pedSomPedido();
   _pedLoopIniciar();
-  try { if (navigator.vibrate) navigator.vibrate([200, 100, 200]); } catch (e) {}
+  _pedVibrar();
 }
 /* ---------- Som de novo pedido: toque escolhido, volume e repetição ---------- */
 function _pedSomCfg() {
   let c = {}; try { c = JSON.parse(localStorage.getItem('pedSomCfg') || '{}') || {}; } catch (e) {}
-  return { tipo: [1, 2, 3].includes(c.tipo) ? c.tipo : 1, vol: (c.vol >= 0.2 && c.vol <= 1) ? c.vol : 0.8, repetir: c.repetir !== false };
+  return { tipo: [1, 2, 3].includes(c.tipo) ? c.tipo : 1, vol: (c.vol >= 0.2 && c.vol <= 1) ? c.vol : 0.8, repetir: c.repetir !== false, vib: c.vib !== false };
 }
 function pedSomCfgSalvar() {
   const tipo = parseInt(document.getElementById('ps-tipo').value, 10) || 1;
   const vol = (parseInt(document.getElementById('ps-vol').value, 10) || 80) / 100;
   const repetir = document.getElementById('ps-rep').checked;
-  try { localStorage.setItem('pedSomCfg', JSON.stringify({ tipo, vol, repetir })); } catch (e) {}
+  const vibEl = document.getElementById('ps-vib');
+  const vib = vibEl ? vibEl.checked : true;
+  try { localStorage.setItem('pedSomCfg', JSON.stringify({ tipo, vol, repetir, vib })); } catch (e) {}
 }
 function pedSomCfgAbrir() {
   const c = _pedSomCfg();
-  const t = document.getElementById('ps-tipo'), v = document.getElementById('ps-vol'), r = document.getElementById('ps-rep');
-  if (t) t.value = String(c.tipo); if (v) v.value = String(Math.round(c.vol * 100)); if (r) r.checked = c.repetir;
+  const t = document.getElementById('ps-tipo'), v = document.getElementById('ps-vol'), r = document.getElementById('ps-rep'), vb = document.getElementById('ps-vib');
+  if (t) t.value = String(c.tipo); if (v) v.value = String(Math.round(c.vol * 100)); if (r) r.checked = c.repetir; if (vb) vb.checked = c.vib;
 }
-function pedSomTestar() { pedSomCfgSalvar(); _pedSomPedido(true); }
+function pedSomTestar() { pedSomCfgSalvar(); _pedSomPedido(true); _pedVibrar(); }
+/* Vibração (padrão: ligada) — independe do som estar mudo */
+function _pedVibrar(padrao) {
+  try { if (_pedSomCfg().vib && navigator.vibrate) navigator.vibrate(padrao || [400, 150, 400, 150, 400]); } catch (e) {}
+}
 function _pedSomPedido(forcar) {
   if (!_pedSom && !forcar) return;
   try {
@@ -17874,9 +17881,9 @@ function _pedTemNovoPendente() { const lim = Date.now() - 36e5 * 2; return _pedL
 function _pedLoopIniciar() {
   if (_pedLoopTimer || !_pedSomCfg().repetir) return;
   _pedLoopTimer = setInterval(() => {
-    if (!_pedSom || !_pedSomCfg().repetir || !_pedTemNovoPendente()) { _pedLoopParar(); return; }
+    if ((!_pedSom && !_pedSomCfg().vib) || !_pedSomCfg().repetir || !_pedTemNovoPendente()) { _pedLoopParar(); return; }
     _pedSomPedido();
-    try { if (navigator.vibrate) navigator.vibrate([200, 100, 200]); } catch (e) {}
+    _pedVibrar();
   }, 6000);
 }
 function _pedLoopParar() { if (_pedLoopTimer) { clearInterval(_pedLoopTimer); _pedLoopTimer = null; } }
@@ -18407,7 +18414,7 @@ function _chatDetectar() {
   const ult = _chatMsgs(p).filter(m => m.de === 'cliente').pop();
   showToast('💬 ' + ((p.cliente || {}).nome || 'Cliente') + ' (#' + (p.codigo || '') + '): ' + String((ult && ult.txt) || '').slice(0, 60));
   _pedBeep();
-  try { if (navigator.vibrate) navigator.vibrate([200, 100, 200]); } catch (e) {}
+  _pedVibrar([200, 100, 200]);
 }
 
 function chatAbrir(id) {
@@ -18495,7 +18502,7 @@ function _motDetectar() {
   if (!novos.length || _currentSection !== 'motoqueiro') return;
   showToast('🛵 Pedido ' + (novos[0].codigo || '') + ' pronto para entrega' + (novos.length > 1 ? ' (+' + (novos.length - 1) + ')' : ''));
   _pedBeep();
-  try { if (navigator.vibrate) navigator.vibrate([200, 100, 200]); } catch (e) {}
+  _pedVibrar();
 }
 
 function motSetTab(t) { _motTab = t; renderMotoqueiro(); }

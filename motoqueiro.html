@@ -546,7 +546,7 @@ button { cursor: pointer; }
     var titulo = '🍳 Pedido aceito — vá para a loja' + (novos.length > 1 ? ' (+' + (novos.length - 1) + ')' : '');
     var corpo = '#' + (p.codigo || '') + (e.bairro ? ' — ' + e.bairro : '') + (p.previsao ? ' · previsão ' + p.previsao : '');
     bipar();
-    try { if (navigator.vibrate) navigator.vibrate([200, 100, 200]); } catch (x) {}
+    vibrar([300, 120, 300]);
     var a = $('#alerta');
     a.innerHTML = esc(titulo) + '<small>' + esc(corpo) + '</small>';
     a.classList.remove('hide'); a.style.animation = 'none'; void a.offsetWidth; a.style.animation = '';
@@ -560,7 +560,7 @@ button { cursor: pointer; }
     var corpo = '#' + (p.codigo || '') + ' — ' + [[e.rua, e.numero].filter(Boolean).join(', '), e.bairro, e.cep ? 'CEP ' + e.cep : ''].filter(Boolean).join(' — ');
     bipar();
     loopIniciar();
-    try { if (navigator.vibrate) navigator.vibrate([300, 120, 300, 120, 300]); } catch (x) {}
+    vibrar([500, 150, 500, 150, 500]);
     var a = $('#alerta');
     a.innerHTML = esc(titulo) + '<small>' + esc(corpo) + '</small>';
     a.classList.remove('hide'); a.style.animation = 'none'; void a.offsetWidth; a.style.animation = '';
@@ -570,7 +570,7 @@ button { cursor: pointer; }
   }
   function notificar(titulo, corpo, id) {
     if (!('Notification' in window) || Notification.permission !== 'granted') return;
-    var op = { body: corpo, icon: 'icon-192.png', badge: 'icon-192.png', tag: 'entrega-' + id, renotify: true, requireInteraction: true, vibrate: [300, 120, 300, 120, 300] };
+    var op = { body: corpo, icon: 'icon-192.png', badge: 'icon-192.png', tag: 'entrega-' + id, renotify: true, requireInteraction: true, vibrate: [500, 150, 500, 150, 500] };
     try {
       if (swReg && swReg.showNotification) swReg.showNotification(titulo, op);
       else new Notification(titulo, op);
@@ -592,7 +592,11 @@ button { cursor: pointer; }
   /* Toque escolhido, volume e repetição (salvo neste aparelho) */
   function somCfg() {
     var c = {}; try { c = JSON.parse(lsGet('motSomCfg', '{}')) || {}; } catch (e) {}
-    return { tipo: (c.tipo === 2 || c.tipo === 3) ? c.tipo : 1, vol: (c.vol >= 0.2 && c.vol <= 1) ? c.vol : 0.9, repetir: c.repetir !== false };
+    return { tipo: (c.tipo === 2 || c.tipo === 3) ? c.tipo : 1, vol: (c.vol >= 0.2 && c.vol <= 1) ? c.vol : 0.9, repetir: c.repetir !== false, vib: c.vib !== false };
+  }
+  /* Vibração (padrão: ligada) — independe do som estar mudo */
+  function vibrar(padrao) {
+    try { if (somCfg().vib && navigator.vibrate) navigator.vibrate(padrao || [400, 150, 400, 150, 400]); } catch (x) {}
   }
   function tocar(c) {
     try {
@@ -626,9 +630,9 @@ button { cursor: pointer; }
   function loopIniciar() {
     if (loopT || !somCfg().repetir) return;
     loopT = setInterval(function () {
-      if (!eu || !som || !somCfg().repetir || !pendentes().length) { loopParar(); return; }
+      if (!eu || (!som && !somCfg().vib) || !somCfg().repetir || !pendentes().length) { loopParar(); return; }
       bipar();
-      try { if (navigator.vibrate) navigator.vibrate([300, 120, 300]); } catch (x) {}
+      vibrar([500, 150, 500]);
     }, 8000);
   }
   function loopParar() { if (loopT) { clearInterval(loopT); loopT = null; } }
@@ -639,14 +643,15 @@ button { cursor: pointer; }
       '<label>Toque<br><select id="sc-tipo" style="width:100%;font-size:16px;padding:10px"><option value="1">Campainha</option><option value="2">Alerta (bipes)</option><option value="3">Sirene</option></select></label>' +
       '<label>Volume<br><input id="sc-vol" type="range" min="20" max="100" step="10" style="width:100%"></label>' +
       '<label style="display:flex;gap:8px;align-items:center"><input id="sc-rep" type="checkbox"> Repetir até pegar a entrega</label>' +
+      '<label style="display:flex;gap:8px;align-items:center"><input id="sc-vib" type="checkbox"> 📳 Vibrar ao receber pedido</label>' +
       '<button type="button" id="sc-test" style="' + btn + '">▶ Testar som</button></div>',
       'Salvar', function () { lsSet('motSomCfg', JSON.stringify(lerCfgModal())); toast('Som salvo'); });
     var c = somCfg();
-    $('#sc-tipo').value = String(c.tipo); $('#sc-vol').value = String(Math.round(c.vol * 100)); $('#sc-rep').checked = c.repetir;
-    $('#sc-test').onclick = function () { destravarAudio(); tocar(lerCfgModal()); };
+    $('#sc-tipo').value = String(c.tipo); $('#sc-vol').value = String(Math.round(c.vol * 100)); $('#sc-rep').checked = c.repetir; $('#sc-vib').checked = c.vib;
+    $('#sc-test').onclick = function () { destravarAudio(); tocar(lerCfgModal()); if (lerCfgModal().vib && navigator.vibrate) { try { navigator.vibrate([400, 150, 400]); } catch (x) {} } };
   });
   function lerCfgModal() {
-    return { tipo: parseInt($('#sc-tipo').value, 10) || 1, vol: (parseInt($('#sc-vol').value, 10) || 90) / 100, repetir: $('#sc-rep').checked };
+    return { tipo: parseInt($('#sc-tipo').value, 10) || 1, vol: (parseInt($('#sc-vol').value, 10) || 90) / 100, repetir: $('#sc-rep').checked, vib: $('#sc-vib').checked };
   }
   $('#bt-som').addEventListener('click', function () {
     som = !som; lsSet('motSom', som ? '1' : '0');
