@@ -17721,6 +17721,7 @@ function _pedCardHtml(p) {
   else if (p.status === 'saiu')     acoes = btn('entregue', '✅ Entregue', 'btn-primary') + btn('cancelar', '✖ Cancelar');
   else if (p.status === 'entregue') acoes = p.lancado ? '<span class="ped-ok">✓ Lançado no caixa</span>' : btn('caixa', '💰 Lançar no caixa', 'btn-primary');
   acoes += btn('whats', '💬 WhatsApp') + btn('imprimir', '🖨 Imprimir');
+  acoes += `<button class="btn btn-secondary btn-md" style="color:var(--red)" data-ped="${id}" onclick="pedAcao('excluir', this.dataset.ped)">🗑 Excluir</button>`;
   const itens = t.itens.map(i =>
     `<li><span>${i.q}× ${escapeHtml(i.n)}${(!i.noCardapio && !i.fixo) ? ' <em class="ped-warn">(fora do cardápio)</em>' : ''}</span><span>${fmt(i.preco * i.q)}</span></li>`).join('');
   return `<div class="card ped-card" style="--ped-cor:${st.cor}">
@@ -17755,6 +17756,7 @@ function pedAcao(a, id) {
     case 'whats':    return pedWhats(id);
     case 'imprimir': return pedImprimir(id);
     case 'caixa':    return pedLancarCaixa(id);
+    case 'excluir':  return pedExcluir(id);
   }
 }
 
@@ -17814,6 +17816,33 @@ function pedEntregar(id) {
       'Pedido <strong>' + escapeHtml(p.codigo || '') + '</strong> finalizado. Lançar <strong>' + fmt(t.total) + '</strong> (' + (PED_PAG[p.pagamento] || '') + ') no caixa de hoje?<br><small style="color:var(--text3)">Entra como venda no dia, igual a uma comanda fechada.</small>',
       [{ label: 'Lançar no caixa', style: 'primary', action: () => pedLancarCaixa(id) }, { label: 'Agora não', style: 'secondary' }]);
   }
+}
+
+/** Exclui o pedido de vez (útil para testes). Se já foi lançado no caixa, desfaz o lançamento do dia antes. */
+function pedExcluir(id) {
+  const p = _pedGet(id); if (!p || !_lojaAtiva) return;
+  const cid = 'ped_' + id;
+  const c = p.lancado ? _cmdGet(cid) : null;
+  const doCaixa = !!(c && c.status === 'fechada' && c.data);
+  if (doCaixa && typeof _bloquearSeCaixaFechado === 'function' && _bloquearSeCaixaFechado(c.data, 'excluir pedido')) return;
+  const final = p.status === 'entregue' || p.status === 'cancelado';
+  const aviso = (final ? '' : '<br><br><strong>Atenção:</strong> este pedido ainda está em andamento e o cliente deixará de acompanhá-lo.')
+    + (doCaixa ? '<br><br>O valor de <strong>' + fmt(_pedTotais(p).total) + '</strong> será descontado do caixa de ' + _formatarDataBR(c.data) + '.' : '');
+  showModal('Excluir pedido ' + (p.codigo || ''),
+    'Excluir o pedido <strong>' + escapeHtml(p.codigo || '') + '</strong> de ' + escapeHtml((p.cliente || {}).nome || 'cliente') + '? Não é possível desfazer.' + aviso,
+    [{ label: 'Excluir pedido', style: 'danger', action: () => {
+        if (doCaixa) {
+          _cmdLancAplicar({ id: c.id, data: c.data, pagamentos: c.pagamentos }, -1);
+        }
+        const apagarComanda = c ? _cmdRef(cid).remove() : Promise.resolve();
+        apagarComanda
+          .then(() => _pedRef(id).remove())
+          .then(() => showToast('Pedido ' + (p.codigo || '') + ' excluído'))
+          .catch(e => {
+            console.error(e);
+            showToast(e && /permission/i.test(e.message || e.code || '') ? 'Sem permissão para excluir o pedido.' : 'Erro ao excluir o pedido', false);
+          });
+    }}, { label: 'Voltar', style: 'secondary' }]);
 }
 
 /** Fecha uma comanda "Online #COD" paga e lança o valor no caixa do dia (mesmo fluxo das mesas). */
