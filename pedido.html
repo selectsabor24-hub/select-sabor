@@ -485,6 +485,12 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
   var HORA_OFFSET = 0, _assinHr = null; // HORA_OFFSET: diferença entre o relógio do aparelho e o do servidor
   // Hora da LOJA (Brasília, UTC-3), com o relógio corrigido pelo servidor — é a mesma conta que as regras do Firebase fazem.
   function agoraMin() { return Math.floor((((Date.now() + HORA_OFFSET - 10800000) % 86400000) + 86400000) % 86400000 / 60000); }
+  // "15-30" vira "Preparo: 15-30 min" (se o texto não tiver letras, acrescenta "min"; não repete "Preparo")
+  function rotuloPreparo(t) {
+    t = String(t == null ? '' : t).trim(); if (!t) return '';
+    if (!/[A-Za-zÀ-ÿ]/.test(t)) t += ' min';
+    return /^preparo/i.test(t) ? t : 'Preparo: ' + t;
+  }
   function fmtMin(n) { return typeof n === 'number' ? ('0' + Math.floor(n / 60)).slice(-2) + ':' + ('0' + (n % 60)).slice(-2) : ''; }
   /* Horário de funcionamento da loja (cfg.horarioOn / abreMin / fechaMin): fora dele ninguém consegue pedir. */
   function horarioLojaOk() {
@@ -725,7 +731,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     if (window.pedidoPwa && cfg && cfg.nome) window.pedidoPwa.nome(cfg.nome);
     document.title = ((cfg && cfg.nome) ? cfg.nome + ' · ' : '') + 'Faça seu pedido';
     var info = [];
-    if (cfg && cfg.tempoEstimado) info.push('⏱ ' + esc(cfg.tempoEstimado));
+    if (cfg && cfg.tempoEstimado) info.push('⏱ ' + esc(rotuloPreparo(cfg.tempoEstimado)));
     if (aceitaEntrega() && porKmAtivo()) info.push('🛵 Entrega a partir de ' + brl(menorTaxa()));
     else if (aceitaEntrega() && cfg && Number(cfg.taxaEntrega) > 0) info.push('🛵 Entrega ' + brl(cfg.taxaEntrega));
     else if (aceitaEntrega() && cfg) info.push('🛵 Entrega grátis');

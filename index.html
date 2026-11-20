@@ -4699,7 +4699,7 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
         <div class="card-title">🏪 Dados do restaurante</div>
         <div class="form-grid">
           <div class="form-group"><label>Nome que o cliente vê</label><input id="pc-nome" class="input-base" maxlength="80" placeholder="Ex.: Select Sabor"></div>
-          <div class="form-group"><label>Tempo estimado</label><input id="pc-tempo" class="input-base" maxlength="40" placeholder="Ex.: 40–50 min"></div>
+          <div class="form-group"><label>Tempo de preparo</label><input id="pc-tempo" class="input-base" maxlength="40" placeholder="Ex.: 15-30 min"></div>
           <div class="form-group"><label>WhatsApp da loja (com DDD)</label><input id="pc-whats" class="input-base" inputmode="tel" maxlength="16" placeholder="(31) 99999-0000" oninput="this.value=_maskFone(this.value)"></div>
         </div>
         <div class="form-actions" style="margin-top:12px"><button class="btn btn-primary btn-md" type="button" onclick="pedConfigSalvarSecao('dados')">💾 Salvar dados do restaurante</button></div>
@@ -18285,7 +18285,7 @@ function renderPedidos() {
     <div class="ped-topo-linha">
       <div>
         <div class="ped-status ${_pedStatusInfo(cfg).on ? 'on' : 'off'}" id="ped-status-el">${_pedStatusInfo(cfg).txt}</div>
-        <div class="ped-sub">${escapeHtml(cfg.nome || '')}${cfg.tempoEstimado ? ' · ⏱ ' + escapeHtml(cfg.tempoEstimado) : ''}${(cfg.horarioOn === true && _pedMinHM(cfg.abreMin) && _pedMinHM(cfg.fechaMin)) ? ' · 🕒 ' + _pedMinHM(cfg.abreMin) + ' às ' + _pedMinHM(cfg.fechaMin) : ''} · Entrega ${(parseFloat(cfg.taxaEntrega) || 0) > 0 ? fmt(cfg.taxaEntrega) : 'grátis'}</div>
+        <div class="ped-sub">${escapeHtml(cfg.nome || '')}${cfg.tempoEstimado ? ' · ⏱ Preparo ' + escapeHtml(cfg.tempoEstimado) : ''}${(cfg.horarioOn === true && _pedMinHM(cfg.abreMin) && _pedMinHM(cfg.fechaMin)) ? ' · 🕒 ' + _pedMinHM(cfg.abreMin) + ' às ' + _pedMinHM(cfg.fechaMin) : ''} · Entrega ${(parseFloat(cfg.taxaEntrega) || 0) > 0 ? fmt(cfg.taxaEntrega) : 'grátis'}</div>
       </div>
       <button class="btn ${aberto ? 'btn-secondary' : 'btn-primary'} btn-md" onclick="pedToggleAberto()">${aberto ? '⏸ Pausar pedidos' : '▶ Abrir para pedidos'}</button>
     </div>
