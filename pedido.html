@@ -219,7 +219,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     </div>
 
     <div class="bloco" id="bl-end"><h3>Endereço de entrega</h3>
-      <div class="campo"><label for="f-cep">CEP</label><input id="f-cep" type="text" inputmode="numeric" autocomplete="postal-code" maxlength="9" placeholder="00000-000"></div>
+      <div class="campo"><label for="f-cep">CEP</label><input id="f-cep" type="text" inputmode="numeric" autocomplete="postal-code" maxlength="9" placeholder="00000-000"><small id="cep-msg" style="display:block;margin-top:4px;font-size:13px;color:var(--mut)"></small></div>
       <div class="campo"><label for="f-rua">Rua / avenida</label><input id="f-rua" autocomplete="address-line1" maxlength="120"></div>
       <div class="campo"><div class="dupla">
         <div><label for="f-num">Número</label><input id="f-num" maxlength="20" autocomplete="off"></div>
@@ -836,7 +836,33 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
   $('#ck-voltar').onclick = function () { desenharMenu(); desenharBarra(); mostrar('v-menu'); };
   $('#tr-voltar').onclick = voltarMenu;
   $('#btn-enviar').onclick = enviar;
-  $('#f-cep').addEventListener('input', function () { this.value = mascaraCep(this.value); });
+  /* CEP → preenche rua e bairro (ViaCEP). Se falhar, o cliente preenche à mão. */
+  var cepUlt = '', cepAuto = { rua: '', bairro: '' };
+  function cepMsg(t, erro) { var m = $('#cep-msg'); m.textContent = t || ''; m.style.color = erro ? '#B91C1C' : 'var(--mut)'; }
+  function buscarCep(d) {
+    if (d === cepUlt) return; cepUlt = d;
+    cepMsg('Buscando endereço…');
+    var ctl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    var to = setTimeout(function () { if (ctl) ctl.abort(); }, 8000);
+    fetch('https://viacep.com.br/ws/' + d + '/json/', ctl ? { signal: ctl.signal } : undefined)
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        clearTimeout(to);
+        if (d !== digitos($('#f-cep').value)) return; // o cliente já mudou o CEP
+        if (!j || j.erro) { cepMsg('CEP não encontrado. Preencha o endereço abaixo.', true); return; }
+        var rua = $('#f-rua'), bai = $('#f-bairro');
+        if (j.logradouro && (!rua.value.trim() || rua.value === cepAuto.rua)) { rua.value = j.logradouro; cepAuto.rua = j.logradouro; }
+        if (j.bairro && (!bai.value.trim() || bai.value === cepAuto.bairro)) { bai.value = j.bairro; cepAuto.bairro = j.bairro; }
+        cepMsg('✓ Endereço encontrado. Confira e informe o número.');
+        var n = $('#f-num'); if (n && !n.value.trim()) n.focus();
+      })
+      .catch(function () { clearTimeout(to); cepUlt = ''; cepMsg('Não foi possível buscar o CEP agora. Preencha o endereço abaixo.', true); });
+  }
+  $('#f-cep').addEventListener('input', function () {
+    this.value = mascaraCep(this.value);
+    var d = digitos(this.value);
+    if (d.length === 8) buscarCep(d); else { cepUlt = ''; cepMsg(''); }
+  });
   $('#f-tel').addEventListener('input', function () { this.value = mascaraTel(this.value); });
 
   /* ---------- Carga inicial ---------- */
