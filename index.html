@@ -17850,7 +17850,7 @@ function _pedCardHtml(p) {
       <span class="ped-hora">${_pedHora(p.ts)} · ${_pedHa(p.ts)}</span>
     </div>
     <div class="ped-cli"><strong>${escapeHtml(cli.nome || '')}</strong> · <a href="tel:${escapeHtml(String(cli.telefone || '').replace(/[^\d+]/g, ''))}">${escapeHtml(cli.telefone || '')}</a></div>
-    ${ent ? `<div class="ped-end">📍 ${escapeHtml((e.rua || '') + ', ' + (e.numero || '') + ' — ' + (e.bairro || ''))}${e.complemento ? ' · ' + escapeHtml(e.complemento) : ''}${e.referencia ? ' · ref.: ' + escapeHtml(e.referencia) : ''}</div>` : ''}
+    ${ent ? `<div class="ped-end">📍 ${escapeHtml((e.rua || '') + ', ' + (e.numero || '') + ' — ' + (e.bairro || '') + (e.cep ? ' · CEP ' + e.cep : ''))}${e.complemento ? ' · ' + escapeHtml(e.complemento) : ''}${e.referencia ? ' · ref.: ' + escapeHtml(e.referencia) : ''}</div>` : ''}
     ${_pedCodEntregaHtml(p)}
     <ul class="ped-itens">${itens}</ul>
     ${p.obs ? `<div class="ped-obs">📝 ${escapeHtml(p.obs)}</div>` : ''}
@@ -18029,7 +18029,7 @@ function pedImprimir(id) {
     <div class="c">${new Date(p.ts || Date.now()).toLocaleString('pt-BR')}</div><hr>
     <div class="b">${p.tipo === 'entrega' ? 'ENTREGA' : 'RETIRADA NA LOJA'}</div>
     <div>${escapeHtml(cli.nome || '')} — ${escapeHtml(cli.telefone || '')}</div>
-    ${p.tipo === 'entrega' ? `<div>${escapeHtml((e.rua || '') + ', ' + (e.numero || '') + ' - ' + (e.bairro || ''))}</div>${e.complemento ? '<div>' + escapeHtml(e.complemento) + '</div>' : ''}${e.referencia ? '<div>Ref.: ' + escapeHtml(e.referencia) + '</div>' : ''}` : ''}
+    ${p.tipo === 'entrega' ? `<div>${escapeHtml((e.rua || '') + ', ' + (e.numero || '') + ' - ' + (e.bairro || '') + (e.cep ? ' - CEP ' + e.cep : ''))}</div>${e.complemento ? '<div>' + escapeHtml(e.complemento) + '</div>' : ''}${e.referencia ? '<div>Ref.: ' + escapeHtml(e.referencia) + '</div>' : ''}` : ''}
     <hr><table>${linhas}</table><hr>
     <table><tr><td>Subtotal</td><td style="text-align:right">${fmt(t.sub)}</td></tr>
     ${p.tipo === 'entrega' ? `<tr><td>Taxa de entrega</td><td style="text-align:right">${fmt(t.taxa)}</td></tr>` : ''}
@@ -18571,8 +18571,8 @@ function _motCardHtml(p) {
   const t = _pedTotais(p), cli = p.cliente || {}, e = p.endereco || {};
   const cor = p.status === 'pronto' ? MOT_COR.sair : (p.status === 'saiu' ? MOT_COR.rua : MOT_COR.feitas);
   const fone = String(cli.telefone || '').replace(/[^\d+]/g, '');
-  const endTxt = [[e.rua, e.numero].filter(Boolean).join(', '), e.bairro].filter(Boolean).join(' — ');
-  const mapa = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent([e.rua, e.numero, e.bairro].filter(Boolean).join(', '));
+  const endTxt = [[e.rua, e.numero].filter(Boolean).join(', '), e.bairro, e.cep ? 'CEP ' + e.cep : ''].filter(Boolean).join(' — ');
+  const mapa = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent([e.rua, e.numero, e.bairro, e.cep].filter(Boolean).join(', '));
   const extra = [e.complemento, e.referencia ? 'ref.: ' + e.referencia : ''].filter(Boolean).join(' · ');
   const fin = p.status === 'entregue';
 

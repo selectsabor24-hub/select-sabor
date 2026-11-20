@@ -193,6 +193,9 @@
               "bairro": {
                 ".validate": "newData.isString() && newData.val().length >= 2 && newData.val().length <= 80"
               },
+              "cep": {
+                ".validate": "newData.isString() && newData.val().matches(/^[0-9]{5}-[0-9]{3}$/)"
+              },
               "complemento": {
                 ".validate": "newData.isString() && newData.val().length <= 120"
               },

@@ -219,6 +219,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     </div>
 
     <div class="bloco" id="bl-end"><h3>Endereço de entrega</h3>
+      <div class="campo"><label for="f-cep">CEP</label><input id="f-cep" type="text" inputmode="numeric" autocomplete="postal-code" maxlength="9" placeholder="00000-000"></div>
       <div class="campo"><label for="f-rua">Rua / avenida</label><input id="f-rua" autocomplete="address-line1" maxlength="120"></div>
       <div class="campo"><div class="dupla">
         <div><label for="f-num">Número</label><input id="f-num" maxlength="20" autocomplete="off"></div>
@@ -531,9 +532,10 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     var salvo = lsGet('cliente') || {};
     if (!$('#f-nome').value) $('#f-nome').value = salvo.nome || '';
     if (!$('#f-tel').value) $('#f-tel').value = salvo.tel || '';
-    if (!$('#f-rua').value) { $('#f-rua').value = salvo.rua || ''; $('#f-num').value = salvo.num || ''; $('#f-bairro').value = salvo.bairro || ''; $('#f-comp').value = salvo.comp || ''; $('#f-ref').value = salvo.ref || ''; }
+    if (!$('#f-rua').value) { $('#f-cep').value = salvo.cep || ''; $('#f-rua').value = salvo.rua || ''; $('#f-num').value = salvo.num || ''; $('#f-bairro').value = salvo.bairro || ''; $('#f-comp').value = salvo.comp || ''; $('#f-ref').value = salvo.ref || ''; }
     setErro(''); desenharCheckout(); mostrar('v-ck');
   }
+  function mascaraCep(v) { var d = digitos(v).slice(0, 8); return d.length > 5 ? d.slice(0, 5) + '-' + d.slice(5) : d; }
   function mascaraTel(v) {
     var d = digitos(v).slice(0, 11);
     if (d.length > 6) return '(' + d.slice(0, 2) + ') ' + d.slice(2, d.length - 4) + '-' + d.slice(-4);
@@ -549,6 +551,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     if (nome.length < 2) return 'Informe seu nome.';
     if (tel.length < 10 || tel.length > 11) return 'Informe um telefone com DDD, por exemplo (31) 99999-0000.';
     if (modo === 'entrega') {
+      if (digitos($('#f-cep').value).length !== 8) return 'Informe o CEP do endereço (8 números).';
       if ($('#f-rua').value.trim().length < 2) return 'Informe a rua do endereço de entrega.';
       if (!$('#f-num').value.trim()) return 'Informe o número do endereço (ou S/N).';
       if ($('#f-bairro').value.trim().length < 2) return 'Informe o bairro.';
@@ -593,7 +596,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     };
     if (modo === 'entrega') {
       p.comCodigo = true;
-      p.endereco = { rua: $('#f-rua').value.trim(), numero: $('#f-num').value.trim(), bairro: $('#f-bairro').value.trim() };
+      p.endereco = { cep: mascaraCep($('#f-cep').value), rua: $('#f-rua').value.trim(), numero: $('#f-num').value.trim(), bairro: $('#f-bairro').value.trim() };
       if ($('#f-comp').value.trim()) p.endereco.complemento = $('#f-comp').value.trim();
       if ($('#f-ref').value.trim()) p.endereco.referencia = $('#f-ref').value.trim();
     }
@@ -618,7 +621,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
       envio = base('').update(up); // pedido + código gravados juntos
     } else envio = ref.set(dados);
     Promise.race([envio, temporizador]).then(function () {
-      lsSet('cliente', { nome: dados.cliente.nome, tel: dados.cliente.telefone, rua: $('#f-rua').value.trim(), num: $('#f-num').value.trim(), bairro: $('#f-bairro').value.trim(), comp: $('#f-comp').value.trim(), ref: $('#f-ref').value.trim() });
+      lsSet('cliente', { nome: dados.cliente.nome, tel: dados.cliente.telefone, cep: mascaraCep($('#f-cep').value), rua: $('#f-rua').value.trim(), num: $('#f-num').value.trim(), bairro: $('#f-bairro').value.trim(), comp: $('#f-comp').value.trim(), ref: $('#f-ref').value.trim() });
       var lista = lsGet('meusPedidos') || [];
       lista.unshift({ loja: LOJA, id: pendenteId, codigo: pendenteCodigo, ts: Date.now() });
       lsSet('meusPedidos', lista.slice(0, 10));
@@ -719,7 +722,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     var det = '<div class="linha"><span>Recebimento</span><span class="v">' + (entrega ? '🛵 Entrega' : '🏪 Retirada na loja') + '</span></div>';
     if (entrega && pedido.endereco) {
       var e = pedido.endereco;
-      det += '<div class="linha"><span class="n">Endereço</span><span class="v" style="text-align:right;font-weight:600">' + esc(e.rua + ', ' + e.numero + ' — ' + e.bairro + (e.complemento ? ' (' + e.complemento + ')' : '')) + '</span></div>';
+      det += '<div class="linha"><span class="n">Endereço</span><span class="v" style="text-align:right;font-weight:600">' + esc(e.rua + ', ' + e.numero + ' — ' + e.bairro + (e.cep ? ' · CEP ' + e.cep : '') + (e.complemento ? ' (' + e.complemento + ')' : '')) + '</span></div>';
     }
     det += '<div class="linha"><span>Pagamento</span><span class="v">' + esc(pg) + (pedido.pagamento === 'dinheiro' && pedido.troco ? ' · troco p/ ' + brl(pedido.troco) : '') + '</span></div>';
     if (pedido.obs) det += '<div class="linha"><span class="n">Observações</span><span class="v" style="text-align:right;font-weight:600">' + esc(pedido.obs) + '</span></div>';
@@ -833,6 +836,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
   $('#ck-voltar').onclick = function () { desenharMenu(); desenharBarra(); mostrar('v-menu'); };
   $('#tr-voltar').onclick = voltarMenu;
   $('#btn-enviar').onclick = enviar;
+  $('#f-cep').addEventListener('input', function () { this.value = mascaraCep(this.value); });
   $('#f-tel').addEventListener('input', function () { this.value = mascaraTel(this.value); });
 
   /* ---------- Carga inicial ---------- */

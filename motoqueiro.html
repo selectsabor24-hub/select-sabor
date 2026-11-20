@@ -410,8 +410,8 @@ button { cursor: pointer; }
     var cor = p.status === 'pronto' ? 'var(--roxo)' : (p.status === 'saiu' ? 'var(--azul)' : 'var(--ok)');
     var fin = p.status === 'entregue';
     var fone = String(cli.telefone || '').replace(/[^\d+]/g, '');
-    var endTxt = [[e.rua, e.numero].filter(Boolean).join(', '), e.bairro].filter(Boolean).join(' — ');
-    var destino = [e.rua, e.numero, e.bairro].filter(Boolean).join(', ');
+    var endTxt = [[e.rua, e.numero].filter(Boolean).join(', '), e.bairro, e.cep ? 'CEP ' + e.cep : ''].filter(Boolean).join(' — ');
+    var destino = [e.rua, e.numero, e.bairro, e.cep].filter(Boolean).join(', ');
     var rota = 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(destino) + '&travelmode=driving';
     var extra = [e.complemento, e.referencia ? 'ref.: ' + e.referencia : ''].filter(Boolean).join(' · ');
 
@@ -523,7 +523,7 @@ button { cursor: pointer; }
   function avisar(novos) {
     var p = novos[0], e = p.endereco || {};
     var titulo = '🛵 Nova entrega pronta' + (novos.length > 1 ? ' (+' + (novos.length - 1) + ')' : '');
-    var corpo = '#' + (p.codigo || '') + ' — ' + [[e.rua, e.numero].filter(Boolean).join(', '), e.bairro].filter(Boolean).join(' — ');
+    var corpo = '#' + (p.codigo || '') + ' — ' + [[e.rua, e.numero].filter(Boolean).join(', '), e.bairro, e.cep ? 'CEP ' + e.cep : ''].filter(Boolean).join(' — ');
     bipar();
     try { if (navigator.vibrate) navigator.vibrate([300, 120, 300, 120, 300]); } catch (x) {}
     var a = $('#alerta');
