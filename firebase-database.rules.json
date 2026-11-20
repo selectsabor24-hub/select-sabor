@@ -197,6 +197,9 @@
           "avisoFotoV": {
             ".validate": "newData.isNumber()"
           },
+          "destaqueId": {
+            ".validate": "newData.isString() && newData.val().length <= 60"
+          },
           "$outro": {
             ".validate": "false"
           }

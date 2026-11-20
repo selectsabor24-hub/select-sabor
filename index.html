@@ -5131,7 +5131,11 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
           </div>
           <div class="form-group">
             <label>Senha</label>
-            <input id="cfg-novo-senha" type="password" placeholder="Mínimo 6 caracteres">
+            <div style="position:relative">
+              <input id="cfg-novo-senha" type="password" placeholder="Mínimo 6 caracteres" autocomplete="new-password" style="padding-right:48px;width:100%">
+              <button type="button" id="cfg-senha-olho" onclick="cfgVerSenha()" aria-label="Mostrar senha" title="Mostrar/ocultar senha"
+                style="position:absolute;right:6px;top:50%;transform:translateY(-50%);width:36px;height:36px;border:0;background:transparent;cursor:pointer;font-size:18px;line-height:1;border-radius:8px;color:var(--text2)">👁️</button>
+            </div>
           </div>
           <div class="form-group">
             <label>Perfil de acesso</label>
@@ -16797,6 +16801,16 @@ function bancoIniciar() {
   });
 }
 
+/** Mostra/oculta a senha digitada em "Criar novo usuário". */
+function cfgVerSenha() {
+  const inp = document.getElementById('cfg-novo-senha'), btn = document.getElementById('cfg-senha-olho');
+  if (!inp) return;
+  const mostrar = inp.type === 'password';
+  inp.type = mostrar ? 'text' : 'password';
+  if (btn) { btn.textContent = mostrar ? '🙈' : '👁️'; btn.setAttribute('aria-label', mostrar ? 'Ocultar senha' : 'Mostrar senha'); }
+  inp.focus();
+}
+
 function alterarPerfilUsuario(uid, perfil) {
   if (!_bancoAdmin()) { showToast('Acesso restrito a administradores.', false); return; }
   _dbRef('usuarios/' + uid + '/perfil').set(perfil === 'atendimento' ? 'atendimento' : 'completo')
@@ -16844,6 +16858,7 @@ function criarUsuario() {
       document.getElementById('cfg-novo-nome').value  = '';
       document.getElementById('cfg-novo-email').value = '';
       document.getElementById('cfg-novo-senha').value = '';
+      { const i = document.getElementById('cfg-novo-senha'); if (i && i.type !== 'password') cfgVerSenha(); }
       renderConfiguracoes();
     })
     .catch(e => {
@@ -19874,6 +19889,7 @@ function renderCardapio() {
   }
 
   const catsOpts = ['<option value="">Todas as categorias</option>'].concat(cats.map(c => `<option value="${escapeAttr(c)}"${c === _cdpCatFiltro ? ' selected' : ''}>${escapeHtml(c)}</option>`)).join('');
+  html += _cdpDestaqueCard();
   html += `<div class="cdp-toolbar">
       <input type="text" id="cdp-busca" placeholder="Buscar item…" value="${escapeAttr(_cdpBusca)}" oninput="cdpFiltrar()">
       <select id="cdp-filtro-cat" onchange="cdpFiltrar()">${catsOpts}</select>
@@ -19881,6 +19897,33 @@ function renderCardapio() {
     <div id="cdp-lista"></div>`;
   box.innerHTML = html;
   _cdpRenderLista();
+}
+
+/* ───────── Destaque do cardápio ─────────
+   O item escolhido aparece no topo da página de pedidos (pedido.html), com foto, preço e botão
+   de adicionar à sacola. Fica em pedidosConfig/<loja>/destaqueId. */
+function _cdpDestaqueCard() {
+  const c = _pedCfg() || {}, atual = c.destaqueId || '';
+  const itens = _cmdCardapio().filter(i => i.ativo !== false).sort((a, b) => String(a.nome).localeCompare(String(b.nome)));
+  const opts = itens.map(i => `<option value="${escapeAttr(i.id)}"${i.id === atual ? ' selected' : ''}>${escapeHtml(i.nome)} — ${fmt(i.preco)}</option>`).join('');
+  return `<div class="card mb-5">
+    <div class="card-title">⭐ Destaque do cardápio</div>
+    <div class="txt-hint" style="margin-bottom:10px">O item escolhido aparece em destaque no topo da página de pedidos, com foto, preço e botão para o cliente já adicionar à sacola. Dica: escolha um item que tenha foto.</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <select id="cdp-destaque-sel" class="cdp-in" style="min-width:240px;flex:1;max-width:420px"><option value="">Nenhum (sem destaque)</option>${opts}</select>
+      <button class="btn btn-primary" type="button" onclick="cdpDestaqueSalvar()">💾 Salvar destaque</button>
+    </div>
+  </div>`;
+}
+function cdpDestaqueSalvar() {
+  if (_cmdSemLoja()) return;
+  if (!_pedCfg()) { showToast('Configure os pedidos online antes (Pedidos online → Configurar).', false); return; }
+  const id = (document.getElementById('cdp-destaque-sel') || {}).value || '';
+  const ref = _dbRef('pedidosConfig/' + _lojaAtiva + '/destaqueId');
+  (id ? ref.set(id) : ref.remove()).then(() => {
+    const it = _cmdCardapio().find(i => i.id === id);
+    showToast(!id ? 'Destaque removido' : (it && !it.fotoV ? 'Destaque salvo ✔ (esse item não tem foto — adicione uma para ficar mais bonito)' : 'Destaque salvo ✔'));
+  }).catch(e => { console.error(e); showToast('Sem permissão para salvar. Publique as regras do Firebase.', false); });
 }
 
 function cdpFiltrar() {
