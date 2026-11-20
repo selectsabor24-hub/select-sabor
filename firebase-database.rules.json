@@ -246,6 +246,24 @@
                 ".validate": "(auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true)) && newData.isNumber()"
               }
             },
+            "chat": {
+              "$msgId": {
+                ".write": "!data.exists() && newData.exists() && newData.child('de').val() === 'cliente'",
+                ".validate": "$msgId.matches(/^[-A-Za-z0-9_]{8,40}$/) && newData.hasChildren(['de','txt','ts'])",
+                "de": {
+                  ".validate": "newData.val() === 'cliente' || newData.val() === 'loja'"
+                },
+                "txt": {
+                  ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 300"
+                },
+                "ts": {
+                  ".validate": "newData.isNumber() && newData.val() === now"
+                },
+                "$outro": {
+                  ".validate": "false"
+                }
+              }
+            },
             "$outro": {
               ".validate": "false"
             }

@@ -147,6 +147,18 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
 .sheet ol { margin: 0; padding-left: 22px; line-height: 1.6; }
 .sheet .dica { margin: 12px 0 0; font-size: 13px; color: var(--mut); }
 .sheet button { display: block; width: 100%; margin-top: 14px; background: var(--verde); color: #fff; border: 0; border-radius: 14px; padding: 14px; font-weight: 700; }
+/* Chat com a loja */
+.chat-msgs { display: flex; flex-direction: column; gap: 6px; max-height: 280px; overflow-y: auto; padding: 2px 0 8px; -webkit-overflow-scrolling: touch; }
+.chat-b { max-width: 84%; padding: 8px 12px; border-radius: 14px; font-size: 15px; line-height: 1.35; overflow-wrap: anywhere; white-space: pre-wrap; }
+.chat-b small { display: block; margin-top: 2px; font-size: 11px; opacity: .7; }
+.chat-b.cliente { align-self: flex-end; background: var(--verde); color: #fff; border-bottom-right-radius: 4px; }
+.chat-b.loja { align-self: flex-start; background: var(--verde-bg); color: var(--txt); border-bottom-left-radius: 4px; }
+.chat-vazio { color: var(--mut); font-size: 14px; text-align: center; padding: 12px 6px; }
+.chat-form { display: flex; gap: 8px; align-items: flex-end; margin-top: 6px; }
+.chat-form textarea { flex: 1; min-width: 0; resize: none; border: 1.5px solid var(--borda); border-radius: 12px; padding: 11px; background: #fff; color: var(--txt); max-height: 110px; }
+.chat-form textarea:focus { outline: 0; border-color: var(--verde2); box-shadow: 0 0 0 3px rgba(63,122,71,.18); }
+.chat-form button { flex-shrink: 0; background: var(--verde); color: #fff; border: 0; border-radius: 12px; padding: 12px 16px; font-weight: 700; min-height: 46px; }
+.chat-form button[disabled] { opacity: .6; }
 @media (max-width: 340px) {
   .top img { width: 52px; height: 52px; }
   .item { padding: 10px; }
@@ -386,6 +398,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
   }
   var db = null, cfg = null, cardapio = [], cart = {}, modo = 'entrega', pag = '', catAtiva = '';
   var pedido = null, refPedido = null, ultimoStatus = null, pendenteId = null, enviando = false;
+  var chatEl = null, chatUlt = null, chatUltEnvio = 0;
 
   if (!/^[A-Za-z0-9_-]{1,60}$/.test(LOJA)) {
     erroGeral('Link inválido. Peça o link do cardápio para a loja.');
@@ -621,7 +634,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     PED_ID = id;
     try { history.replaceState(null, '', '?loja=' + encodeURIComponent(LOJA) + '&p=' + encodeURIComponent(id)); } catch (e) {}
     if (refPedido) refPedido.off();
-    pedido = null; ultimoStatus = null;
+    pedido = null; ultimoStatus = null; chatUlt = null;
     $('#tr-corpo').innerHTML = '<div class="carregando">Carregando seu pedido…</div>';
     mostrar('v-track');
     refPedido = base('pedidos/' + LOJA + '/' + id);
@@ -648,6 +661,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     var h = '<div class="codigo"><div class="rot">Pedido</div><div class="cod">' + esc(pedido.codigo || '') + '</div><div style="color:var(--mut);font-size:14px">' + esc((cfg && cfg.nome) || '') + (pedido.ts ? ' · ' + hora(pedido.ts) : '') + '</div></div>';
     h += '<div class="status-card ' + (st === 'cancelado' ? 'cancel' : '') + '"><div class="ic">' + r.ic + '</div><div class="tt">' + esc(titulo) + '</div><div class="ds">' + esc(desc) + '</div>' +
       (pedido.previsao && STATUS_FINAIS.indexOf(st) < 0 ? '<div class="prev">⏱ Previsão: ' + esc(pedido.previsao) + '</div>' : '') + '</div>';
+    h += '<div id="chat-slot"></div>';
     if (st !== 'cancelado') {
       var ps = passos(pedido.tipo), ix = ps.findIndex(function (p) { return p[0] === st; });
       h += '<div class="bloco"><h3>Andamento</h3><ul class="linha-tempo">' + ps.map(function (p, i) {
@@ -683,7 +697,11 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     if (fl) h += '<a class="btn-sec" target="_blank" rel="noopener" href="https://wa.me/' + fl + '?text=' + encodeURIComponent('Olá! Sobre o meu pedido ' + (pedido.codigo || '')) + '">💬 Falar com a loja</a>';
     h += '<button class="btn-sec" id="tr-copiar">🔗 Copiar link deste acompanhamento</button>';
     h += '<button class="btn-sec" id="tr-novo">🍽 Fazer um novo pedido</button><div style="height:calc(30px + var(--safe-b))"></div>';
+    var tinhaFoco = !!(chatEl && document.activeElement === chatEl.querySelector('#chat-txt'));
     corpo.innerHTML = h;
+    montarChat();
+    var slot = $('#chat-slot');
+    if (slot) { slot.appendChild(chatEl); renderChat(); if (tinhaFoco) chatEl.querySelector('#chat-txt').focus(); }
     $('#tr-copiar').onclick = function () {
       var url = location.href;
       if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(function () { toast('Link copiado!'); }, function () { toast(url); });
@@ -697,6 +715,53 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     }
     ultimoStatus = st;
     document.title = (pedido.codigo ? 'Pedido ' + pedido.codigo + ' · ' : '') + titulo;
+  }
+  /* ---------- Chat com a loja (dentro do pedido) ---------- */
+  function chatMsgs() {
+    var c = (pedido && pedido.chat) || {};
+    return Object.keys(c).map(function (k) { var m = c[k] || {}; m.id = k; return m; })
+      .filter(function (m) { return typeof m.txt === 'string' && (m.de === 'cliente' || m.de === 'loja'); })
+      .sort(function (a, b) { return (a.ts || 0) - (b.ts || 0); });
+  }
+  function montarChat() {
+    if (chatEl) return;
+    chatEl = document.createElement('div');
+    chatEl.className = 'bloco';
+    chatEl.innerHTML = '<h3>💬 Conversa com a loja</h3><div class="chat-msgs" id="chat-msgs"></div>' +
+      '<div class="chat-form"><textarea id="chat-txt" rows="1" maxlength="300" placeholder="Escreva sua mensagem…"></textarea><button type="button" id="chat-env">Enviar</button></div>' +
+      '<p class="nota">A loja responde por aqui. Mantenha esta página aberta para ver as respostas.</p>';
+    chatEl.querySelector('#chat-env').onclick = enviarChat;
+    chatEl.querySelector('#chat-txt').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviarChat(); }
+    });
+  }
+  function renderChat() {
+    montarChat();
+    var box = chatEl.querySelector('#chat-msgs');
+    var msgs = chatMsgs();
+    var perto = box.scrollHeight - box.scrollTop - box.clientHeight < 60;
+    box.innerHTML = msgs.length ? msgs.map(function (m) {
+      return '<div class="chat-b ' + m.de + '">' + esc(m.txt) + '<small>' + (m.de === 'loja' ? 'Loja · ' : '') + hora(m.ts) + '</small></div>';
+    }).join('') : '<div class="chat-vazio">Nenhuma mensagem ainda. Escreva aqui se precisar falar com a loja.</div>';
+    if (perto || chatUlt === null) box.scrollTop = box.scrollHeight;
+    var ult = msgs.filter(function (m) { return m.de === 'loja'; }).reduce(function (mx, m) { return Math.max(mx, m.ts || 0); }, 0);
+    if (chatUlt !== null && ult > chatUlt) {
+      toast('💬 Nova mensagem da loja');
+      if (navigator.vibrate) { try { navigator.vibrate([150, 80, 150]); } catch (x) {} }
+    }
+    chatUlt = Math.max(chatUlt || 0, ult);
+  }
+  function enviarChat() {
+    var ta = chatEl && chatEl.querySelector('#chat-txt');
+    if (!ta || !PED_ID) return;
+    var t = ta.value.trim().slice(0, 300);
+    if (!t || Date.now() - chatUltEnvio < 1200) return;
+    chatUltEnvio = Date.now();
+    var bt = chatEl.querySelector('#chat-env'); bt.disabled = true;
+    base('pedidos/' + LOJA + '/' + PED_ID + '/chat').push({ de: 'cliente', txt: t, ts: firebase.database.ServerValue.TIMESTAMP })
+      .then(function () { ta.value = ''; })
+      .catch(function () { toast('Não foi possível enviar. Verifique sua internet e tente de novo.'); })
+      .then(function () { bt.disabled = false; });
   }
   function voltarMenu() {
     if (refPedido) { refPedido.off(); refPedido = null; }

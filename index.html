@@ -3303,6 +3303,26 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
 @media (max-width: 600px) {
   .mot-links .btn { flex: 1 1 calc(50% - 8px); }
 }
+/* ============================================================
+   15) CHAT DO PEDIDO (loja ↔ cliente)
+   ============================================================ */
+.chat-overlay { position: fixed; inset: 0; z-index: 5000; display: none; align-items: flex-end; justify-content: center; background: rgba(0,0,0,.45); }
+.chat-overlay.open { display: flex; }
+.chat-box { width: 100%; max-width: 560px; height: min(86vh, 640px); background: var(--surface); border-radius: 18px 18px 0 0; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 -8px 30px rgba(0,0,0,.25); }
+@media (min-width: 700px) { .chat-overlay { align-items: center; } .chat-box { border-radius: 18px; } }
+.chat-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--border); }
+.chat-head .t { flex: 1; min-width: 0; font-weight: 800; }
+.chat-head .t small { display: block; font-weight: 500; color: var(--text3); font-size: 12px; overflow-wrap: anywhere; }
+.chat-msgs { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px; background: var(--bg); -webkit-overflow-scrolling: touch; }
+.chat-b { max-width: 82%; padding: 8px 12px; border-radius: 14px; font-size: 15px; line-height: 1.35; overflow-wrap: anywhere; white-space: pre-wrap; }
+.chat-b small { display: block; margin-top: 2px; font-size: 11px; opacity: .7; }
+.chat-b.loja { align-self: flex-end; background: var(--accent); color: #fff; border-bottom-right-radius: 4px; }
+.chat-b.cliente { align-self: flex-start; background: var(--surface); color: var(--text); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+.chat-vazio { margin: auto; color: var(--text3); text-align: center; padding: 20px; }
+.chat-rapidas { display: flex; gap: 6px; overflow-x: auto; padding: 8px 10px 0; }
+.chat-rapidas button { flex: 0 0 auto; border: 1px solid var(--border); background: var(--surface); color: var(--text2); border-radius: 99px; padding: 6px 12px; font-size: 13px; cursor: pointer; }
+.chat-form { display: flex; gap: 8px; align-items: flex-end; padding: 10px; padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)); }
+.chat-form textarea { flex: 1; min-width: 0; resize: none; max-height: 110px; }
 </style>
 
 </head>
@@ -5623,6 +5643,27 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
   <div class="modal-box" id="modal-cmd-box" style="max-width:760px;width:96vw;max-height:92vh;overflow-y:auto;padding:0"></div>
 </div>
 
+<!-- Chat do pedido (loja ↔ cliente) -->
+<div class="chat-overlay" id="chat-overlay" onclick="if(event.target===this)chatFechar()">
+  <div class="chat-box" role="dialog" aria-modal="true" aria-label="Conversa com o cliente">
+    <div class="chat-head">
+      <div class="t" id="chat-titulo"></div>
+      <button class="btn btn-secondary btn-md" onclick="chatFechar()">✕ Fechar</button>
+    </div>
+    <div class="chat-msgs" id="chat-msgs"></div>
+    <div class="chat-rapidas">
+      <button type="button" onclick="_chatRapida(this)">Pedido recebido ✅</button>
+      <button type="button" onclick="_chatRapida(this)">Já estamos preparando 👩‍🍳</button>
+      <button type="button" onclick="_chatRapida(this)">O motoqueiro saiu e já chega 🛵</button>
+      <button type="button" onclick="_chatRapida(this)">Pode confirmar o endereço?</button>
+    </div>
+    <div class="chat-form">
+      <textarea id="chat-txt" class="input-base" rows="1" maxlength="300" placeholder="Escreva uma mensagem…" onkeydown="_chatTecla(event)"></textarea>
+      <button class="btn btn-primary btn-md" id="chat-env" onclick="chatEnviar()">Enviar</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal de confirmação customizado -->
 <div class="modal-overlay" id="modal-overlay">
   <div class="modal-box">
@@ -6465,14 +6506,18 @@ function setLojaAtiva(id) {
   _cache.pedidosCfg = null;
   _pedVistos = null; // a 1ª carga não dispara alerta
   _motProntos = null;
+  _chatUlt = null;
+  chatFechar();
   const refPedidos = _dbRef('pedidos/' + id).orderByChild('ts').limitToLast(200);
   refPedidos.on('value', snap => {
     const v = snap.val() || {};
     _cache.pedidos = Object.keys(v).filter(k => /^[-A-Za-z0-9_]{8,40}$/.test(k)).map(k => Object.assign({ id: k }, v[k]));
     _pedDetectarNovos();
+    _chatDetectar();
     _pedAtualizarBadge();
     _motDetectar();
     _motAtualizarBadge();
+    if (_chatAberto) _chatRender();
     if (_currentSection === 'pedidos' || _currentSection === 'motoqueiro') _refreshCurrentSection();
   }, e => console.warn('[pedidos] sem acesso:', e && e.message));
   _listenersLoja.push(refPedidos);
@@ -17627,7 +17672,7 @@ function _pedAtualizarSomBtn() {
   if (b) b.textContent = _pedSom ? '🔔 Som ligado' : '🔕 Som desligado';
 }
 function _pedAtualizarBadge() {
-  const n = _pedLista().filter(p => p.status === 'novo').length;
+  const n = _pedLista().filter(p => p.status === 'novo').length + _chatNaoLidosTotal();
   ['ped-badge-nav', 'ped-badge-di'].forEach(id => {
     const el = document.getElementById(id); if (!el) return;
     el.textContent = n; el.style.display = n ? 'inline-flex' : 'none';
@@ -17720,6 +17765,8 @@ function _pedCardHtml(p) {
   else if (p.status === 'pronto')   acoes = (ent ? btn('saiu', '🛵 Saiu para entrega', 'btn-primary') : btn('entregue', '✅ Cliente retirou', 'btn-primary')) + btn('cancelar', '✖ Cancelar');
   else if (p.status === 'saiu')     acoes = btn('entregue', '✅ Entregue', 'btn-primary') + btn('cancelar', '✖ Cancelar');
   else if (p.status === 'entregue') acoes = p.lancado ? '<span class="ped-ok">✓ Lançado no caixa</span>' : btn('caixa', '💰 Lançar no caixa', 'btn-primary');
+  const nChat = _chatNaoLidas(p), totChat = _chatMsgs(p).length;
+  acoes += btn('chat', '💬 Chat' + (nChat ? ' (' + nChat + ' nova' + (nChat > 1 ? 's' : '') + ')' : (totChat ? ' (' + totChat + ')' : '')), nChat ? 'btn-primary' : 'btn-secondary');
   acoes += btn('whats', '💬 WhatsApp') + btn('imprimir', '🖨 Imprimir');
   acoes += `<button class="btn btn-secondary btn-md" style="color:var(--red)" data-ped="${id}" onclick="pedAcao('excluir', this.dataset.ped)">🗑 Excluir</button>`;
   const itens = t.itens.map(i =>
@@ -17757,6 +17804,7 @@ function pedAcao(a, id) {
     case 'imprimir': return pedImprimir(id);
     case 'caixa':    return pedLancarCaixa(id);
     case 'excluir':  return pedExcluir(id);
+    case 'chat':     return chatAbrir(id);
   }
 }
 
@@ -17981,6 +18029,105 @@ function pedConfigSalvar() {
 }
 
 /* ============================================================
+   3.30b CHAT DO PEDIDO (v5.2)
+   ============================================================
+   Conversa loja ↔ cliente dentro do próprio pedido, sem depender do WhatsApp.
+   Firebase: caixa/pedidos/{lojaId}/{pedidoId}/chat/{msgId} = { de:'cliente'|'loja', txt, ts }
+   O cliente escreve pela página pedido.html (sem login). A lista de pedidos já
+   chega em tempo real (3.30), então as mensagens aparecem sem listener extra.
+   O "visto" fica guardado neste aparelho (localStorage).
+   ============================================================ */
+let _chatAberto = null;   // id do pedido com o chat aberto
+let _chatUlt = null;      // id do pedido -> ts da última mensagem do cliente já conhecida (para alertar)
+let _chatEnviando = false;
+
+function _chatMsgs(p) {
+  const c = (p && p.chat) || {};
+  return Object.keys(c).map(k => Object.assign({ id: k }, c[k]))
+    .filter(m => m && typeof m.txt === 'string' && (m.de === 'cliente' || m.de === 'loja'))
+    .sort((a, b) => (a.ts || 0) - (b.ts || 0));
+}
+function _chatVistoKey(id) { return 'chatV:' + _lojaAtiva + ':' + id; }
+function _chatVisto(id) { try { return Number(localStorage.getItem(_chatVistoKey(id))) || 0; } catch (e) { return 0; } }
+function _chatUltCliente(p) { return _chatMsgs(p).filter(m => m.de === 'cliente').reduce((mx, m) => Math.max(mx, m.ts || 0), 0); }
+function _chatMarcarVisto(p) {
+  const ult = _chatUltCliente(p); if (!ult) return;
+  try { localStorage.setItem(_chatVistoKey(p.id), String(ult)); } catch (e) {}
+}
+function _chatNaoLidas(p) { const v = _chatVisto(p.id); return _chatMsgs(p).filter(m => m.de === 'cliente' && (m.ts || 0) > v).length; }
+/** Quantos pedidos (dos últimos 7 dias) têm mensagem do cliente ainda não lida neste aparelho. */
+function _chatNaoLidosTotal() {
+  const limite = Date.now() - 7 * 864e5;
+  return _pedLista().filter(p => (p.ts || 0) > limite && _chatNaoLidas(p) > 0).length;
+}
+
+/** Som + aviso quando chega mensagem nova do cliente (a 1ª carga não alerta). */
+function _chatDetectar() {
+  const lista = _pedLista();
+  const mapa = {};
+  lista.forEach(p => { mapa[p.id] = _chatUltCliente(p); });
+  const primeira = _chatUlt === null;
+  const antes = _chatUlt || {};
+  _chatUlt = mapa;
+  if (_chatAberto) { const pa = _pedGet(_chatAberto); if (pa) _chatMarcarVisto(pa); }
+  if (primeira) return;
+  const novos = lista.filter(p => mapa[p.id] > (antes[p.id] || 0) && p.id !== _chatAberto);
+  if (!novos.length) return;
+  const p = novos[0];
+  const ult = _chatMsgs(p).filter(m => m.de === 'cliente').pop();
+  showToast('💬 ' + ((p.cliente || {}).nome || 'Cliente') + ' (#' + (p.codigo || '') + '): ' + String((ult && ult.txt) || '').slice(0, 60));
+  _pedBeep();
+  try { if (navigator.vibrate) navigator.vibrate([200, 100, 200]); } catch (e) {}
+}
+
+function chatAbrir(id) {
+  const p = _pedGet(id); if (!p) return;
+  _chatAberto = id;
+  document.getElementById('chat-overlay').classList.add('open');
+  document.getElementById('chat-titulo').innerHTML = 'Conversa · #' + escapeHtml(p.codigo || '') + '<small>' + escapeHtml((p.cliente || {}).nome || '') + '</small>';
+  const ta = document.getElementById('chat-txt'); if (ta) ta.value = '';
+  _chatRender(true);
+  setTimeout(() => { if (ta) ta.focus(); }, 60);
+}
+function chatFechar() {
+  _chatAberto = null;
+  const o = document.getElementById('chat-overlay'); if (o) o.classList.remove('open');
+  _pedAtualizarBadge();
+  if (_currentSection === 'pedidos' || _currentSection === 'motoqueiro') _refreshCurrentSection();
+}
+function _chatRender(forcarFim) {
+  const box = document.getElementById('chat-msgs'); if (!box || !_chatAberto) return;
+  const p = _pedGet(_chatAberto);
+  if (!p) { box.innerHTML = '<div class="chat-vazio">Pedido não encontrado (pode ter sido excluído).</div>'; return; }
+  const nome = escapeHtml(String((p.cliente || {}).nome || 'Cliente').split(' ')[0]);
+  const msgs = _chatMsgs(p);
+  const perto = box.scrollHeight - box.scrollTop - box.clientHeight < 80;
+  box.innerHTML = msgs.length
+    ? msgs.map(m => `<div class="chat-b ${m.de}">${escapeHtml(m.txt)}<small>${m.de === 'loja' ? 'Loja' : nome} · ${_pedHora(m.ts)}</small></div>`).join('')
+    : '<div class="chat-vazio">Nenhuma mensagem ainda. Escreva abaixo para falar com o cliente.</div>';
+  if (forcarFim || perto) box.scrollTop = box.scrollHeight;
+  _chatMarcarVisto(p);
+  _pedAtualizarBadge();
+}
+function chatEnviar() {
+  if (!_chatAberto || _chatEnviando || !_lojaAtiva) return;
+  const ta = document.getElementById('chat-txt'); if (!ta) return;
+  const t = ta.value.trim().slice(0, 300); if (!t) return;
+  _chatEnviando = true;
+  _pedRef(_chatAberto).child('chat').push({ de: 'loja', txt: t, ts: firebase.database.ServerValue.TIMESTAMP })
+    .then(() => { ta.value = ''; ta.focus(); })
+    .catch(e => {
+      console.error(e);
+      showToast(e && /permission/i.test(e.message || e.code || '')
+        ? 'Sem permissão para enviar. Publique as regras atualizadas do Firebase (firebase-database.rules.json).'
+        : 'Erro ao enviar a mensagem', false);
+    })
+    .then(() => { _chatEnviando = false; });
+}
+function _chatTecla(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); chatEnviar(); } }
+function _chatRapida(btn) { const ta = document.getElementById('chat-txt'); if (ta) { ta.value = btn.textContent; ta.focus(); } }
+
+/* ============================================================
    3.31 MOTOQUEIRO (v5.1)
    ============================================================
    Aba para quem faz as entregas. Usa os mesmos pedidos da seção 3.30
@@ -18127,6 +18274,7 @@ function _motCardHtml(p) {
       <a class="btn btn-secondary btn-md" href="${escapeHtml(mapa)}" target="_blank" rel="noopener">🗺 Mapa</a>
       ${fone ? `<a class="btn btn-secondary btn-md" href="tel:${escapeHtml(fone)}">📞 Ligar</a>` : ''}
       ${fone ? btn('whats', '💬 WhatsApp') : ''}
+      ${btn('chat', '💬 Chat')}
     </div>`;
 
   return `<div class="card mot-card" style="--mot-cor:${cor}">
@@ -18154,6 +18302,7 @@ function motAcao(a, id) {
     case 'entregue': return _motConfirmarEntrega(p);
     case 'voltar':   return _motMudar(id, 'pronto').then(ok => { if (ok) { _motTab = 'sair'; renderMotoqueiro(); } });
     case 'whats':    return _motWhats(p);
+    case 'chat':     return chatAbrir(id);
   }
 }
 
