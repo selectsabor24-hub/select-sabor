@@ -4681,15 +4681,37 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
 
       <div id="ped-topo"></div>
 
-      <!-- Configuração -->
-      <div class="card" id="ped-config" style="display:none">
-        <div class="card-title">Configurar pedidos online</div>
+      <!-- Configuração (cada categoria tem o seu próprio botão Salvar) -->
+      <div id="ped-config" style="display:none">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+        <div style="font-size:17px;font-weight:700">Configurar pedidos online</div>
+        <button class="btn btn-secondary btn-md" type="button" onclick="pedConfigFechar()">✕ Fechar</button>
+      </div>
+      <div class="card mb-5">
+        <div class="card-title">🏪 Dados do restaurante</div>
         <div class="form-grid">
           <div class="form-group"><label>Nome que o cliente vê</label><input id="pc-nome" class="input-base" maxlength="80" placeholder="Ex.: Select Sabor"></div>
           <div class="form-group"><label>Tempo estimado</label><input id="pc-tempo" class="input-base" maxlength="40" placeholder="Ex.: 40–50 min"></div>
+          <div class="form-group"><label>WhatsApp da loja (com DDD)</label><input id="pc-whats" class="input-base" inputmode="tel" maxlength="16" placeholder="(31) 99999-0000" oninput="this.value=_maskFone(this.value)"></div>
+        </div>
+        <div class="form-actions" style="margin-top:12px"><button class="btn btn-primary btn-md" type="button" onclick="pedConfigSalvarSecao('dados')">💾 Salvar dados do restaurante</button></div>
+      </div>
+      <div class="card mb-5">
+        <div class="card-title">🛒 Pedidos e taxas</div>
+        <div class="form-grid">
           <div class="form-group"><label>Taxa padrão de entrega (R$)</label><input id="pc-taxa" class="input-base" inputmode="decimal" placeholder="0,00"></div>
           <div class="form-group"><label>Pedido mínimo (R$)</label><input id="pc-min" class="input-base" inputmode="decimal" placeholder="0,00"></div>
-          <div class="form-group"><label>WhatsApp da loja (com DDD)</label><input id="pc-whats" class="input-base" inputmode="tel" maxlength="16" placeholder="(31) 99999-0000" oninput="this.value=_maskFone(this.value)"></div>
+        </div>
+        <div class="ped-checks">
+          <label><input type="checkbox" id="pc-entrega"> Aceitar entrega</label>
+          <label><input type="checkbox" id="pc-retirada"> Aceitar retirada na loja</label>
+          <label><input type="checkbox" id="pc-aberto"> Receber pedidos agora</label>
+        </div>
+        <div class="form-actions" style="margin-top:12px"><button class="btn btn-primary btn-md" type="button" onclick="pedConfigSalvarSecao('pedidos')">💾 Salvar pedidos e taxas</button></div>
+      </div>
+      <div class="card mb-5">
+        <div class="card-title">📣 Aviso no topo do cardápio</div>
+        <div class="form-grid">
           <div class="form-group"><label>Aviso no topo do cardápio (opcional)</label><input id="pc-aviso" class="input-base" maxlength="200" placeholder="Ex.: Hoje temos feijoada!"></div>
           <div class="form-group" style="grid-column:1/-1"><label>Foto do aviso (opcional — aparece em destaque no topo do cardápio)</label>
             <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
@@ -4699,8 +4721,12 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
             </div>
           </div>
         </div>
-        <div class="card-title" style="margin-top:18px;font-size:15px">Taxa de entrega por distância (km)</div>
-        <p style="font-size:13px;color:var(--text-muted,#6b7280);margin:4px 0 10px">O sistema calcula o trajeto de carro entre o restaurante e o endereço do cliente e cobra pela faixa. Se nenhuma faixa for preenchida, vale só a taxa padrão acima. Acima do último km você pode definir uma taxa fixa; se deixar em branco, a entrega não é aceita (o cliente pode retirar na loja).</p>
+        <div style="font-size:12px;color:var(--text-muted,#6b7280);margin-top:6px">A foto é enviada na hora que você escolhe; o botão abaixo salva o texto do aviso.</div>
+        <div class="form-actions" style="margin-top:12px"><button class="btn btn-primary btn-md" type="button" onclick="pedConfigSalvarSecao('aviso')">💾 Salvar aviso</button></div>
+      </div>
+      <div class="card mb-5">
+        <div class="card-title">📍 Endereço do restaurante</div>
+        <p style="font-size:13px;color:var(--text-muted,#6b7280);margin:0 0 10px">Usado para calcular a distância até o cliente.</p>
         <div class="form-grid">
           <div class="form-group"><label>CEP</label><input id="pc-cep" class="input-base" inputmode="numeric" maxlength="9" placeholder="00000-000" oninput="pedConfigCep(this)"></div>
           <div class="form-group"><label>Número</label><input id="pc-num" class="input-base" maxlength="20" placeholder="Ex.: 8"></div>
@@ -4716,6 +4742,11 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
           <a id="pc-mapa" class="btn btn-secondary btn-md" target="_blank" rel="noopener" style="display:none">Conferir no mapa</a>
         </div>
         <small id="pc-loc-msg" style="display:block;margin-bottom:10px;font-size:13px"></small>
+        <div class="form-actions" style="margin-top:12px"><button class="btn btn-primary btn-md" type="button" onclick="pedConfigSalvarSecao('endereco')">💾 Salvar endereço</button></div>
+      </div>
+      <div class="card mb-5">
+        <div class="card-title">🛵 Taxa de entrega por distância (km)</div>
+        <p style="font-size:13px;color:var(--text-muted,#6b7280);margin:4px 0 10px">O sistema calcula o trajeto de carro entre o restaurante e o endereço do cliente e cobra pela faixa. Se nenhuma faixa for preenchida, vale só a taxa padrão (em "Pedidos e taxas"). Acima do último km você pode definir uma taxa fixa; se deixar em branco, a entrega não é aceita (o cliente pode retirar na loja).</p>
         <div style="font-weight:600;font-size:13px;margin:6px 0">Faixas (preencha só as que quiser)</div>
         <div id="pc-faixas">
           <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap"><span style="width:64px;font-size:13px">Até (km)</span><input id="pc-fk-0" class="input-base" inputmode="decimal" placeholder="Ex.: 3" style="width:90px"><span style="font-size:13px">cobrar R$</span><input id="pc-fv-0" class="input-base" inputmode="decimal" placeholder="0,00" style="width:110px"></div>
@@ -4725,12 +4756,10 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
           <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap"><span style="width:64px;font-size:13px">Até (km)</span><input id="pc-fk-4" class="input-base" inputmode="decimal" placeholder="Ex.: 3" style="width:90px"><span style="font-size:13px">cobrar R$</span><input id="pc-fv-4" class="input-base" inputmode="decimal" placeholder="0,00" style="width:110px"></div>
         </div>
         <div style="display:flex;gap:8px;align-items:center;margin:4px 0 12px;flex-wrap:wrap"><span style="font-size:13px">Acima do último km, cobrar R$</span><input id="pc-acima" class="input-base" inputmode="decimal" placeholder="0,00" style="width:110px"><span style="font-size:12px;color:var(--text-muted,#6b7280)">(em branco = não entrega acima)</span></div>
-        <div class="ped-checks">
-          <label><input type="checkbox" id="pc-entrega"> Aceitar entrega</label>
-          <label><input type="checkbox" id="pc-retirada"> Aceitar retirada na loja</label>
-          <label><input type="checkbox" id="pc-aberto"> Receber pedidos agora</label>
-        </div>
-        <div class="card-title" style="margin-top:18px;font-size:15px">🔔 Som de novo pedido <span style="font-weight:400;font-size:12px;color:var(--text-muted,#6b7280)">(vale só neste aparelho, salva sozinho)</span></div>
+        <div class="form-actions" style="margin-top:12px"><button class="btn btn-primary btn-md" type="button" onclick="pedConfigSalvarSecao('faixas')">💾 Salvar faixas de entrega</button></div>
+      </div>
+      <div class="card mb-5">
+        <div class="card-title">🔔 Som de novo pedido <span style="font-weight:400;font-size:12px;color:var(--text-muted,#6b7280)">(vale só neste aparelho, salva sozinho)</span></div>
         <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin:8px 0 12px">
           <select id="ps-tipo" class="input-base" style="width:auto" onchange="pedSomCfgSalvar()"><option value="1">Campainha</option><option value="2">Alerta (bipes)</option><option value="3">Sirene</option></select>
           <label style="display:flex;align-items:center;gap:6px;font-size:13px">Volume <input id="ps-vol" type="range" min="20" max="100" step="10" value="80" oninput="pedSomCfgSalvar()"></label>
@@ -4738,7 +4767,9 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
           <label style="display:flex;align-items:center;gap:6px;font-size:13px"><input id="ps-vib" type="checkbox" checked onchange="pedSomCfgSalvar()"> 📳 Vibrar ao receber pedido</label>
           <button class="btn btn-secondary btn-md" type="button" onclick="pedSomTestar()">▶ Testar som</button>
         </div>
-        <div class="card-title" style="margin-top:6px;font-size:15px">📲 Aviso ao motoqueiro com a tela bloqueada <span style="font-weight:400;font-size:12px;color:var(--text-muted,#6b7280)">(grátis)</span></div>
+      </div>
+      <div class="card mb-5">
+        <div class="card-title">📲 Aviso ao motoqueiro com a tela bloqueada <span style="font-weight:400;font-size:12px;color:var(--text-muted,#6b7280)">(grátis)</span></div>
         <div style="font-size:13px;margin:6px 0 8px;line-height:1.5">Preencha com os dados do servidor de avisos (ver LEIA-ME.txt na pasta cloudflare-worker). O motoqueiro só precisa tocar em "Ativar avisos" no app dele. O aviso sai deste painel, então ele precisa estar aberto ao aceitar o pedido e marcar como pronto.</div>
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 12px">
           <input id="pc-push-url" class="input-base" placeholder="Endereço do servidor (https://...workers.dev)" style="flex:2 1 260px">
@@ -4747,10 +4778,7 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
           <button class="btn btn-secondary btn-md" type="button" onclick="pedPushTestar()">▶ Enviar aviso de teste</button>
         </div>
         <small id="pc-push-msg" style="display:block;margin-bottom:10px;font-size:13px"></small>
-        <div class="form-actions" style="margin-top:12px">
-          <button class="btn btn-primary btn-md" onclick="pedConfigSalvar()">Salvar</button>
-          <button class="btn btn-secondary btn-md" onclick="pedConfigFechar()">Cancelar</button>
-        </div>
+      </div>
       </div>
 
       <div class="metrics-grid" id="ped-metricas"></div>
@@ -18765,51 +18793,67 @@ function pedConfigAbrir() {
   if (_currentSection !== 'pedidos') showSection('pedidos', document.getElementById('nav-pedidos'));
 }
 function pedConfigFechar() { const b = document.getElementById('ped-config'); if (b) b.style.display = 'none'; }
-function pedConfigSalvar() {
+/** Salva UMA categoria da configuração (dados | pedidos | aviso | endereco | faixas),
+ *  sem mexer nas demais: grava só os campos daquela categoria com update(). */
+function pedConfigSalvarSecao(secao) {
   if (!_lojaAtiva) return;
   const v = id => (document.getElementById(id).value || '').trim();
-  const entrega = document.getElementById('pc-entrega').checked, retirada = document.getElementById('pc-retirada').checked;
-  if (!entrega && !retirada) { showToast('Marque pelo menos entrega ou retirada', false); return; }
-  const cfg = {
-    aberto: document.getElementById('pc-aberto').checked,
-    nome: v('pc-nome').slice(0, 80) || 'Select Sabor',
-    taxaEntrega: _pedRound(_pedNum(v('pc-taxa'))),
-    pedidoMinimo: _pedRound(_pedNum(v('pc-min'))),
-    aceitaEntrega: entrega, aceitaRetirada: retirada,
-  };
-  if (v('pc-tempo'))  cfg.tempoEstimado = v('pc-tempo').slice(0, 40);
-  if (v('pc-whats'))  cfg.whatsapp = v('pc-whats').replace(/[^\d()+ -]/g, '').slice(0, 20);
-  if (v('pc-aviso'))  cfg.aviso = v('pc-aviso').slice(0, 200);
-  if ((_pedCfg() || {}).avisoFotoV) cfg.avisoFotoV = _pedCfg().avisoFotoV;   // a foto é enviada na hora; o salvar só preserva a versão
-  // taxa por distância (km)
-  const fxs = [];
-  for (let i = 0; i < 5; i++) {
-    const k = v('pc-fk-' + i), val = v('pc-fv-' + i);
-    if (!k && !val) continue;
-    const ate = _pedNum(k);
-    if (!(ate > 0) || val === '') { showToast('Faixa ' + (i + 1) + ': informe o km e o valor', false); return; }
-    fxs.push({ ate: Math.round(ate * 10) / 10, valor: _pedRound(_pedNum(val)) });
-  }
-  fxs.sort((a, b) => a.ate - b.ate);
-  for (let i = 1; i < fxs.length; i++) if (fxs[i].ate === fxs[i - 1].ate) { showToast('Há duas faixas com o mesmo km', false); return; }
-  const lat = parseFloat(v('pc-lat').replace(',', '.')), lng = parseFloat(v('pc-lng').replace(',', '.'));
-  const coordOk = v('pc-lat') !== '' && v('pc-lng') !== '' && isFinite(lat) && isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
-  if (fxs.length && !coordOk) { showToast('Para cobrar por km, localize o endereço do restaurante (botão 📍)', false); return; }
-  if (fxs.length) cfg.faixas = fxs;
-  if (fxs.length && v('pc-acima') !== '') cfg.taxaAcima = _pedRound(_pedNum(v('pc-acima')));
-  if (coordOk) { cfg.lojaLat = Math.round(lat * 1e6) / 1e6; cfg.lojaLng = Math.round(lng * 1e6) / 1e6; }
-  const _cepL = v('pc-cep'), _ufL = v('pc-uf');
-  if (_cepL && !/^\d{5}-\d{3}$/.test(_cepL)) { showToast('CEP do restaurante inválido (use 00000-000)', false); return; }
-  if (_cepL) cfg.lojaCep = _cepL;
-  if (v('pc-rua'))    cfg.lojaRua = v('pc-rua').slice(0, 120);
-  if (v('pc-num'))    cfg.lojaNumero = v('pc-num').slice(0, 20);
-  if (v('pc-bairro')) cfg.lojaBairro = v('pc-bairro').slice(0, 80);
-  if (v('pc-cidade')) cfg.lojaCidade = v('pc-cidade').slice(0, 80);
-  if (_ufL)           cfg.lojaUf = _ufL;
-  const _endTxt = [[v('pc-rua'), v('pc-num')].filter(Boolean).join(', '), v('pc-bairro'), [v('pc-cidade'), _ufL].filter(Boolean).join(' - '), _cepL].filter(Boolean).join(' · ');
-  if (_endTxt) cfg.lojaEndereco = _endTxt.slice(0, 200);
-  _dbRef('pedidosConfig/' + _lojaAtiva).set(cfg)
-    .then(() => { showToast('Configuração salva!'); pedConfigFechar(); })
+  const upd = {}, vazioNulo = (k, val) => { upd[k] = val ? val : null; };
+  let nome = 'Salvo';
+  if (secao === 'dados') {
+    nome = 'Dados do restaurante';
+    upd.nome = v('pc-nome').slice(0, 80) || 'Select Sabor';
+    vazioNulo('tempoEstimado', v('pc-tempo').slice(0, 40));
+    vazioNulo('whatsapp', v('pc-whats').replace(/[^\d()+ -]/g, '').slice(0, 20));
+  } else if (secao === 'pedidos') {
+    nome = 'Pedidos e taxas';
+    const entrega = document.getElementById('pc-entrega').checked, retirada = document.getElementById('pc-retirada').checked;
+    if (!entrega && !retirada) { showToast('Marque pelo menos entrega ou retirada', false); return; }
+    upd.taxaEntrega = _pedRound(_pedNum(v('pc-taxa')));
+    upd.pedidoMinimo = _pedRound(_pedNum(v('pc-min')));
+    upd.aceitaEntrega = entrega; upd.aceitaRetirada = retirada;
+    upd.aberto = document.getElementById('pc-aberto').checked;
+  } else if (secao === 'aviso') {
+    nome = 'Aviso';
+    vazioNulo('aviso', v('pc-aviso').slice(0, 200));
+  } else if (secao === 'endereco') {
+    nome = 'Endereço';
+    const cep = v('pc-cep'), uf = v('pc-uf');
+    if (cep && !/^\d{5}-\d{3}$/.test(cep)) { showToast('CEP do restaurante inválido (use 00000-000)', false); return; }
+    vazioNulo('lojaCep', cep);
+    vazioNulo('lojaRua', v('pc-rua').slice(0, 120));
+    vazioNulo('lojaNumero', v('pc-num').slice(0, 20));
+    vazioNulo('lojaBairro', v('pc-bairro').slice(0, 80));
+    vazioNulo('lojaCidade', v('pc-cidade').slice(0, 80));
+    vazioNulo('lojaUf', uf);
+    const lat = parseFloat(v('pc-lat').replace(',', '.')), lng = parseFloat(v('pc-lng').replace(',', '.'));
+    const coordOk = v('pc-lat') !== '' && v('pc-lng') !== '' && isFinite(lat) && isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
+    upd.lojaLat = coordOk ? Math.round(lat * 1e6) / 1e6 : null;
+    upd.lojaLng = coordOk ? Math.round(lng * 1e6) / 1e6 : null;
+    const end = [[v('pc-rua'), v('pc-num')].filter(Boolean).join(', '), v('pc-bairro'), [v('pc-cidade'), uf].filter(Boolean).join(' - '), cep].filter(Boolean).join(' · ');
+    vazioNulo('lojaEndereco', end.slice(0, 200));
+  } else if (secao === 'faixas') {
+    nome = 'Faixas de entrega';
+    const fxs = [];
+    for (let i = 0; i < 5; i++) {
+      const k = v('pc-fk-' + i), val = v('pc-fv-' + i);
+      if (!k && !val) continue;
+      const ate = _pedNum(k);
+      if (!(ate > 0) || val === '') { showToast('Faixa ' + (i + 1) + ': informe o km e o valor', false); return; }
+      fxs.push({ ate: Math.round(ate * 10) / 10, valor: _pedRound(_pedNum(val)) });
+    }
+    fxs.sort((a, b) => a.ate - b.ate);
+    for (let i = 1; i < fxs.length; i++) if (fxs[i].ate === fxs[i - 1].ate) { showToast('Há duas faixas com o mesmo km', false); return; }
+    const c = _pedCfg() || {};
+    if (fxs.length && !(c.lojaLat != null && c.lojaLng != null)) { showToast('Para cobrar por km, salve antes o endereço do restaurante (botão 📍 Localizar pelo endereço)', false); return; }
+    upd.faixas = fxs.length ? fxs : null;
+    upd.taxaAcima = (fxs.length && v('pc-acima') !== '') ? _pedRound(_pedNum(v('pc-acima'))) : null;
+  } else return;
+
+  // 1ª configuração: o banco exige o campo "aberto" no registro
+  if (!_pedCfg()) { if (upd.aberto === undefined) upd.aberto = document.getElementById('pc-aberto').checked; if (upd.nome === undefined) upd.nome = v('pc-nome').slice(0, 80) || 'Select Sabor'; }
+  _dbRef('pedidosConfig/' + _lojaAtiva).update(upd)
+    .then(() => showToast(nome + ' salvo ✔'))
     .catch(e => { console.error(e); showToast('Sem permissão para salvar. Publique as regras do Firebase (firebase/firebase-database.rules.json).', false); });
 }
 
