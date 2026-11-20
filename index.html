@@ -4691,6 +4691,13 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
           <div class="form-group"><label>Pedido mínimo (R$)</label><input id="pc-min" class="input-base" inputmode="decimal" placeholder="0,00"></div>
           <div class="form-group"><label>WhatsApp da loja (com DDD)</label><input id="pc-whats" class="input-base" inputmode="tel" maxlength="16" placeholder="(31) 99999-0000" oninput="this.value=_maskFone(this.value)"></div>
           <div class="form-group"><label>Aviso no topo do cardápio (opcional)</label><input id="pc-aviso" class="input-base" maxlength="200" placeholder="Ex.: Hoje temos feijoada!"></div>
+          <div class="form-group" style="grid-column:1/-1"><label>Foto do aviso (opcional — aparece em destaque no topo do cardápio)</label>
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+              <div id="pc-aviso-foto-prev" style="width:160px;height:80px;border-radius:10px;border:1px dashed var(--border);background:var(--surface2);display:flex;align-items:center;justify-content:center;overflow:hidden;font-size:12px;color:var(--text3)">Sem foto</div>
+              <button class="btn btn-secondary btn-md" type="button" onclick="pedAvisoFotoEscolher()">📷 Escolher foto</button>
+              <button class="btn btn-secondary btn-md" type="button" id="pc-aviso-foto-rem" style="display:none" onclick="pedAvisoFotoRemover()">Remover foto</button>
+            </div>
+          </div>
         </div>
         <div class="card-title" style="margin-top:18px;font-size:15px">Taxa de entrega por distância (km)</div>
         <p style="font-size:13px;color:var(--text-muted,#6b7280);margin:4px 0 10px">O sistema calcula o trajeto de carro entre o restaurante e o endereço do cliente e cobra pela faixa. Se nenhuma faixa for preenchida, vale só a taxa padrão acima. Acima do último km você pode definir uma taxa fixa; se deixar em branco, a entrega não é aceita (o cliente pode retirar na loja).</p>
@@ -18655,6 +18662,77 @@ function pedToggleAberto() {
     .then(() => showToast(novo ? 'Pedidos abertos para os clientes' : 'Pedidos pausados'))
     .catch(e => { console.error(e); showToast('Sem permissão para alterar. Publique as regras do Firebase.', false); });
 }
+/* ───────── Foto do aviso do cardápio ─────────
+   Guardada em cardapioFotos/<loja>/_aviso; a versão fica em pedidosConfig/<loja>/avisoFotoV. */
+function _pedAvisoFotoPreview(d) {
+  const box = document.getElementById('pc-aviso-foto-prev'), rem = document.getElementById('pc-aviso-foto-rem');
+  if (box) { box.innerHTML = ''; if (d) { const im = document.createElement('img'); im.src = d; im.style.cssText = 'width:100%;height:100%;object-fit:cover'; box.appendChild(im); } else box.textContent = 'Sem foto'; }
+  if (rem) rem.style.display = d ? '' : 'none';
+}
+function _pedAvisoFotoCarregar() {
+  _pedAvisoFotoPreview(null);
+  const loja = _lojaAtiva, c = _pedCfg() || {};
+  if (!loja || !c.avisoFotoV) return;
+  _dbRef('cardapioFotos/' + loja + '/_aviso').once('value').then(s => {
+    const d = s.val();
+    if (loja === _lojaAtiva && typeof d === 'string' && d.indexOf('data:image/') === 0) _pedAvisoFotoPreview(d);
+  }).catch(() => {});
+}
+function _pedAvisoFotoRedimensionar(file) {
+  return new Promise((resolve, reject) => {
+    if (!file || !/^image\//.test(file.type || '')) { reject(new Error('tipo')); return; }
+    const url = URL.createObjectURL(file), img = new Image();
+    img.onload = () => {
+      try {
+        const w = img.naturalWidth, h = img.naturalHeight, prop = 2;   // faixa 2:1
+        let sw = w, sh = w / prop; if (sh > h) { sh = h; sw = h * prop; }
+        URL.revokeObjectURL(url);
+        let T = 720, d = '';
+        for (let tent = 0; tent < 3; tent++, T -= 160) {
+          const c = document.createElement('canvas'); c.width = T; c.height = T / prop;
+          const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
+          g.drawImage(img, (w - sw) / 2, (h - sh) / 2, sw, sh, 0, 0, c.width, c.height);
+          let tipo = 'image/webp', q = 0.8; d = c.toDataURL(tipo, q);
+          if (d.indexOf('data:image/webp') !== 0) { tipo = 'image/jpeg'; d = c.toDataURL(tipo, q); }
+          while (d.length > 65000 && q > 0.4) { q -= 0.1; d = c.toDataURL(tipo, q); }
+          if (d.length <= 65000) { resolve(d); return; }
+        }
+        reject(new Error('grande'));
+      } catch (e) { reject(e); }
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('imagem')); };
+    img.src = url;
+  });
+}
+function pedAvisoFotoEscolher() {
+  if (!_lojaAtiva) return;
+  let inp = document.getElementById('pc-aviso-foto-input');
+  if (!inp) { inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*'; inp.id = 'pc-aviso-foto-input'; inp.style.display = 'none'; document.body.appendChild(inp); }
+  inp.value = '';
+  inp.onchange = () => {
+    const f = inp.files && inp.files[0]; if (!f) return;
+    const loja = _lojaAtiva;
+    showToast('Enviando foto…');
+    _pedAvisoFotoRedimensionar(f).then(d =>
+      _dbRef('cardapioFotos/' + loja + '/_aviso').set(d)
+        .then(() => _dbRef('pedidosConfig/' + loja + '/avisoFotoV').set(Date.now()))
+        .then(() => { if (loja === _lojaAtiva) _pedAvisoFotoPreview(d); showToast('Foto do aviso salva ✔'); })
+    ).catch(e => {
+      console.error(e);
+      showToast(e && e.message === 'grande' ? 'Foto muito detalhada. Tente outra.' :
+        (e && /permission/i.test(e.message || e.code || '') ? 'Sem permissão. Publique as regras atualizadas do Firebase.' : 'Não foi possível enviar a foto'), false);
+    });
+  };
+  inp.click();
+}
+function pedAvisoFotoRemover() {
+  const loja = _lojaAtiva; if (!loja) return;
+  _dbRef('pedidosConfig/' + loja + '/avisoFotoV').remove()
+    .then(() => _dbRef('cardapioFotos/' + loja + '/_aviso').remove())
+    .then(() => { _pedAvisoFotoPreview(null); showToast('Foto do aviso removida'); })
+    .catch(e => { console.error(e); showToast('Erro ao remover a foto', false); });
+}
+
 function pedConfigAbrir() {
   if (!_lojaAtiva) { showToast('Aguarde o carregamento do restaurante', false); return; }
   const c = _pedCfg() || {};
@@ -18667,6 +18745,7 @@ function pedConfigAbrir() {
   set('pc-min', money(c.pedidoMinimo));
   set('pc-whats', _maskFone(c.whatsapp || ''));
   set('pc-aviso', c.aviso || '');
+  _pedAvisoFotoCarregar();
   set('pc-cep', c.lojaCep || ''); set('pc-num', c.lojaNumero || ''); set('pc-rua', c.lojaRua || '');
   set('pc-bairro', c.lojaBairro || ''); set('pc-cidade', c.lojaCidade || ''); set('pc-uf', c.lojaUf || '');
   set('pc-lat', c.lojaLat != null ? String(c.lojaLat) : '');
@@ -18701,6 +18780,7 @@ function pedConfigSalvar() {
   if (v('pc-tempo'))  cfg.tempoEstimado = v('pc-tempo').slice(0, 40);
   if (v('pc-whats'))  cfg.whatsapp = v('pc-whats').replace(/[^\d()+ -]/g, '').slice(0, 20);
   if (v('pc-aviso'))  cfg.aviso = v('pc-aviso').slice(0, 200);
+  if ((_pedCfg() || {}).avisoFotoV) cfg.avisoFotoV = _pedCfg().avisoFotoV;   // a foto é enviada na hora; o salvar só preserva a versão
   // taxa por distância (km)
   const fxs = [];
   for (let i = 0; i < 5; i++) {

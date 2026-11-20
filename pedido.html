@@ -74,6 +74,11 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
   background: linear-gradient(100deg, transparent, rgba(255,255,255,.28), transparent);
   transform: skewX(-20deg); animation: avisoBrilho 4.5s ease-in-out infinite; pointer-events: none;
 }
+.aviso.destaque.com-foto { flex-direction: column; align-items: stretch; gap: 0; padding: 0; text-align: center; }
+.aviso.destaque.com-foto::before { display: none; }
+.aviso.destaque .aviso-img { display: block; width: 100%; aspect-ratio: 2 / 1; object-fit: cover; background: #9A5C1C; }
+.aviso.destaque .aviso-txt { padding: 12px 18px 14px; }
+.aviso.destaque .aviso-txt:empty { display: none; }
 @keyframes avisoPulso { 0%,100% { transform: scale(1); } 50% { transform: scale(1.12); } }
 @keyframes avisoBrilho { 0%,60% { left: -60%; } 100% { left: 130%; } }
 @media (prefers-reduced-motion: reduce) { .aviso.destaque::before, .aviso.destaque::after { animation: none; } }
@@ -464,6 +469,25 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
       el.innerHTML = '<img src="' + d + '" alt="" width="84" height="84" decoding="async">';
     });
   }
+  /* Foto do aviso do dia (cardapioFotos/<loja>/_aviso, versão em cfg.avisoFotoV), com cache no celular. */
+  var AVISO_FOTO = null, avisoFotoBuscando = 0;
+  function avisoFoto() {
+    var v = cfg && cfg.avisoFotoV;
+    if (!v) { AVISO_FOTO = null; return null; }
+    if (AVISO_FOTO && AVISO_FOTO.v === v) return AVISO_FOTO.d;
+    var c = lsGet('avisoFoto_' + LOJA);
+    if (c && c.v === v && typeof c.d === 'string' && c.d.indexOf('data:image/') === 0) { AVISO_FOTO = c; return c.d; }
+    if (avisoFotoBuscando !== v) {
+      avisoFotoBuscando = v;
+      base('cardapioFotos/' + LOJA + '/_aviso').once('value').then(function (sn) {
+        var d = sn.val();
+        if (typeof d !== 'string' || d.indexOf('data:image/') !== 0) return;
+        AVISO_FOTO = { v: v, d: d }; lsSet('avisoFoto_' + LOJA, AVISO_FOTO);
+        try { desenharCabecalho(); } catch (e) {}
+      }).catch(function () { avisoFotoBuscando = 0; });
+    }
+    return AVISO_FOTO && AVISO_FOTO.v === v ? AVISO_FOTO.d : null;
+  }
   function fotosSincronizar() {
     var cache = fotoCacheLer(), manter = {};
     itensAtivos().forEach(function (i) {
@@ -634,8 +658,13 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     chip.textContent = aberta() ? '● Aberto para pedidos' : '● Fechado no momento';
     var av = $('#aviso');
     var txt = !aberta() ? 'Estamos fechados no momento. Você pode ver o cardápio, mas só dá para enviar pedidos quando abrirmos.' : (cfg && cfg.aviso) || '';
-    av.textContent = txt; av.classList.toggle('hide', !txt);
-    av.classList.toggle('destaque', !!txt && aberta()); // aviso do dia em destaque; "fechado" continua discreto
+    var foto = aberta() ? avisoFoto() : null;
+    av.textContent = '';
+    if (foto) { var im = document.createElement('img'); im.className = 'aviso-img'; im.alt = ''; im.src = foto; av.appendChild(im); }
+    var tx = document.createElement('span'); tx.className = 'aviso-txt'; tx.textContent = txt; av.appendChild(tx);
+    av.classList.toggle('hide', !txt && !foto);
+    av.classList.toggle('destaque', (!!txt || !!foto) && aberta()); // aviso do dia em destaque; "fechado" continua discreto
+    av.classList.toggle('com-foto', !!foto);
   }
   function desenharMenu() {
     var itens = itensAtivos();

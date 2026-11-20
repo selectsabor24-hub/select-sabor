@@ -194,6 +194,9 @@
           "lojaUf": {
             ".validate": "newData.isString() && newData.val().length === 2"
           },
+          "avisoFotoV": {
+            ".validate": "newData.isNumber()"
+          },
           "$outro": {
             ".validate": "false"
           }
