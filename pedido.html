@@ -99,7 +99,6 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
 @keyframes avisoBrilho { 0%,60% { left: -60%; } 100% { left: 130%; } }
 @media (prefers-reduced-motion: reduce) { .aviso.destaque::before, .aviso.destaque::after { animation: none; } }
 /* Entrada da foto do destaque: cresce do centro até o tamanho final (toca só na 1ª vez, não a cada clique na sacola) */
-.aviso.destaque .dest-hr { flex: 0 0 auto; background: rgba(255,255,255,.22); color: #fff; font-size: 12px; font-weight: 800; padding: 8px 12px; border-radius: 999px; text-align: center; line-height: 1.25; }
 @keyframes fotoCresce { 0% { transform: scale(.35); opacity: 0; } 60% { opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
 @keyframes fotoFundo { from { opacity: 0; } to { opacity: 1; } }
 @keyframes selosPop { 0% { transform: scale(0); opacity: 0; } 70% { transform: scale(1.15); opacity: 1; } 100% { transform: scale(1); } }
@@ -128,8 +127,6 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
 .item .nome { font-weight: 700; overflow-wrap: anywhere; }
 .item .desc { margin-top: 3px; font-size: 13px; color: var(--mut); line-height: 1.35; overflow-wrap: anywhere; }
 .item .preco { margin-top: 2px; color: var(--laranja); font-weight: 800; }
-.item.fora .info, .item.fora .ft { opacity: .5; }
-.hr-fora { flex-shrink: 0; background: var(--laranja-bg); color: #7C4A12; border: 1px solid #F0D9B5; border-radius: 12px; padding: 7px 10px; font-size: 12px; font-weight: 800; line-height: 1.25; text-align: center; }
 .item .hr-dentro { margin-top: 3px; font-size: 12px; font-weight: 700; color: var(--verde); }
 .add { flex-shrink: 0; background: var(--verde); color: #fff; border: 0; border-radius: 12px; padding: 10px 16px; font-weight: 700; min-height: 44px; }
 .add[disabled] { background: #C9CFC9; cursor: not-allowed; }
@@ -710,7 +707,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
   /* Aviso do dia + item em destaque (cfg.destaqueId): foto, preço e botão de adicionar à sacola. */
   function destaqueItem() {
     var id = cfg && cfg.destaqueId; if (!id) return null;
-    return itensAtivos().filter(function (i) { return i.id === id; })[0] || null;
+    return itensDisponiveis().filter(function (i) { return i.id === id; })[0] || null;
   }
   var _fotoAnimada = null; // última foto cujo efeito de entrada já rodou
   function desenharAviso() {
@@ -733,9 +730,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
       var q = cart[dest.id] || 0, id = esc(dest.id);
       var lin = document.createElement('div'); lin.className = 'dest-linha';
       lin.innerHTML = '<div class="dest-info"><div class="dest-nome">' + esc(dest.nome) + '</div>' + (dest.desc ? '<div class="dest-desc">' + esc(dest.desc) + '</div>' : '') + '<div class="dest-preco">' + brl(dest.preco) + '</div></div>' +
-        (!noHorario(dest)
-          ? '<span class="dest-hr">🕒 ' + esc(rotuloHorario(dest).replace(/^d/, 'D')) + '</span>'
-          : q > 0
+        (q > 0
           ? '<div class="dest-step"><button type="button" data-m="-1" data-id="' + id + '" aria-label="Diminuir">−</button><span>' + q + '</span><button type="button" data-m="1" data-id="' + id + '" aria-label="Aumentar">+</button></div>'
           : '<button type="button" class="dest-btn" data-m="1" data-id="' + id + '">Adicionar</button>');
       av.appendChild(lin);
@@ -761,9 +756,12 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     desenharAviso();
   }
   function desenharMenu() {
-    var itens = itensAtivos();
+    var itens = itensDisponiveis(); // item fora do horário de venda fica oculto para o cliente
     var wrap = $('#menu-lista');
-    if (!itens.length) { wrap.innerHTML = '<div class="vazio">O cardápio ainda não tem itens disponíveis.</div>'; $('#cats').classList.add('hide'); return; }
+    if (!itens.length) {
+      wrap.innerHTML = '<div class="vazio">' + (itensAtivos().length ? 'No momento não temos itens disponíveis neste horário. Volte mais tarde!' : 'O cardápio ainda não tem itens disponíveis.') + '</div>';
+      $('#cats').classList.add('hide'); _assinHr = assinaturaHorarios(); return;
+    }
     var porCat = {};
     itens.forEach(function (i) { var c = i.cat || 'Outros'; (porCat[c] = porCat[c] || []).push(i); });
     var cats = categorias().filter(function (c) { return porCat[c]; });
@@ -775,10 +773,10 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     cats.forEach(function (c, ix) {
       h += '<h2 class="cat-titulo" id="cat-' + ix + '">' + esc(c) + '</h2>';
       porCat[c].sort(function (a, b) { return String(a.nome).localeCompare(String(b.nome), 'pt-BR'); }).forEach(function (i) {
-        var q = cart[i.id] || 0, fora = !noHorario(i);
+        var q = cart[i.id] || 0;
         var ft = i.fotoV ? '<div class="ft' + (FOTOS[i.id] ? '' : ' sk') + '" data-f="' + esc(i.id) + '">' + (FOTOS[i.id] ? '<img src="' + FOTOS[i.id] + '" alt="" width="84" height="84" decoding="async">' : '') + '</div>' : '';
-        h += '<div class="item' + (fora ? ' fora' : '') + '">' + ft + '<div class="info"><div class="nome">' + esc(i.nome) + '</div>' + (i.desc ? '<div class="desc">' + esc(i.desc) + '</div>' : '') + '<div class="preco">' + brl(i.preco) + '</div>' + (temHorario(i) && !fora ? '<div class="hr-dentro">🕒 Disponível ' + esc(rotuloHorario(i)) + '</div>' : '') + '</div>' +
-          (fora ? '<div class="hr-fora">🕒 Disponível<br>' + esc(rotuloHorario(i)) + '</div>' : q > 0
+        h += '<div class="item">' + ft + '<div class="info"><div class="nome">' + esc(i.nome) + '</div>' + (i.desc ? '<div class="desc">' + esc(i.desc) + '</div>' : '') + '<div class="preco">' + brl(i.preco) + '</div>' + (temHorario(i) ? '<div class="hr-dentro">🕒 Disponível ' + esc(rotuloHorario(i)) + '</div>' : '') + '</div>' +
+          (q > 0
             ? '<div class="stepper"><button type="button" data-m="-1" data-id="' + esc(i.id) + '" aria-label="Diminuir">−</button><span>' + q + '</span><button type="button" data-m="1" data-id="' + esc(i.id) + '" aria-label="Aumentar">+</button></div>'
             : '<button type="button" class="add" data-m="1" data-id="' + esc(i.id) + '"' + (aberta() ? '' : ' disabled') + '>Adicionar</button>') +
           '</div>';
