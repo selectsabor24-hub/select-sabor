@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <script>try{var t=localStorage.getItem("caixa-theme");if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Controle de Caixa v4.9</title>
+<title>Controle de Caixa v5.3</title>
 
 <!-- ============================================================
      PWA — Progressive Web App
@@ -33,7 +33,7 @@
 <!--
   ╔══════════════════════════════════════════════════════════════════════╗
   ║           CONTROLE DE CAIXA                                           ║
-  ║           Versão: 4.9 — Nova categoria "Pedidos" no menu lateral      ║
+  ║           Versão: 5.3 — Cadastro de motoqueiros + menu "Pedidos"      ║
   ╠══════════════════════════════════════════════════════════════════════╣
   ║  HISTÓRICO DE VERSÕES                                                ║
   ║  ─────────────────────────────────────────────────────────────────  ║
@@ -44,8 +44,11 @@
   ║         · Melhoria: renderContas usa cache; seção 3.22 documentada   ║
   ║  v3.3 — Seções novas: Planilhas já lançadas (3.23), calendário       ║
   ║         visual de lançamentos com marcação de cartão                 ║
-  ║  v4.9 — Menu lateral: nova categoria "Pedidos" (entre Dashboard e   ║
-  ║         Cadastros) com Pedidos online, Motoqueiro e Comandas/Mesas  ║
+  ║  v5.3 — Motoqueiro: nova aba "Cadastro" (nome, telefone, moto/placa,║
+  ║         ativar/desativar, editar, excluir) e lista "Quem é você?"   ║
+  ║         no topo. Menu lateral: nova categoria "Pedidos" (entre      ║
+  ║         Dashboard e Cadastros) com Pedidos online, Motoqueiro e     ║
+  ║         Comandas/Mesas. Novas regras Firebase: caixa/motoqueiros    ║
   ║  v4.8 — Dashboard: cards recalculados só com dados lançados         ║
   ║         (faturamento, despesas, CMV, comandas, delivery) e textos   ║
   ║         voltados para restaurante                                   ║
@@ -3302,6 +3305,21 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
 .mot-resumo-l { display: flex; flex-direction: column; gap: 2px; padding: 8px 0; border-bottom: 1px dashed var(--border); }
 .mot-resumo-l:last-child { border-bottom: 0; }
 .mot-resumo-l span { font-size: 13px; color: var(--text3); }
+/* Cadastro de motoqueiros (v5.3) */
+.mot-cad-form { display: grid; grid-template-columns: 2fr 1.2fr 1.2fr auto; gap: 12px; align-items: end; }
+.mot-cad-form .form-group { margin: 0; min-width: 0; }
+.mot-cad-item { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px 0; border-bottom: 1px dashed var(--border); }
+.mot-cad-item:last-child { border-bottom: 0; }
+.mot-cad-item.off { opacity: .6; }
+.mot-cad-info { flex: 1 1 220px; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.mot-cad-info strong { font-size: 16px; overflow-wrap: anywhere; }
+.mot-cad-info span { font-size: 13px; color: var(--text3); overflow-wrap: anywhere; }
+.mot-cad-tag { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; background: #DCFCE7; color: #166534; }
+.mot-cad-item.off .mot-cad-tag { background: #E5E7EB; color: #374151; }
+.mot-cad-acoes { display: flex; gap: 6px; flex-wrap: wrap; }
+@media (max-width: 760px) {
+  .mot-cad-form { grid-template-columns: 1fr; }
+}
 @media (max-width: 600px) {
   .mot-links .btn { flex: 1 1 calc(50% - 8px); }
 }
@@ -3429,7 +3447,7 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
           <img src="logo.png" alt="Select Sabor" style="width:44px;height:44px;border-radius:50%;flex-shrink:0;background:#fff;box-shadow:0 0 0 2px rgba(255,255,255,0.18)">
           <div>
             <div class="logo-title">Controle de Caixa</div>
-            <div class="logo-sub">v4.9</div>
+            <div class="logo-sub">v5.3</div>
           </div>
         </div>
         <span id="status-dot" style="display:none;width:8px;height:8px;border-radius:50%;background:#4ADE80;flex-shrink:0;box-shadow:0 0 0 2px rgba(74,222,128,0.2)" title="Conectado"></span>
@@ -4665,6 +4683,7 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
         </div>
         <div class="mot-topo">
           <input id="mot-nome" class="input-base" maxlength="40" placeholder="Seu nome (opcional)" autocomplete="name" oninput="_motNomeSalvar(this.value)">
+          <select id="mot-sel" class="input-base" style="display:none" onchange="_motNomeSalvar(this.value)" aria-label="Quem é você?"></select>
           <button class="btn btn-secondary btn-md" id="mot-som-btn" onclick="pedSomToggle(); renderMotoqueiro()">🔔 Som ligado</button>
         </div>
       </div>
@@ -4675,6 +4694,7 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
         <button id="mot-tab-sair"   onclick="motSetTab('sair')">Para sair</button>
         <button id="mot-tab-rua"    onclick="motSetTab('rua')">Na rua</button>
         <button id="mot-tab-feitas" onclick="motSetTab('feitas')">Entregues hoje</button>
+        <button id="mot-tab-cadastro" onclick="motSetTab('cadastro')">👤 Cadastro</button>
       </div>
 
       <div id="mot-lista"></div>
@@ -5808,7 +5828,7 @@ const CATS_INSUMO_EXTRA = ['sacolao', 'acougue', 'supermercado'];
    ============================================================ */
 
 let db = null;
-let _cache = { comandas: [], cardapio: [], data: [], forn: null, lojas: [], lojasCad: [], funcs: [], pagamentosFunc: [], contasPagar: [], pontoFunc: [], faltasFunc: [], fechamentosCaixa: [], auditoria: [] };
+let _cache = { comandas: [], cardapio: [], motoqueiros: [], data: [], forn: null, lojas: [], lojasCad: [], funcs: [], pagamentosFunc: [], contasPagar: [], pontoFunc: [], faltasFunc: [], fechamentosCaixa: [], auditoria: [] };
 let _listeners = [];
 let _lojaAtiva = null; // id da loja selecionada atualmente
 let _refreshTimer = null; // debounce para evitar múltiplos re-renders
@@ -6504,6 +6524,16 @@ function setLojaAtiva(id) {
     if (_currentSection === 'comandas' || (_currentSection === 'cardapio' && !_cdpEditando())) _refreshCurrentSection();
   });
   _listenersLoja.push(refCardapio);
+
+  // Motoqueiros cadastrados da loja ativa (v5.3)
+  _cache.motoqueiros = [];
+  const refMotoqueiros = _dbRef('motoqueiros/' + id);
+  refMotoqueiros.on('value', snap => {
+    const v = snap.val() || {};
+    _cache.motoqueiros = Object.keys(v).map(k => Object.assign({ id: k }, v[k]));
+    if (_currentSection === 'motoqueiro') _refreshCurrentSection();
+  }, e => console.warn('[motoqueiros] sem acesso:', e && e.message));
+  _listenersLoja.push(refMotoqueiros);
 
   // Pedidos online da loja ativa
   _cache.pedidos = [];
@@ -18175,9 +18205,10 @@ function motSetTab(t) { _motTab = t; renderMotoqueiro(); }
 
 function renderMotoqueiro() {
   const lista = document.getElementById('mot-lista'); if (!lista) return;
+  // Não apaga o que está sendo digitado no cadastro quando chega atualização do Firebase
+  if (_motTab === 'cadastro' && _motCadEditando()) return;
   const met = document.getElementById('mot-metricas');
-  const inp = document.getElementById('mot-nome');
-  if (inp && document.activeElement !== inp && inp.value !== _motNome()) inp.value = _motNome();
+  _motSeletorRender();
   const som = document.getElementById('mot-som-btn');
   if (som) som.textContent = _pedSom ? '🔔 Som ligado' : '🔕 Som desligado';
   const tabs = document.getElementById('mot-tabs');
@@ -18187,15 +18218,30 @@ function renderMotoqueiro() {
     lista.innerHTML = '<div class="card" style="text-align:center;color:var(--text3)">Aguarde o carregamento do restaurante.</div>';
     return;
   }
+  tabs.style.display = '';
+
+  // Aba Cadastro funciona mesmo sem os pedidos online configurados
+  const tabCad = document.getElementById('mot-tab-cadastro');
+  if (tabCad) {
+    tabCad.classList.toggle('active', _motTab === 'cadastro');
+    const nAtivos = _motCadLista().filter(m => m.ativo !== false).length;
+    tabCad.textContent = '👤 Cadastro' + (nAtivos ? ' (' + nAtivos + ')' : '');
+  }
+  if (_motTab === 'cadastro') {
+    ['sair', 'rua', 'feitas'].forEach(t => { const b = document.getElementById('mot-tab-' + t); if (b) b.classList.remove('active'); });
+    met.innerHTML = '';
+    lista.innerHTML = _motCadHtml();
+    return;
+  }
+
   if (!_pedCfg()) {
-    met.innerHTML = ''; tabs.style.display = 'none';
+    met.innerHTML = '';
     lista.innerHTML = `<div class="card ped-vazio"><div style="font-size:34px">🛵</div>
       <div style="font-weight:800;margin:6px 0">Pedidos online ainda não configurados</div>
       <div style="color:var(--text3);margin-bottom:12px">Ative os pedidos online para as entregas aparecerem aqui.</div>
       <button class="btn btn-primary btn-md" onclick="pedConfigAbrir()">Configurar e ativar</button></div>`;
     return;
   }
-  tabs.style.display = '';
 
   const todas  = _motEntregas();
   const sair   = todas.filter(p => p.status === 'pronto').sort((a, b) => (a.ts || 0) - (b.ts || 0));
@@ -18222,6 +18268,135 @@ function renderMotoqueiro() {
   let html = arr.length ? arr.map(_motCardHtml).join('') : `<div class="card" style="text-align:center;color:var(--text3);padding:28px 12px">${vazio}</div>`;
   if (_motTab === 'feitas') html = _motResumoHtml(feitas) + html;
   lista.innerHTML = html;
+}
+
+/* ---------- Cadastro de motoqueiros (v5.3) ----------
+   Firebase: caixa/motoqueiros/{lojaId}/{id}  ({id, nome, telefone, placa, ativo, criadoEm})
+   Quem está cadastrado e ativo aparece numa lista de escolha no topo da aba
+   ("Quem é você?"); o nome escolhido é gravado no pedido ao sair para entrega. */
+let _motEditId = null;
+
+function _motCadLista() {
+  return (_cache.motoqueiros || []).slice().sort((a, b) => String(a.nome || '').localeCompare(String(b.nome || ''), 'pt-BR'));
+}
+function _motCadRef(id) { return _dbRef('motoqueiros/' + _lojaAtiva + '/' + id); }
+function _motCadEditando() {
+  const e = document.activeElement;
+  return !!(e && e.closest && e.closest('#mot-cad-form') && /^(INPUT|SELECT|TEXTAREA)$/.test(e.tagName));
+}
+
+/** Troca o campo de nome livre por uma lista de escolha quando há motoqueiros ativos cadastrados. */
+function _motSeletorRender() {
+  const inp = document.getElementById('mot-nome');
+  const sel = document.getElementById('mot-sel');
+  if (!inp || !sel) return;
+  const ativos = _motCadLista().filter(m => m.ativo !== false);
+  const atual = _motNome();
+  if (!ativos.length) {
+    sel.style.display = 'none'; inp.style.display = '';
+    if (document.activeElement !== inp && inp.value !== atual) inp.value = atual;
+    return;
+  }
+  inp.style.display = 'none'; sel.style.display = '';
+  const nomes = ativos.map(m => String(m.nome));
+  if (atual && !nomes.includes(atual)) nomes.push(atual); // nome antigo salvo neste aparelho
+  const sig = nomes.join('\u0001');
+  if (sel.dataset.sig !== sig) {
+    sel.innerHTML = '<option value="">Quem é você?</option>' + nomes.map(n => `<option value="${escapeAttr(n)}">${escapeHtml(n)}</option>`).join('');
+    sel.dataset.sig = sig;
+  }
+  if (sel.value !== atual) sel.value = atual;
+}
+
+function _motCadHtml() {
+  const lista = _motCadLista();
+  const ed = _motEditId ? lista.find(m => m.id === _motEditId) : null;
+  if (_motEditId && !ed) _motEditId = null;
+  const v = (campo) => ed ? escapeAttr(ed[campo] || '') : '';
+  const hojeNome = {};
+  _motEntregas().filter(_motEntregueHoje).forEach(p => { const k = String(p.motoqueiro || '').trim(); if (k) hojeNome[k] = (hojeNome[k] || 0) + 1; });
+
+  const form = `<div class="card mb-5" id="mot-cad-form">
+      <div class="card-title">${ed ? 'Editar motoqueiro' : 'Novo motoqueiro'}</div>
+      <div class="mot-cad-form">
+        <div class="form-group"><label>Nome</label><input id="mot-cad-nome" type="text" maxlength="40" placeholder="Ex: João" autocomplete="off" value="${v('nome')}" onkeydown="if(event.key==='Enter')motCadSalvar()"></div>
+        <div class="form-group"><label>Telefone / WhatsApp</label><input id="mot-cad-fone" type="tel" maxlength="20" placeholder="(11) 90000-0000" autocomplete="off" value="${v('telefone')}" onkeydown="if(event.key==='Enter')motCadSalvar()"></div>
+        <div class="form-group"><label>Moto / Placa</label><input id="mot-cad-placa" type="text" maxlength="20" placeholder="Ex: ABC-1D23" autocomplete="off" value="${v('placa')}" onkeydown="if(event.key==='Enter')motCadSalvar()"></div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn btn-primary btn-md" onclick="motCadSalvar()">${ed ? 'Salvar' : '+ Cadastrar'}</button>
+          ${ed ? '<button class="btn btn-secondary btn-md" onclick="motCadCancelar()">Cancelar</button>' : ''}
+        </div>
+      </div>
+    </div>`;
+
+  if (!lista.length) {
+    return form + `<div class="card" style="text-align:center;color:var(--text3);padding:28px 12px">Nenhum motoqueiro cadastrado ainda.<br>Cadastre acima para escolher o nome nas entregas.</div>`;
+  }
+  const linhas = lista.map(m => {
+    const off = m.ativo === false;
+    const n = hojeNome[String(m.nome || '').trim()] || 0;
+    const info = [m.telefone ? '📞 ' + escapeHtml(m.telefone) : '', m.placa ? '🏍️ ' + escapeHtml(m.placa) : '', n ? n + ' entrega' + (n > 1 ? 's' : '') + ' hoje' : ''].filter(Boolean).join(' · ');
+    return `<div class="mot-cad-item${off ? ' off' : ''}">
+        <div class="mot-cad-info"><strong>${escapeHtml(m.nome || '')}</strong>${info ? `<span>${info}</span>` : ''}</div>
+        <span class="mot-cad-tag">${off ? 'Inativo' : 'Ativo'}</span>
+        <div class="mot-cad-acoes">
+          <button class="btn btn-secondary btn-md" data-mot="${escapeAttr(m.id)}" onclick="motCadEditar(this.dataset.mot)">Editar</button>
+          <button class="btn btn-secondary btn-md" data-mot="${escapeAttr(m.id)}" onclick="motCadAtivo(this.dataset.mot)">${off ? 'Ativar' : 'Desativar'}</button>
+          <button class="btn btn-secondary btn-md" data-mot="${escapeAttr(m.id)}" onclick="motCadExcluir(this.dataset.mot)" title="Excluir">🗑</button>
+        </div>
+      </div>`;
+  }).join('');
+  return form + `<div class="card"><div class="card-title">Motoqueiros cadastrados (${lista.length})</div>${linhas}</div>`;
+}
+
+function _motCadSemFoco() { const a = document.activeElement; if (a && a.blur) a.blur(); }
+
+function motCadSalvar() {
+  if (!_lojaAtiva) { showToast('Aguarde o carregamento do restaurante', false); return; }
+  const nome  = (document.getElementById('mot-cad-nome').value || '').trim().replace(/\s+/g, ' ').slice(0, 40);
+  const fone  = (document.getElementById('mot-cad-fone').value || '').replace(/[^\d()+\-\s]/g, '').trim().slice(0, 20);
+  const placa = (document.getElementById('mot-cad-placa').value || '').trim().slice(0, 20);
+  if (!nome) { showToast('Informe o nome do motoqueiro', false); return; }
+  if (_motCadLista().some(m => m.id !== _motEditId && String(m.nome || '').trim().toLowerCase() === nome.toLowerCase())) {
+    showToast('Já existe um motoqueiro chamado "' + nome + '"', false); return;
+  }
+  const ed = _motEditId ? _motCadLista().find(m => m.id === _motEditId) : null;
+  const id = ed ? ed.id : 'mot_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+  const reg = { id, nome, telefone: fone, placa, ativo: ed ? ed.ativo !== false : true, criadoEm: ed && ed.criadoEm ? ed.criadoEm : Date.now() };
+  _motCadRef(id).set(reg)
+    .then(() => {
+      // se o nome escolhido neste aparelho era o antigo, acompanha a mudança
+      if (ed && _motNome() === String(ed.nome || '').trim() && ed.nome !== nome) _motNomeSalvar(nome);
+      showToast(ed ? 'Motoqueiro atualizado' : 'Motoqueiro cadastrado');
+      _motEditId = null;
+      _motCadSemFoco();
+      renderMotoqueiro();
+      const n = document.getElementById('mot-cad-nome'); if (n && !ed) n.focus();
+    })
+    .catch(e => {
+      console.error(e);
+      showToast(e && /permission/i.test(e.message || e.code || '')
+        ? 'Sem permissão para salvar. Publique as regras atualizadas do Firebase (firebase-database.rules.json).'
+        : 'Erro ao salvar o motoqueiro', false);
+    });
+}
+function motCadEditar(id) { _motEditId = id; _motCadSemFoco(); renderMotoqueiro(); const n = document.getElementById('mot-cad-nome'); if (n) { n.focus(); n.select(); } }
+function motCadCancelar() { _motEditId = null; _motCadSemFoco(); renderMotoqueiro(); }
+function motCadAtivo(id) {
+  const m = _motCadLista().find(x => x.id === id); if (!m) return;
+  _motCadRef(id).child('ativo').set(m.ativo === false)
+    .catch(e => { console.error(e); showToast('Erro ao atualizar o motoqueiro', false); });
+}
+function motCadExcluir(id) {
+  const m = _motCadLista().find(x => x.id === id); if (!m) return;
+  showModal('Excluir motoqueiro', `Excluir <strong>${escapeHtml(m.nome || '')}</strong> do cadastro? As entregas já feitas continuam com o nome dele. Se só quiser tirar da lista, use <em>Desativar</em>.`, [
+    { label: 'Excluir', style: 'danger', action: () => {
+        _motCadRef(id).remove()
+          .then(() => { if (_motEditId === id) _motEditId = null; showToast('Motoqueiro excluído'); })
+          .catch(e => { console.error(e); showToast('Erro ao excluir', false); });
+    }},
+    { label: 'Cancelar', style: 'secondary' }
+  ]);
 }
 
 /** Resumo do dia por motoqueiro: entregas, taxas e quanto entrou em cada forma de pagamento. */

@@ -40,6 +40,14 @@
           ".read": true
         }
       },
+      "motoqueiros": {
+        "$lojaId": {
+          "$motId": {
+            ".write": "auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true)",
+            ".validate": "newData.val() == null || (newData.hasChildren(['id','nome']) && newData.child('nome').isString() && newData.child('nome').val().length <= 40)"
+          }
+        }
+      },
       "fornecedores": {
         ".write": "auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true)"
       },
