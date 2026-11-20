@@ -312,14 +312,23 @@ button { cursor: pointer; }
       cfg = s.val(); $('#tp-loja').textContent = (cfg && cfg.nome) || 'Restaurante'; render();
     });
     ouvir(ref('cardapio/' + eu.lojaId), 'value', function (s) { cardapio = s.val() || {}; render(); });
-    ouvir(ref('pedidos/' + eu.lojaId).orderByChild('ts').limitToLast(120), 'value', function (s) {
-      var v = s.val() || {};
-      pedidos = Object.keys(v).filter(function (k) { return ID_OK.test(k); })
-        .map(function (k) { return Object.assign({ id: k }, v[k]); })
+    // O motoqueiro só enxerga (regras do Firebase): entregas prontas que ninguém pegou + as dele.
+    var prontosMap = {}, meusMap = {};
+    function juntar() {
+      var tudo = Object.assign({}, prontosMap, meusMap);
+      pedidos = Object.keys(tudo).filter(function (k) { return ID_OK.test(k); })
+        .map(function (k) { return Object.assign({ id: k }, tudo[k]); })
         .filter(function (p) { return p.tipo === 'entrega'; });
       detectar();
       render();
-    }, function (e) { toast('Sem acesso aos pedidos. Fale com o restaurante.', false); console.warn(e); });
+    }
+    var semAcesso = function (e) { toast('Sem acesso aos pedidos. Fale com o restaurante.', false); console.warn(e); };
+    ouvir(ref('pedidos/' + eu.lojaId).orderByChild('status').equalTo('pronto').limitToLast(100), 'value', function (s) {
+      prontosMap = s.val() || {}; juntar();
+    }, semAcesso);
+    ouvir(ref('pedidos/' + eu.lojaId).orderByChild('motoqueiro').equalTo(eu.nome).limitToLast(100), 'value', function (s) {
+      meusMap = s.val() || {}; juntar();
+    }, semAcesso);
     avisoNotif();
     travarTela();
   }
