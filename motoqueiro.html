@@ -18,7 +18,7 @@
 <script src="https://cdn.jsdelivr.net/npm/firebase@10.12.2/firebase-auth-compat.min.js"></script>
 <!--
   ╔══════════════════════════════════════════════════════════════════════╗
-  ║  APP DO MOTOQUEIRO — Select Sabor                          v1.0      ║
+  ║  APP DO MOTOQUEIRO — Select Sabor                          v1.1      ║
   ╠══════════════════════════════════════════════════════════════════════╣
   ║  · Login individual (e-mail + senha criados em Motoqueiro > Cadastro)║
   ║  · Lê os pedidos de ENTREGA da loja do motoqueiro (caixa/pedidos)    ║
@@ -395,16 +395,10 @@ button { cursor: pointer; }
 
   function resumo(arr) {
     if (!arr.length) return '';
-    var r = { dinheiro: 0, pix: 0, cartao: 0, taxas: 0 };
-    arr.forEach(function (p) {
-      var t = totais(p); r.taxas += t.taxa;
-      r[p.pagamento === 'pix' ? 'pix' : (p.pagamento === 'cartao' ? 'cartao' : 'dinheiro')] += t.total;
-    });
+    var taxas = 0;
+    arr.forEach(function (p) { taxas += totais(p).taxa; });
     return '<div class="resumo"><h3>Resumo de hoje — ' + arr.length + ' entrega' + (arr.length > 1 ? 's' : '') + '</h3>' +
-      '<div class="l"><span>💵 Dinheiro recebido</span><b>' + brl(round(r.dinheiro)) + '</b></div>' +
-      '<div class="l"><span>📲 Pix</span><b>' + brl(round(r.pix)) + '</b></div>' +
-      '<div class="l"><span>💳 Cartão</span><b>' + brl(round(r.cartao)) + '</b></div>' +
-      '<div class="l"><span>🛵 Taxas de entrega</span><b>' + brl(round(r.taxas)) + '</b></div></div>';
+      '<div class="l"><span>🛵 Taxa recebida</span><b>' + brl(round(taxas)) + '</b></div></div>';
   }
 
   function cartao(p) {
