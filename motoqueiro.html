@@ -215,8 +215,9 @@ button { cursor: pointer; }
   function foneWa(t) { var d = String(t || '').replace(/\D/g, ''); if (!d) return ''; if (d.length <= 11) d = '55' + d; return d; }
 
   /* ---------- Estado ---------- */
-  var app = firebase.initializeApp(FIREBASE_CONFIG);
-  var auth = firebase.auth(), db = firebase.database();
+  // App com nome próprio: o login do motoqueiro fica separado do login do painel (mesmo navegador/endereço).
+  var app = firebase.initializeApp(FIREBASE_CONFIG, 'motoqueiro');
+  var auth = app.auth(), db = app.database();
   var eu = null;            // { uid, lojaId, nome, ativo }
   var cfg = null, cardapio = {}, pedidos = [];
   var tab = 'sair';
