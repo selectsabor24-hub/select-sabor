@@ -4718,6 +4718,16 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
         <div class="form-actions" style="margin-top:12px"><button class="btn btn-primary btn-md" type="button" onclick="pedConfigSalvarSecao('pedidos')">💾 Salvar pedidos e taxas</button></div>
       </div>
       <div class="card mb-5">
+        <div class="card-title">🕒 Horário de funcionamento</div>
+        <div class="ped-checks"><label><input type="checkbox" id="pc-horario-on"> Usar horário de funcionamento (fora dele a loja não recebe pedidos)</label></div>
+        <div class="form-grid" style="margin-top:10px">
+          <div class="form-group"><label>Abre às</label><input id="pc-abre" class="input-base" type="time"></div>
+          <div class="form-group"><label>Fecha às</label><input id="pc-fecha" class="input-base" type="time"></div>
+        </div>
+        <div style="font-size:12px;color:var(--text3);margin-top:6px">Passou do horário, o cliente ainda vê o cardápio, mas não consegue enviar pedido (o bloqueio vale também no servidor). Aceita horário que passa da meia-noite (ex.: 18:00 às 02:00). O botão "Pausar pedidos" continua valendo por cima do horário. Horário de Brasília.</div>
+        <div class="form-actions" style="margin-top:12px"><button class="btn btn-primary btn-md" type="button" onclick="pedConfigSalvarSecao('horario')">💾 Salvar horário de funcionamento</button></div>
+      </div>
+      <div class="card mb-5">
         <div class="card-title">📣 Aviso no topo do cardápio</div>
         <div class="form-grid">
           <div class="form-group"><label>Aviso no topo do cardápio (opcional)</label><input id="pc-aviso" class="input-base" maxlength="200" placeholder="Ex.: Hoje temos feijoada!"></div>
@@ -18289,8 +18299,8 @@ function renderPedidos() {
   topo.innerHTML = `<div class="card ped-topo">
     <div class="ped-topo-linha">
       <div>
-        <div class="ped-status ${aberto ? 'on' : 'off'}">${aberto ? '● Recebendo pedidos' : '● Pedidos pausados'}</div>
-        <div class="ped-sub">${escapeHtml(cfg.nome || '')}${cfg.tempoEstimado ? ' · ⏱ ' + escapeHtml(cfg.tempoEstimado) : ''} · Entrega ${(parseFloat(cfg.taxaEntrega) || 0) > 0 ? fmt(cfg.taxaEntrega) : 'grátis'}</div>
+        <div class="ped-status ${_pedStatusInfo(cfg).on ? 'on' : 'off'}" id="ped-status-el">${_pedStatusInfo(cfg).txt}</div>
+        <div class="ped-sub">${escapeHtml(cfg.nome || '')}${cfg.tempoEstimado ? ' · ⏱ ' + escapeHtml(cfg.tempoEstimado) : ''}${(cfg.horarioOn === true && _pedMinHM(cfg.abreMin) && _pedMinHM(cfg.fechaMin)) ? ' · 🕒 ' + _pedMinHM(cfg.abreMin) + ' às ' + _pedMinHM(cfg.fechaMin) : ''} · Entrega ${(parseFloat(cfg.taxaEntrega) || 0) > 0 ? fmt(cfg.taxaEntrega) : 'grátis'}</div>
       </div>
       <button class="btn ${aberto ? 'btn-secondary' : 'btn-primary'} btn-md" onclick="pedToggleAberto()">${aberto ? '⏸ Pausar pedidos' : '▶ Abrir para pedidos'}</button>
     </div>
@@ -18706,6 +18716,29 @@ function pedCompartilharLink() {
   const cfg = _pedCfg() || {};
   window.open('https://wa.me/?text=' + encodeURIComponent('Faça seu pedido' + (cfg.nome ? ' no ' + cfg.nome : '') + ' pelo link: ' + _pedLinkCliente()), '_blank', 'noopener');
 }
+/* ---------- Horário de funcionamento (cfg.horarioOn / abreMin / fechaMin = minutos desde 00:00, horário de Brasília) ---------- */
+function _pedHMMin(t) { const m = /^(\d{1,2}):(\d{2})$/.exec(String(t || '')); if (!m) return null; const h = +m[1], mi = +m[2]; return (h > 23 || mi > 59) ? null : h * 60 + mi; }
+function _pedMinHM(n) { return (typeof n === 'number' && n >= 0 && n < 1440) ? String(Math.floor(n / 60)).padStart(2, '0') + ':' + String(n % 60).padStart(2, '0') : ''; }
+function _pedAgoraMin() { return Math.floor((((Date.now() - 10800000) % 86400000) + 86400000) % 86400000 / 60000); }
+function _pedDentroHorario(c) {
+  if (!c || c.horarioOn !== true) return true;
+  const a = c.abreMin, f = c.fechaMin;
+  if (typeof a !== 'number' || typeof f !== 'number' || a === f) return false;
+  const n = _pedAgoraMin();
+  return a < f ? (n >= a && n < f) : (n >= a || n < f);
+}
+function _pedStatusInfo(c) {
+  const manual = !!c && c.aberto === true;
+  if (!manual) return { on: false, txt: '● Pedidos pausados' };
+  if (!_pedDentroHorario(c)) return { on: false, txt: '● Fora do horário' + (_pedMinHM(c.abreMin) ? ' · abre às ' + _pedMinHM(c.abreMin) : '') };
+  return { on: true, txt: '● Recebendo pedidos' };
+}
+setInterval(() => {   // mantém o status do topo certo quando o horário vira, sem redesenhar a tela
+  const el = document.getElementById('ped-status-el'), c = _pedCfg();
+  if (!el || !c) return;
+  const st = _pedStatusInfo(c);
+  if (el.textContent !== st.txt) { el.textContent = st.txt; el.className = 'ped-status ' + (st.on ? 'on' : 'off'); }
+}, 30000);
 function pedToggleAberto() {
   const cfg = _pedCfg(); if (!cfg || !_lojaAtiva) return;
   const novo = !(cfg.aberto === true);
@@ -18810,6 +18843,8 @@ function pedConfigAbrir() {
   document.getElementById('pc-entrega').checked  = c.aceitaEntrega !== false;
   document.getElementById('pc-retirada').checked = c.aceitaRetirada !== false;
   document.getElementById('pc-aberto').checked   = _pedCfg() ? c.aberto === true : true;
+  document.getElementById('pc-horario-on').checked = c.horarioOn === true;
+  set('pc-abre', _pedMinHM(c.abreMin)); set('pc-fecha', _pedMinHM(c.fechaMin));
   const box = document.getElementById('ped-config');
   box.style.display = '';
   box.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -18836,6 +18871,13 @@ function pedConfigSalvarSecao(secao) {
     upd.pedidoMinimo = _pedRound(_pedNum(v('pc-min')));
     upd.aceitaEntrega = entrega; upd.aceitaRetirada = retirada;
     upd.aberto = document.getElementById('pc-aberto').checked;
+  } else if (secao === 'horario') {
+    nome = 'Horário de funcionamento';
+    const on = document.getElementById('pc-horario-on').checked;
+    const a = _pedHMMin(v('pc-abre')), f = _pedHMMin(v('pc-fecha'));
+    if (on && (a === null || f === null)) { showToast('Informe a hora que abre e a hora que fecha', false); return; }
+    if (a !== null && a === f) { showToast('O horário de abrir e fechar não podem ser iguais', false); return; }
+    upd.horarioOn = on; upd.abreMin = a; upd.fechaMin = f;
   } else if (secao === 'aviso') {
     nome = 'Aviso';
     vazioNulo('aviso', v('pc-aviso').slice(0, 200));

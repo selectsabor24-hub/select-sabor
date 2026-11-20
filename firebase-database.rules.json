@@ -200,6 +200,15 @@
           "destaqueId": {
             ".validate": "newData.isString() && newData.val().length <= 60"
           },
+          "horarioOn": {
+            ".validate": "newData.isBoolean()"
+          },
+          "abreMin": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() < 1440"
+          },
+          "fechaMin": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() < 1440"
+          },
           "$outro": {
             ".validate": "false"
           }
@@ -215,7 +224,7 @@
           "$pedidoId": {
             ".read": true,
             ".write": "(!data.exists() && newData.exists()) || (auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true))",
-            ".validate": "$pedidoId.matches(/^[-A-Za-z0-9_]{8,40}$/) && newData.hasChildren(['ts','codigo','cliente','tipo','pagamento','itens','status']) && (data.exists() || root.child('caixa/pedidosConfig').child($lojaId).child('aberto').val() === true) && (newData.child('tipo').val() !== 'entrega' || newData.child('endereco').child('rua').exists())",
+            ".validate": "$pedidoId.matches(/^[-A-Za-z0-9_]{8,40}$/) && newData.hasChildren(['ts','codigo','cliente','tipo','pagamento','itens','status']) && (data.exists() || (root.child('caixa/pedidosConfig').child($lojaId).child('aberto').val() === true && (root.child('caixa/pedidosConfig').child($lojaId).child('horarioOn').val() !== true || ((root.child('caixa/pedidosConfig').child($lojaId).child('abreMin').val() < root.child('caixa/pedidosConfig').child($lojaId).child('fechaMin').val() && (((now - 10800000) % 86400000) / 60000) >= root.child('caixa/pedidosConfig').child($lojaId).child('abreMin').val() && (((now - 10800000) % 86400000) / 60000) < root.child('caixa/pedidosConfig').child($lojaId).child('fechaMin').val()) || (root.child('caixa/pedidosConfig').child($lojaId).child('abreMin').val() > root.child('caixa/pedidosConfig').child($lojaId).child('fechaMin').val() && ((((now - 10800000) % 86400000) / 60000) >= root.child('caixa/pedidosConfig').child($lojaId).child('abreMin').val() || (((now - 10800000) % 86400000) / 60000) < root.child('caixa/pedidosConfig').child($lojaId).child('fechaMin').val())))))) && (newData.child('tipo').val() !== 'entrega' || newData.child('endereco').child('rua').exists())",
             "ts": {
               ".validate": "newData.isNumber() && (data.exists() ? newData.val() === data.val() : newData.val() === now)"
             },

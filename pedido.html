@@ -486,7 +486,23 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
   /* ---------- Horário de venda por item (hrIni / hrFim, "HH:MM") ----------
      Fora da janela o item continua aparecendo, mas sem botão de adicionar. Aceita janela que atravessa a meia-noite (18:00–02:00). */
   var HORA_OFFSET = 0, _assinHr = null; // HORA_OFFSET: diferença entre o relógio do aparelho e o do servidor
-  function agoraMin() { var d = new Date(Date.now() + HORA_OFFSET); return d.getHours() * 60 + d.getMinutes(); }
+  // Hora da LOJA (Brasília, UTC-3), com o relógio corrigido pelo servidor — é a mesma conta que as regras do Firebase fazem.
+  function agoraMin() { return Math.floor((((Date.now() + HORA_OFFSET - 10800000) % 86400000) + 86400000) % 86400000 / 60000); }
+  function fmtMin(n) { return typeof n === 'number' ? ('0' + Math.floor(n / 60)).slice(-2) + ':' + ('0' + (n % 60)).slice(-2) : ''; }
+  /* Horário de funcionamento da loja (cfg.horarioOn / abreMin / fechaMin): fora dele ninguém consegue pedir. */
+  function horarioLojaOk() {
+    if (!cfg || cfg.horarioOn !== true) return true;
+    var a = cfg.abreMin, f = cfg.fechaMin;
+    if (typeof a !== 'number' || typeof f !== 'number' || a === f) return false;
+    var n = agoraMin();
+    return a < f ? (n >= a && n < f) : (n >= a || n < f);
+  }
+  function foraDoHorarioLoja() { return !!(cfg && cfg.aberto === true) && !horarioLojaOk(); }
+  function msgFechada() {
+    return foraDoHorarioLoja()
+      ? 'Já passou do nosso horário de pedidos (' + fmtMin(cfg.abreMin) + ' às ' + fmtMin(cfg.fechaMin) + '). Abrimos às ' + fmtMin(cfg.abreMin) + '.'
+      : 'A loja está fechada no momento.';
+  }
   function hmMin(v) { var m = /^(\d{1,2}):(\d{2})$/.exec(String(v || '')); if (!m) return null; var h = +m[1], mi = +m[2]; return h > 23 || mi > 59 ? null : h * 60 + mi; }
   function temHorario(i) { var a = hmMin(i.hrIni), b = hmMin(i.hrFim); return a !== null && b !== null && a !== b; }
   function noHorario(i) {
@@ -496,7 +512,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
   }
   function rotuloHorario(i) { return 'das ' + i.hrIni + ' às ' + i.hrFim; }
   function itensDisponiveis() { return itensAtivos().filter(noHorario); }
-  function assinaturaHorarios() { return itensAtivos().filter(temHorario).map(function (i) { return i.id + ':' + (noHorario(i) ? 1 : 0); }).join('|'); }
+  function assinaturaHorarios() { return (aberta() ? 'A' : 'F') + '#' + itensAtivos().filter(temHorario).map(function (i) { return i.id + ':' + (noHorario(i) ? 1 : 0); }).join('|'); }
   /* ---------- Fotos do cardápio ----------
      O cardápio (texto) abre na hora. As fotos vêm de cardapioFotos/ e ficam salvas no celular
      (localStorage) com a versão "fotoV": nas visitas seguintes aparecem junto com o cardápio, sem rede. */
@@ -560,7 +576,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     itensAtivos().forEach(function (i) { var n = i.cat || 'Outros'; if (!tem(n)) out.push(n); });
     return out;
   }
-  function aberta() { return !!(cfg && cfg.aberto === true); }
+  function aberta() { return !!(cfg && cfg.aberto === true) && horarioLojaOk(); }
   function aceitaEntrega() { return !cfg || cfg.aceitaEntrega !== false; }
   function aceitaRetirada() { return !cfg || cfg.aceitaRetirada !== false; }
   /* ---------- Taxa por distância (km) ----------
@@ -677,7 +693,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     Object.keys(cart).forEach(function (k) { if (!ids[k] || cart[k] < 1) delete cart[k]; });
   }
   function mudar(id, delta) {
-    if (!aberta()) { toast('A loja está fechada no momento.'); return; }
+    if (!aberta()) { toast(msgFechada()); return; }
     var it = cardapio.find(function (x) { return x.id === id; });
     if (delta > 0 && it && !noHorario(it)) {
       toast('"' + it.nome + '" só está disponível ' + rotuloHorario(it) + '.');
@@ -699,7 +715,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
   var _fotoAnimada = null; // última foto cujo efeito de entrada já rodou
   function desenharAviso() {
     var av = $('#aviso'); if (!av) return;
-    var txt = !aberta() ? 'Estamos fechados no momento. Você pode ver o cardápio, mas só dá para enviar pedidos quando abrirmos.' : (cfg && cfg.aviso) || '';
+    var txt = !aberta() ? (foraDoHorarioLoja() ? 'Estamos fechados no momento. Nosso horário de pedidos é das ' + fmtMin(cfg.abreMin) + ' às ' + fmtMin(cfg.fechaMin) + '. Você pode ver o cardápio, mas só dá para enviar pedidos quando abrirmos.' : 'Estamos fechados no momento. Você pode ver o cardápio, mas só dá para enviar pedidos quando abrirmos.') : (cfg && cfg.aviso) || '';
     var dest = aberta() ? destaqueItem() : null;
     var foto = aberta() ? ((dest && dest.fotoV && FOTOS[dest.id]) || avisoFoto()) : null;
     var animar = !!foto && foto !== _fotoAnimada; if (foto) _fotoAnimada = foto;
@@ -741,7 +757,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     $('#loja-info').innerHTML = info.map(function (t) { return '<span>' + t + '</span>'; }).join('');
     var chip = $('#loja-chip');
     chip.className = 'chip-st ' + (aberta() ? 'on' : 'off');
-    chip.textContent = aberta() ? '● Aberto para pedidos' : '● Fechado no momento';
+    chip.textContent = aberta() ? '● Aberto para pedidos' : (foraDoHorarioLoja() ? '● Fechado · abre às ' + fmtMin(cfg.abreMin) : '● Fechado no momento');
     desenharAviso();
   }
   function desenharMenu() {
@@ -803,7 +819,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
   function setErro(msg) { var e = $('#ck-erro'); e.textContent = msg || ''; e.classList.toggle('hide', !msg); if (msg) e.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
   function abrirCheckout() {
     if (!qtdTotal()) return;
-    if (!aberta()) { toast('A loja está fechada no momento.'); return; }
+    if (!aberta()) { toast(msgFechada()); return; }
     if (modo === 'entrega' && !aceitaEntrega()) modo = 'retirada';
     if (modo === 'retirada' && !aceitaRetirada()) modo = 'entrega';
     var salvo = lsGet('cliente') || {};
@@ -821,7 +837,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     return d;
   }
   function validar() {
-    if (!aberta()) return 'A loja está fechada no momento.';
+    if (!aberta()) return msgFechada();
     var foraHr = Object.keys(cart).map(function (id) { return cardapio.find(function (x) { return x.id === id; }); }).filter(function (i) { return i && !noHorario(i); });
     if (foraHr.length) {
       var msgHr = '"' + foraHr[0].nome + '" só está disponível ' + rotuloHorario(foraHr[0]) + ' e foi tirado da sacola.';
@@ -1208,7 +1224,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
   setInterval(function () {
     if (!cfgPronto || !cardPronto || !cfg) return;
     if (assinaturaHorarios() === _assinHr) return;
-    limparCartInvalido(); salvarCart(); desenharMenu(); desenharAviso(); desenharBarra();
+    limparCartInvalido(); salvarCart(); desenharCabecalho(); desenharMenu(); desenharAviso(); desenharBarra();
     if (!$('#v-ck').classList.contains('hide')) desenharCheckout();
   }, 20000);
   base('pedidosConfig/' + LOJA).on('value', function (s) { cfg = s.val(); cfgPronto = true; iniciar(); },
