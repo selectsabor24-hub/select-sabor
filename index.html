@@ -5322,6 +5322,35 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
         <div id="del-mes-status" class="alert-box"></div>
       </div>
 
+      <!-- Espaço do banco de dados -->
+      <div class="card mw-520">
+        <div class="card-title">Espaço usado no banco</div>
+        <div class="txt-hint" style="margin-bottom:10px">O plano gratuito do Firebase guarda até <strong>1 GB</strong>. Clique para calcular quanto já foi usado (lê o banco inteiro uma vez). É uma <strong>estimativa</strong>; o número exato está no console do Firebase (Realtime Database → Uso).</div>
+        <div class="form-actions">
+          <button class="btn btn-primary" id="banco-btn-calc" onclick="bancoCalcular()">Calcular espaço usado</button>
+        </div>
+        <div id="banco-uso-status" class="alert-box" style="margin-top:12px;display:none"></div>
+      </div>
+
+      <!-- Limpeza automática quando o banco enche -->
+      <div class="card mw-520">
+        <div class="card-title">Se o espaço do banco encher</div>
+        <div class="txt-hint" style="margin-bottom:10px">Quando o banco passar do limite escolhido, o sistema apaga os <strong>pedidos online concluídos (entregues ou cancelados) mais antigos primeiro</strong>, até sobrar folga (10% abaixo do limite). Nunca apaga pedidos novos ou em andamento, nem os concluídos nos últimos 90 dias. <strong>Lançamentos do caixa, comandas, fechamentos, contas e funcionários nunca são apagados.</strong> Antes de apagar, o sistema baixa um arquivo de backup (JSON) com os pedidos que serão apagados.</div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text3)">Quando passar de</label>
+          <select id="banco-limite-sel" style="padding:9px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:14px">
+            <option value="0">Desativado</option>
+            <option value="70">70% do espaço</option>
+            <option value="80">80% do espaço</option>
+            <option value="90">90% do espaço</option>
+            <option value="95">95% do espaço</option>
+          </select>
+          <button class="btn btn-primary" onclick="bancoSalvarLimite()">Salvar</button>
+          <button class="btn btn-secondary" onclick="bancoVerificarAgora()">Verificar e liberar agora</button>
+        </div>
+        <div id="banco-limpeza-status" class="txt-hint" style="margin-top:12px"></div>
+      </div>
+
       <!-- Reset completo -->
       <div class="card" style="max-width:520px;border-color:#FECACA">
         <div class="card-title txt-red">⚠️ Zona de perigo — Reset completo</div>
@@ -16481,6 +16510,7 @@ function _showImportStatus(msg, sucesso) {
 
 function renderConfiguracoes() {
   renderGerenciarLojas();
+  try { bancoIniciar(); } catch (e) { console.warn('[banco]', e); }
   if (typeof _atualizarBotaoNotif === 'function') _atualizarBotaoNotif();
   const el = document.getElementById('cfg-usuarios-lista');
   if (!el) return;
@@ -16504,6 +16534,191 @@ function renderConfiguracoes() {
       </div>`).join('');
   }).catch(() => {
     el.innerHTML = '<div style="color:var(--red);font-size:13px">Erro ao carregar usuários.</div>';
+  });
+}
+
+/* ============================================================
+   ESPAÇO DO BANCO — estimativa de uso e limpeza automática
+   Apaga SOMENTE pedidos online concluídos (entregue/cancelado) com
+   mais de 90 dias, do mais antigo para o mais novo. Nunca toca em
+   lançamentos, comandas, fechamentos, contas, funcionários etc.
+   Config em caixa/configBanco { limitePct, ultimaVerif, ultimaMsg }
+   ============================================================ */
+const BANCO_LIMITE_BYTES = 1e9;          // plano gratuito: 1 GB
+const BANCO_FOLGA_PCT    = 10;           // apaga até ficar 10% abaixo do limite
+const BANCO_DIAS_PROTEGIDOS = 90;        // concluídos mais novos que isso nunca são apagados
+const BANCO_INTERVALO_MS = 3 * 864e5;    // confere a cada 3 dias com o painel aberto
+let _bancoCfg = { limitePct: 0 };
+let _bancoOcupado = false;
+
+function _bancoBytes(v) {
+  try { return new Blob([JSON.stringify(v === undefined ? null : v)]).size; } catch (e) { return 0; }
+}
+function _bancoFmtBytes(b) {
+  if (b >= 1e9) return (b / 1e9).toFixed(2).replace('.', ',') + ' GB';
+  if (b >= 1e6) return (b / 1e6).toFixed(1).replace('.', ',') + ' MB';
+  return Math.max(1, Math.round(b / 1e3)) + ' KB';
+}
+function _bancoStatus(id, msg, tipo) {
+  const el = document.getElementById(id); if (!el) return;
+  el.style.display = 'block';
+  if (id === 'banco-uso-status') {
+    el.style.background = tipo === 'ok' ? 'var(--green-bg)' : tipo === 'erro' ? '#FEE2E2' : 'var(--amber-bg)';
+    el.style.color      = tipo === 'ok' ? 'var(--green)'    : tipo === 'erro' ? 'var(--red)'    : 'var(--amber)';
+  }
+  el.innerHTML = msg;
+}
+function _bancoAdmin() {
+  const u = firebase.auth().currentUser;
+  return !!(u && isAdminEmail(u.email));
+}
+
+/** Lê o banco inteiro e devolve { total, partes[], dados }. */
+function _bancoLer() {
+  return db.ref('caixa').once('value').then(snap => {
+    const dados = snap.val() || {};
+    const partes = Object.keys(dados).map(k => ({ nome: k, bytes: _bancoBytes(dados[k]) }))
+      .sort((a, b) => b.bytes - a.bytes);
+    const total = partes.reduce((t, x) => t + x.bytes, 0);
+    return { total, partes, dados };
+  });
+}
+
+function bancoCalcular() {
+  if (!_bancoAdmin()) { showToast('Acesso restrito a administradores.', false); return; }
+  const btn = document.getElementById('banco-btn-calc');
+  if (btn) { btn.disabled = true; btn.textContent = 'Calculando…'; }
+  _bancoStatus('banco-uso-status', '⏳ Lendo o banco…', 'aviso');
+  _bancoLer().then(r => {
+    const pct = r.total / BANCO_LIMITE_BYTES * 100;
+    const tipo = pct >= 90 ? 'erro' : pct >= 70 ? 'aviso' : 'ok';
+    const top = r.partes.slice(0, 6).map(x =>
+      '<div style="display:flex;justify-content:space-between;font-size:12px;margin-top:2px"><span>' + escapeHtml(x.nome) + '</span><span>' + _bancoFmtBytes(x.bytes) + '</span></div>').join('');
+    _bancoStatus('banco-uso-status',
+      '<strong>' + _bancoFmtBytes(r.total) + '</strong> de 1 GB (' + pct.toFixed(2).replace('.', ',') + '%)' +
+      '<div style="height:8px;background:rgba(0,0,0,.1);border-radius:4px;margin:8px 0;overflow:hidden"><div style="height:100%;width:' + Math.min(100, pct).toFixed(1) + '%;background:currentColor"></div></div>' +
+      '<div style="opacity:.85;margin-bottom:4px">Maiores partes:</div>' + top, tipo);
+  }).catch(e => {
+    _bancoStatus('banco-uso-status', '❌ Erro ao calcular: ' + escapeHtml(e.message || 'desconhecido'), 'erro');
+  }).finally(() => {
+    if (btn) { btn.disabled = false; btn.textContent = 'Calcular espaço usado'; }
+  });
+}
+
+function bancoCarregarCfg() {
+  if (!_bancoAdmin() || !db) return Promise.resolve();
+  return _dbRef('configBanco').once('value').then(s => {
+    _bancoCfg = Object.assign({ limitePct: 0 }, s.val() || {});
+    const sel = document.getElementById('banco-limite-sel');
+    if (sel) sel.value = String(_bancoCfg.limitePct || 0);
+    _bancoMostrarResumo();
+  }).catch(() => {});
+}
+
+function _bancoMostrarResumo() {
+  const pct = Number(_bancoCfg.limitePct) || 0;
+  const base = pct
+    ? 'Ativo: passou de ' + pct + '% de 1 GB, os pedidos online concluídos mais antigos são apagados primeiro (confere a cada 3 dias, quando o painel é aberto).'
+    : 'Desativado: nada é apagado automaticamente.';
+  const ult = _bancoCfg.ultimaVerif
+    ? ' Última verificação: ' + new Date(_bancoCfg.ultimaVerif).toLocaleString('pt-BR') + (_bancoCfg.ultimaMsg ? ' — ' + escapeHtml(_bancoCfg.ultimaMsg) : '')
+    : '';
+  const el = document.getElementById('banco-limpeza-status');
+  if (el) el.innerHTML = base + ult;
+}
+
+function bancoSalvarLimite() {
+  if (!_bancoAdmin()) { showToast('Acesso restrito a administradores.', false); return; }
+  const pct = parseInt(document.getElementById('banco-limite-sel').value, 10) || 0;
+  _dbRef('configBanco/limitePct').set(pct).then(() => {
+    _bancoCfg.limitePct = pct;
+    _bancoMostrarResumo();
+    showToast(pct ? 'Limpeza automática ativada.' : 'Limpeza automática desativada.');
+  }).catch(e => { console.error(e); showToast('Erro ao salvar.', false); });
+}
+
+function bancoVerificarAgora() {
+  if (!_bancoAdmin()) { showToast('Acesso restrito a administradores.', false); return; }
+  const pct = parseInt(document.getElementById('banco-limite-sel').value, 10) || 0;
+  if (!pct) { showToast('Escolha um limite (70% a 95%) antes de verificar.', false); return; }
+  _bancoCfg.limitePct = pct;
+  _dbRef('configBanco/limitePct').set(pct).catch(() => {});
+  _bancoVerificar(true);
+}
+
+/** Confere o uso e, se passou do limite, apaga pedidos concluídos antigos. */
+function _bancoVerificar(manual) {
+  if (_bancoOcupado || !db) return;
+  const limPct = Number(_bancoCfg.limitePct) || 0;
+  if (!limPct) return;
+  _bancoOcupado = true;
+  const fim = msg => {
+    _bancoOcupado = false;
+    _bancoCfg.ultimaVerif = Date.now(); _bancoCfg.ultimaMsg = msg;
+    _dbRef('configBanco').update({ ultimaVerif: _bancoCfg.ultimaVerif, ultimaMsg: msg }).catch(() => {});
+    _bancoMostrarResumo();
+    if (manual) showToast(msg);
+  };
+  _bancoLer().then(r => {
+    const limite = BANCO_LIMITE_BYTES * limPct / 100;
+    if (r.total <= limite) return fim('uso em ' + (r.total / BANCO_LIMITE_BYTES * 100).toFixed(1).replace('.', ',') + '% — nada apagado');
+
+    const alvo = BANCO_LIMITE_BYTES * (limPct - BANCO_FOLGA_PCT) / 100;
+    const corte = Date.now() - BANCO_DIAS_PROTEGIDOS * 864e5;
+    const cands = [];
+    const peds = r.dados.pedidos || {};
+    Object.keys(peds).forEach(loja => {
+      const lp = peds[loja] || {};
+      Object.keys(lp).forEach(id => {
+        const p = lp[id];
+        if (!p || typeof p !== 'object') return;
+        if (p.status !== 'entregue' && p.status !== 'cancelado') return;
+        if (typeof p.ts !== 'number' || p.ts >= corte) return;
+        cands.push({ loja, id, ts: p.ts, bytes: _bancoBytes(p), pedido: p });
+      });
+    });
+    cands.sort((a, b) => a.ts - b.ts);
+
+    let restante = r.total; const apagar = [];
+    for (const c of cands) { if (restante <= alvo) break; apagar.push(c); restante -= c.bytes; }
+    if (!apagar.length) return fim('passou do limite, mas não há pedidos concluídos com mais de ' + BANCO_DIAS_PROTEGIDOS + ' dias para apagar');
+
+    // 1) backup antes de apagar
+    _baixarJson('backup-pedidos-apagados-' + hojeLocalISO() + '.json', {
+      tipo: 'backup_pedidos_limpeza_banco', geradoEm: new Date().toISOString(),
+      pedidos: apagar.map(c => ({ loja: c.loja, id: c.id, pedido: c.pedido }))
+    });
+
+    // 2) apaga os pedidos (e códigos/recusas ligados a eles)
+    const up = {};
+    const cod = r.dados.codigosEntrega || {}, rec = r.dados.recusasEntrega || {};
+    apagar.forEach(c => {
+      up['pedidos/' + c.loja + '/' + c.id] = null;
+      if (cod[c.loja] && cod[c.loja][c.id] !== undefined) up['codigosEntrega/' + c.loja + '/' + c.id] = null;
+      const rl = rec[c.loja] || {};
+      Object.keys(rl).forEach(u => { if (rl[u] && rl[u][c.id] !== undefined) up['recusasEntrega/' + c.loja + '/' + u + '/' + c.id] = null; });
+    });
+    const chaves = Object.keys(up), lotes = [];
+    for (let i = 0; i < chaves.length; i += 400) {
+      const parte = {}; chaves.slice(i, i + 400).forEach(k => parte[k] = null); lotes.push(parte);
+    }
+    return lotes.reduce((pr, l) => pr.then(() => _dbRef('').update(l)), Promise.resolve()).then(() => {
+      const aindaAcima = restante > alvo;
+      fim(apagou(apagar.length, r.total - restante) + (aindaAcima ? ' (ainda acima da folga: não há mais pedidos antigos para apagar)' : ''));
+    });
+    function apagou(n, b) { return n + ' pedido(s) concluído(s) apagado(s), ~' + _bancoFmtBytes(b) + ' liberados'; }
+  }).catch(e => {
+    console.error('[banco]', e);
+    _bancoOcupado = false;
+    if (manual) showToast('Erro ao verificar o banco: ' + (e.message || 'desconhecido'), false);
+  });
+}
+
+/** Chamado ao abrir Configurações: carrega a config e confere se já passou o intervalo. */
+function bancoIniciar() {
+  bancoCarregarCfg().then(() => {
+    const ult = Number(_bancoCfg.ultimaVerif) || 0;
+    if (Number(_bancoCfg.limitePct) && Date.now() - ult >= BANCO_INTERVALO_MS) _bancoVerificar(false);
   });
 }
 
