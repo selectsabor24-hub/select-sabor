@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <script>try{var t=localStorage.getItem("caixa-theme");if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Controle de Caixa v5.4</title>
+<title>Controle de Caixa v5.6</title>
 
 <!-- ============================================================
      PWA — Progressive Web App
@@ -45,6 +45,10 @@
   ║         · Melhoria: renderContas usa cache; seção 3.22 documentada   ║
   ║  v3.3 — Seções novas: Planilhas já lançadas (3.23), calendário       ║
   ║         visual de lançamentos com marcação de cartão                 ║
+  ║  v5.6 — Pedidos online: ao finalizar a entrega (painel ou app do    ║
+  ║         motoqueiro) o valor é lançado AUTOMATICAMENTE no caixa     ║
+  ║         do dia (só entregas de hoje; caixa fechado não lança).     ║
+  ║         App do motoqueiro: resumo mostra só a taxa recebida.       ║
   ║  v5.5 — Código de confirmação da entrega: ao pedir por entrega o   ║
   ║         cliente recebe um código de 4 números (só ele e a loja veem║
   ║         O motoqueiro digita o código para dar a entrega como feita.║
@@ -6601,6 +6605,8 @@ function setLojaAtiva(id) {
   _cache.pedidos = [];
   _cache.pedidosCfg = null;
   _pedVistos = null; // a 1ª carga não dispara alerta
+  _pedAutoTentou.clear();
+  _pedAutoLiberadoEm = Date.now() + 4000; // espera os dados do caixa carregarem antes do lançamento automático
   _motProntos = null;
   _chatUlt = null;
   chatFechar();
@@ -6609,6 +6615,7 @@ function setLojaAtiva(id) {
     const v = snap.val() || {};
     _cache.pedidos = Object.keys(v).filter(k => /^[-A-Za-z0-9_]{8,40}$/.test(k)).map(k => Object.assign({ id: k }, v[k]));
     _pedDetectarNovos();
+    _pedAutoLancar();
     _chatDetectar();
     _pedAtualizarBadge();
     _motDetectar();
@@ -18085,13 +18092,9 @@ function pedCancelar(id) {
 
 function pedEntregar(id) {
   const p = _pedGet(id); if (!p) return;
+  // O lançamento no caixa é automático: assim que o status vira "entregue" (aqui ou no app do
+  // motoqueiro), _pedAutoLancar() (chamado pelo listener de pedidos) lança o valor no caixa do dia.
   pedMudar(id, 'entregue');
-  if (!p.lancado) {
-    const t = _pedTotais(p);
-    showModal('Lançar no caixa?',
-      'Pedido <strong>' + escapeHtml(p.codigo || '') + '</strong> finalizado. Lançar <strong>' + fmt(t.total) + '</strong> (' + (PED_PAG[p.pagamento] || '') + ') no caixa de hoje?<br><small style="color:var(--text3)">Entra como venda no dia, igual a uma comanda fechada.</small>',
-      [{ label: 'Lançar no caixa', style: 'primary', action: () => pedLancarCaixa(id) }, { label: 'Agora não', style: 'secondary' }]);
-  }
 }
 
 /** Exclui o pedido de vez (útil para testes). Se já foi lançado no caixa, desfaz o lançamento do dia antes. */
@@ -18122,11 +18125,15 @@ function pedExcluir(id) {
     }}, { label: 'Voltar', style: 'secondary' }]);
 }
 
-/** Fecha uma comanda "Online #COD" paga e lança o valor no caixa do dia (mesmo fluxo das mesas). */
-function pedLancarCaixa(id) {
+/** Fecha uma comanda "Online #COD" paga e lança o valor no caixa do dia (mesmo fluxo das mesas).
+ *  auto = true: chamado pelo lançamento automático (_pedAutoLancar). Nesse modo não reabre caixa
+ *  fechado e "reserva" o pedido com uma transação em `lancado`, para que dois computadores abertos
+ *  ao mesmo tempo nunca lancem o mesmo pedido duas vezes. */
+function pedLancarCaixa(id, auto) {
   const p = _pedGet(id); if (!p || p.lancado || _pedLancando.has(id)) return;
   const hoje = _cmdHoje();
-  if (!_cmdGarantirCaixaAberto(hoje)) return;
+  if (auto) { if (_caixaEstaFechado(hoje)) return; }
+  else if (!_cmdGarantirCaixaAberto(hoje)) return;
   _pedLancando.add(id);
   const t = _pedTotais(p), agora = new Date().toISOString();
   const itens = {};
@@ -18138,12 +18145,56 @@ function pedLancarCaixa(id) {
   const c = { id: cid, mesa: 'Online ' + (p.codigo || ''), pessoas: '', garcom: '', status: 'fechada',
     abertaEm: agora, fechadaEm: agora, data: hoje, servicoPct: 0, desconto: 0, itens,
     subtotal: t.total, servico: 0, total: t.total, pagamentos, troco: 0, origem: 'pedido_online', pedidoId: id };
-  _cmdRef(cid).set(c).then(() => {
-    _cmdLancAplicar({ id: cid, data: hoje, pagamentos }, +1);
-    return _pedRef(id).update({ lancado: true });
-  }).then(() => showToast('Pedido ' + (p.codigo || '') + ' lançado no caixa: ' + fmt(t.total)))
-    .catch(e => { console.error(e); showToast('Erro ao lançar no caixa', false); })
+  let reservou = false;
+  const reserva = auto
+    ? _pedRef(id).child('lancado').transaction(cur => cur ? undefined : true).then(r => { reservou = !!(r && r.committed); return reservou; })
+    : Promise.resolve(true);
+  reserva.then(ok => {
+    if (!ok) return;
+    return _cmdRef(cid).set(c).then(() => {
+      _cmdLancAplicar({ id: cid, data: hoje, pagamentos }, +1);
+      return auto ? null : _pedRef(id).update({ lancado: true });
+    }).then(() => showToast('Pedido ' + (p.codigo || '') + (auto ? ' lançado automaticamente no caixa: ' : ' lançado no caixa: ') + fmt(t.total)))
+      .catch(e => {
+        console.error(e);
+        showToast('Erro ao lançar no caixa', false);
+        // Falhou depois de reservar: libera o pedido para poder lançar de novo (manual ou automático).
+        if (auto && reservou) _pedRef(id).child('lancado').remove().catch(() => {});
+      });
+  }).catch(e => { console.error(e); if (auto) showToast('Erro ao lançar no caixa', false); })
     .then(() => _pedLancando.delete(id));
+}
+
+/** Lançamento automático: todo pedido ENTREGUE hoje que ainda não foi lançado entra no caixa do dia.
+ *  Funciona qualquer que seja a origem da finalização (painel ou app do motoqueiro), em qualquer
+ *  computador com o sistema aberto. Só considera pedidos entregues HOJE (não mexe em dias antigos)
+ *  e, com o caixa de hoje fechado, não lança nada (o botão manual continua disponível). */
+let _pedAutoTimer = null;
+let _pedAutoLiberadoEm = 0;
+const _pedAutoTentou = new Set();
+function _pedAutoLancar() {
+  if (!_lojaAtiva) return;
+  const falta = _pedAutoLiberadoEm - Date.now();
+  if (!_lancamentosFirebaseCarregados || falta > 0) {
+    // Dados do caixa ainda carregando: espera um pouco para nunca gravar em cima de dados incompletos.
+    if (!_pedAutoTimer) _pedAutoTimer = setTimeout(() => { _pedAutoTimer = null; _pedAutoLancar(); }, Math.max(1000, falta));
+    return;
+  }
+  const hoje = _cmdHoje();
+  _pedLista().forEach(p => {
+    if (p.status !== 'entregue' || p.lancado || _pedLancando.has(p.id) || _pedAutoTentou.has(p.id)) return;
+    const ts = p.hist && p.hist.entregue;
+    if (!ts) return;
+    const d = new Date(ts);
+    const dia = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    if (dia !== hoje) return;
+    _pedAutoTentou.add(p.id);
+    if (_caixaEstaFechado(hoje)) {
+      showToast('Pedido ' + (p.codigo || '') + ' entregue, mas o caixa de hoje está fechado. Lance manualmente após reabrir.', false);
+      return;
+    }
+    pedLancarCaixa(p.id, true);
+  });
 }
 
 /* ---------- WhatsApp e impressão ---------- */
