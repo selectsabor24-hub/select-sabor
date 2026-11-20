@@ -424,7 +424,6 @@ button { cursor: pointer; }
     var fone = String(cli.telefone || '').replace(/[^\d+]/g, '');
     var endTxt = [[e.rua, e.numero].filter(Boolean).join(', '), e.bairro, e.cep ? 'CEP ' + e.cep : ''].filter(Boolean).join(' — ');
     var destino = [e.rua, e.numero, e.bairro, e.cep].filter(Boolean).join(', ');
-    var rota = 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(destino) + '&travelmode=driving';
     var extra = [e.complemento, e.referencia ? 'ref.: ' + e.referencia : ''].filter(Boolean).join(' · ');
 
     var cobrar;
@@ -446,7 +445,7 @@ button { cursor: pointer; }
     if (p.status === 'pronto') acoes = '<button class="p" data-a="sair" data-id="' + id + '">🛵 Saí para entrega</button>';
     else if (p.status === 'saiu') acoes = '<button class="p" data-a="entregue" data-id="' + id + '">✅ Entregue</button><button data-a="voltar" data-id="' + id + '">↩ Ainda não saí</button>';
 
-    var links = fin ? '' : '<div class="links"><a href="' + esc(rota) + '" target="_blank" rel="noopener">🗺 Rota</a></div>';
+    var links = fin ? '' : '<div class="links"><button type="button" data-a="rota" data-id="' + id + '">🗺 Rota</button></div>';
 
     return '<div class="card" style="--cor:' + cor + '">' +
       '<div class="cab"><span class="cod">#' + esc(p.codigo || '') + '</span><span class="hora">' + quando + '</span></div>' +
@@ -469,7 +468,37 @@ button { cursor: pointer; }
     else if (a === 'entregue') confirmarEntrega(p);
     else if (a === 'voltar') voltar(p);
     else if (a === 'whats') whats(p);
+    else if (a === 'rota') abrirRota(p);
   });
+
+  /* ---------- Rota: da loja até o cliente, no app de GPS que o motoqueiro escolher ---------- */
+  function enderecoDe(e, cidade, uf) {
+    return [[e.rua, e.numero].filter(Boolean).join(' '), e.bairro, cidade, uf, e.cep].filter(Boolean).join(', ');
+  }
+  function abrirRota(p) {
+    var e = p.endereco || {}, c = cfg || {};
+    var destino = enderecoDe(e, e.cidade || c.lojaCidade, e.uf || c.lojaUf);
+    var temLoja = typeof c.lojaLat === 'number' && typeof c.lojaLng === 'number';
+    var origem = temLoja ? (c.lojaLat + ',' + c.lojaLng)
+      : enderecoDe({ rua: c.lojaRua, numero: c.lojaNumero, bairro: c.lojaBairro, cep: c.lojaCep }, c.lojaCidade, c.lojaUf);
+    var q = encodeURIComponent;
+    var opcoes = [
+      ['🗺 Google Maps', 'https://www.google.com/maps/dir/?api=1' + (origem ? '&origin=' + q(origem) : '') + '&destination=' + q(destino) + '&travelmode=driving'],
+      ['🚙 Waze', 'https://waze.com/ul?q=' + q(destino) + '&navigate=yes']
+    ];
+    if (ehIOS) opcoes.push(['🍎 Apple Maps', 'https://maps.apple.com/?' + (origem ? 'saddr=' + q(origem) + '&' : '') + 'daddr=' + q(destino) + '&dirflg=d']);
+    else opcoes.push(['📍 Outro app de GPS', 'geo:0,0?q=' + q(destino)]);
+    var m = $('#modal');
+    m.innerHTML = '<div class="m"><h3>Abrir rota no…</h3><div style="display:grid;gap:10px;margin:12px 0">' +
+      opcoes.map(function (o, i) { return '<button type="button" data-i="' + i + '" style="width:100%;padding:14px;border-radius:12px;border:1px solid #cfd4dc;background:#fff;font-size:16px;font-weight:700">' + o[0] + '</button>'; }).join('') +
+      '</div><small style="color:#6b7280">Destino: ' + esc(destino) + '</small>' +
+      '<div class="bs"><button id="md-nao">Voltar</button></div></div>';
+    m.classList.remove('hide');
+    $('#md-nao').onclick = function () { m.classList.add('hide'); };
+    Array.prototype.forEach.call(m.querySelectorAll('button[data-i]'), function (b) {
+      b.onclick = function () { m.classList.add('hide'); window.location.href = opcoes[+b.dataset.i][1]; };
+    });
+  }
 
   function erroGrav(e) {
     console.error(e);
