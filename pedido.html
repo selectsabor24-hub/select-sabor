@@ -99,6 +99,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
 @keyframes avisoBrilho { 0%,60% { left: -60%; } 100% { left: 130%; } }
 @media (prefers-reduced-motion: reduce) { .aviso.destaque::before, .aviso.destaque::after { animation: none; } }
 /* Entrada da foto do destaque: cresce do centro até o tamanho final (toca só na 1ª vez, não a cada clique na sacola) */
+.aviso.destaque .dest-hr { flex: 0 0 auto; background: rgba(255,255,255,.22); color: #fff; font-size: 12px; font-weight: 800; padding: 8px 12px; border-radius: 999px; text-align: center; line-height: 1.25; }
 @keyframes fotoCresce { 0% { transform: scale(.35); opacity: 0; } 60% { opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
 @keyframes fotoFundo { from { opacity: 0; } to { opacity: 1; } }
 @keyframes selosPop { 0% { transform: scale(0); opacity: 0; } 70% { transform: scale(1.15); opacity: 1; } 100% { transform: scale(1); } }
@@ -127,6 +128,9 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
 .item .nome { font-weight: 700; overflow-wrap: anywhere; }
 .item .desc { margin-top: 3px; font-size: 13px; color: var(--mut); line-height: 1.35; overflow-wrap: anywhere; }
 .item .preco { margin-top: 2px; color: var(--laranja); font-weight: 800; }
+.item.fora .info, .item.fora .ft { opacity: .5; }
+.hr-fora { flex-shrink: 0; background: var(--laranja-bg); color: #7C4A12; border: 1px solid #F0D9B5; border-radius: 12px; padding: 7px 10px; font-size: 12px; font-weight: 800; line-height: 1.25; text-align: center; }
+.item .hr-dentro { margin-top: 3px; font-size: 12px; font-weight: 700; color: var(--verde); }
 .add { flex-shrink: 0; background: var(--verde); color: #fff; border: 0; border-radius: 12px; padding: 10px 16px; font-weight: 700; min-height: 44px; }
 .add[disabled] { background: #C9CFC9; cursor: not-allowed; }
 .stepper { flex-shrink: 0; display: inline-flex; align-items: center; background: var(--verde-bg); border-radius: 12px; }
@@ -479,6 +483,20 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
 
   /* ---------- Cardápio ---------- */
   function itensAtivos() { return cardapio.filter(function (i) { return i.tipo !== 'cat' && i.ativo !== false && i.nome; }); }
+  /* ---------- Horário de venda por item (hrIni / hrFim, "HH:MM") ----------
+     Fora da janela o item continua aparecendo, mas sem botão de adicionar. Aceita janela que atravessa a meia-noite (18:00–02:00). */
+  var HORA_OFFSET = 0, _assinHr = null; // HORA_OFFSET: diferença entre o relógio do aparelho e o do servidor
+  function agoraMin() { var d = new Date(Date.now() + HORA_OFFSET); return d.getHours() * 60 + d.getMinutes(); }
+  function hmMin(v) { var m = /^(\d{1,2}):(\d{2})$/.exec(String(v || '')); if (!m) return null; var h = +m[1], mi = +m[2]; return h > 23 || mi > 59 ? null : h * 60 + mi; }
+  function temHorario(i) { var a = hmMin(i.hrIni), b = hmMin(i.hrFim); return a !== null && b !== null && a !== b; }
+  function noHorario(i) {
+    if (!temHorario(i)) return true;
+    var a = hmMin(i.hrIni), b = hmMin(i.hrFim), n = agoraMin();
+    return a < b ? (n >= a && n < b) : (n >= a || n < b);
+  }
+  function rotuloHorario(i) { return 'das ' + i.hrIni + ' às ' + i.hrFim; }
+  function itensDisponiveis() { return itensAtivos().filter(noHorario); }
+  function assinaturaHorarios() { return itensAtivos().filter(temHorario).map(function (i) { return i.id + ':' + (noHorario(i) ? 1 : 0); }).join('|'); }
   /* ---------- Fotos do cardápio ----------
      O cardápio (texto) abre na hora. As fotos vêm de cardapioFotos/ e ficam salvas no celular
      (localStorage) com a versão "fotoV": nas visitas seguintes aparecem junto com o cardápio, sem rede. */
@@ -655,11 +673,17 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
   function qtdTotal() { return Object.keys(cart).reduce(function (s, k) { return s + cart[k]; }, 0); }
   function subtotal() { return round2(Object.keys(cart).reduce(function (s, k) { return s + precoDe(k) * cart[k]; }, 0)); }
   function limparCartInvalido() {
-    var ids = {}; itensAtivos().forEach(function (i) { ids[i.id] = 1; });
+    var ids = {}; itensDisponiveis().forEach(function (i) { ids[i.id] = 1; });
     Object.keys(cart).forEach(function (k) { if (!ids[k] || cart[k] < 1) delete cart[k]; });
   }
   function mudar(id, delta) {
     if (!aberta()) { toast('A loja está fechada no momento.'); return; }
+    var it = cardapio.find(function (x) { return x.id === id; });
+    if (delta > 0 && it && !noHorario(it)) {
+      toast('"' + it.nome + '" só está disponível ' + rotuloHorario(it) + '.');
+      limparCartInvalido(); salvarCart(); desenharMenu(); desenharAviso(); desenharBarra();
+      return;
+    }
     var q = (cart[id] || 0) + delta;
     if (q <= 0) delete cart[id]; else cart[id] = Math.min(q, 99);
     salvarCart(); desenharMenu(); desenharAviso(); desenharBarra();
@@ -693,7 +717,9 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
       var q = cart[dest.id] || 0, id = esc(dest.id);
       var lin = document.createElement('div'); lin.className = 'dest-linha';
       lin.innerHTML = '<div class="dest-info"><div class="dest-nome">' + esc(dest.nome) + '</div>' + (dest.desc ? '<div class="dest-desc">' + esc(dest.desc) + '</div>' : '') + '<div class="dest-preco">' + brl(dest.preco) + '</div></div>' +
-        (q > 0
+        (!noHorario(dest)
+          ? '<span class="dest-hr">🕒 ' + esc(rotuloHorario(dest).replace(/^d/, 'D')) + '</span>'
+          : q > 0
           ? '<div class="dest-step"><button type="button" data-m="-1" data-id="' + id + '" aria-label="Diminuir">−</button><span>' + q + '</span><button type="button" data-m="1" data-id="' + id + '" aria-label="Aumentar">+</button></div>'
           : '<button type="button" class="dest-btn" data-m="1" data-id="' + id + '">Adicionar</button>');
       av.appendChild(lin);
@@ -733,16 +759,17 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     cats.forEach(function (c, ix) {
       h += '<h2 class="cat-titulo" id="cat-' + ix + '">' + esc(c) + '</h2>';
       porCat[c].sort(function (a, b) { return String(a.nome).localeCompare(String(b.nome), 'pt-BR'); }).forEach(function (i) {
-        var q = cart[i.id] || 0;
+        var q = cart[i.id] || 0, fora = !noHorario(i);
         var ft = i.fotoV ? '<div class="ft' + (FOTOS[i.id] ? '' : ' sk') + '" data-f="' + esc(i.id) + '">' + (FOTOS[i.id] ? '<img src="' + FOTOS[i.id] + '" alt="" width="84" height="84" decoding="async">' : '') + '</div>' : '';
-        h += '<div class="item">' + ft + '<div class="info"><div class="nome">' + esc(i.nome) + '</div>' + (i.desc ? '<div class="desc">' + esc(i.desc) + '</div>' : '') + '<div class="preco">' + brl(i.preco) + '</div></div>' +
-          (q > 0
+        h += '<div class="item' + (fora ? ' fora' : '') + '">' + ft + '<div class="info"><div class="nome">' + esc(i.nome) + '</div>' + (i.desc ? '<div class="desc">' + esc(i.desc) + '</div>' : '') + '<div class="preco">' + brl(i.preco) + '</div>' + (temHorario(i) && !fora ? '<div class="hr-dentro">🕒 Disponível ' + esc(rotuloHorario(i)) + '</div>' : '') + '</div>' +
+          (fora ? '<div class="hr-fora">🕒 Disponível<br>' + esc(rotuloHorario(i)) + '</div>' : q > 0
             ? '<div class="stepper"><button type="button" data-m="-1" data-id="' + esc(i.id) + '" aria-label="Diminuir">−</button><span>' + q + '</span><button type="button" data-m="1" data-id="' + esc(i.id) + '" aria-label="Aumentar">+</button></div>'
             : '<button type="button" class="add" data-m="1" data-id="' + esc(i.id) + '"' + (aberta() ? '' : ' disabled') + '>Adicionar</button>') +
           '</div>';
       });
     });
     wrap.innerHTML = h;
+    _assinHr = assinaturaHorarios();
   }
   function desenharBarra() {
     var n = qtdTotal(), b = $('#barra');
@@ -795,6 +822,12 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
   }
   function validar() {
     if (!aberta()) return 'A loja está fechada no momento.';
+    var foraHr = Object.keys(cart).map(function (id) { return cardapio.find(function (x) { return x.id === id; }); }).filter(function (i) { return i && !noHorario(i); });
+    if (foraHr.length) {
+      var msgHr = '"' + foraHr[0].nome + '" só está disponível ' + rotuloHorario(foraHr[0]) + ' e foi tirado da sacola.';
+      limparCartInvalido(); salvarCart(); desenharMenu(); desenharAviso(); desenharBarra(); desenharCheckout();
+      return msgHr;
+    }
     if (!qtdTotal()) return 'Sua sacola está vazia.';
     var min = cfg ? Number(cfg.pedidoMinimo) || 0 : 0;
     if (subtotal() < min) return 'O pedido mínimo é ' + brl(min) + '. Adicione mais itens.';
@@ -1170,6 +1203,14 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     if (!$('#v-ck').classList.contains('hide')) { desenharCheckout(); }
     if (!$('#v-track').classList.contains('hide') && pedido) desenharAcompanhamento(false);
   }
+  try { db.ref('.info/serverTimeOffset').on('value', function (s) { HORA_OFFSET = Number(s.val()) || 0; }); } catch (e) {}
+  // a cada 20 s confere se algum item entrou/saiu do horário e atualiza a tela e a sacola
+  setInterval(function () {
+    if (!cfgPronto || !cardPronto || !cfg) return;
+    if (assinaturaHorarios() === _assinHr) return;
+    limparCartInvalido(); salvarCart(); desenharMenu(); desenharAviso(); desenharBarra();
+    if (!$('#v-ck').classList.contains('hide')) desenharCheckout();
+  }, 20000);
   base('pedidosConfig/' + LOJA).on('value', function (s) { cfg = s.val(); cfgPronto = true; iniciar(); },
     function () { cfgPronto = true; cfg = null; iniciar(); });
   base('cardapio/' + LOJA).on('value', function (s) {
