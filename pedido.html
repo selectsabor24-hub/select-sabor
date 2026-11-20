@@ -54,6 +54,29 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
 /* Avisos */
 .aviso { margin: 12px 0 0; padding: 10px 12px; border-radius: 12px; font-size: 14px; background: var(--laranja-bg); color: #7C4A12; border: 1px solid #F0D9B5; }
 .aviso.erro { background: var(--vermelho-bg); color: var(--vermelho); border-color: #FCA5A5; }
+/* Aviso do dia (ex.: "Hoje temos tropeiro"): destaque forte, com ícone e brilho suave */
+.aviso.destaque {
+  position: relative; display: flex; align-items: center; justify-content: center; text-align: center; gap: 12px;
+  margin: 14px 0 0; padding: 14px 18px; border-radius: 16px;
+  font-size: 16px; font-weight: 700; line-height: 1.35; letter-spacing: .1px;
+  color: #fff; border: 0;
+  background: linear-gradient(135deg, #D98324 0%, #B8742F 55%, #9A5C1C 100%);
+  box-shadow: 0 6px 18px rgba(184,116,47,.38), inset 0 1px 0 rgba(255,255,255,.25);
+  overflow: hidden;
+}
+.aviso.destaque::before {
+  content: "📣"; flex: 0 0 auto; width: 38px; height: 38px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; font-size: 20px;
+  background: rgba(255,255,255,.22); animation: avisoPulso 2.2s ease-in-out infinite;
+}
+.aviso.destaque::after {
+  content: ""; position: absolute; top: 0; left: -60%; width: 40%; height: 100%;
+  background: linear-gradient(100deg, transparent, rgba(255,255,255,.28), transparent);
+  transform: skewX(-20deg); animation: avisoBrilho 4.5s ease-in-out infinite; pointer-events: none;
+}
+@keyframes avisoPulso { 0%,100% { transform: scale(1); } 50% { transform: scale(1.12); } }
+@keyframes avisoBrilho { 0%,60% { left: -60%; } 100% { left: 130%; } }
+@media (prefers-reduced-motion: reduce) { .aviso.destaque::before, .aviso.destaque::after { animation: none; } }
 .banner-andamento { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin: 12px 0 0; padding: 10px 12px; border-radius: 12px; background: var(--verde-bg); border: 1px solid #BBD7BF; font-size: 14px; }
 .banner-andamento button { background: var(--verde); color: #fff; border: 0; border-radius: 10px; padding: 8px 14px; font-weight: 600; }
 
@@ -612,6 +635,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     var av = $('#aviso');
     var txt = !aberta() ? 'Estamos fechados no momento. Você pode ver o cardápio, mas só dá para enviar pedidos quando abrirmos.' : (cfg && cfg.aviso) || '';
     av.textContent = txt; av.classList.toggle('hide', !txt);
+    av.classList.toggle('destaque', !!txt && aberta()); // aviso do dia em destaque; "fechado" continua discreto
   }
   function desenharMenu() {
     var itens = itensAtivos();
