@@ -18,7 +18,7 @@
 <script src="https://cdn.jsdelivr.net/npm/firebase@10.12.2/firebase-auth-compat.min.js"></script>
 <!--
   ╔══════════════════════════════════════════════════════════════════════╗
-  ║  APP DO MOTOQUEIRO — Select Sabor                          v1.2      ║
+  ║  APP DO MOTOQUEIRO — Select Sabor                          v1.3      ║
   ╠══════════════════════════════════════════════════════════════════════╣
   ║  · Login individual (e-mail + senha criados em Motoqueiro > Cadastro)║
   ║  · Lê os pedidos de ENTREGA da loja do motoqueiro (caixa/pedidos)    ║
@@ -81,7 +81,7 @@ button { cursor: pointer; }
 .met small { display: block; font-size: 11px; font-weight: 700; color: var(--mut); text-transform: uppercase; letter-spacing: .4px; }
 .met b { font-size: 24px; }
 .tabs { display: flex; gap: 6px; margin-bottom: 12px; }
-.tabs button { flex: 1; padding: 11px 6px; border-radius: 12px; border: 1.5px solid var(--borda); background: #fff; font-weight: 700; font-size: 14px; color: var(--txt); }
+.tabs button { flex: 1; padding: 11px 4px; border-radius: 12px; border: 1.5px solid var(--borda); background: #fff; font-weight: 700; font-size: 13px; color: var(--txt); }
 .tabs button.on { background: var(--verde); border-color: var(--verde); color: #fff; }
 
 /* Cartões */
@@ -95,6 +95,8 @@ button { cursor: pointer; }
 .cli { margin-top: 8px; overflow-wrap: anywhere; }
 .links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .links a, .links button { flex: 1 1 calc(33% - 8px); display: flex; align-items: center; justify-content: center; text-align: center; text-decoration: none; padding: 11px 8px; border-radius: 12px; border: 1.5px solid var(--borda); background: #fff; color: var(--txt); font-weight: 700; font-size: 14px; }
+.prep { margin-top: 12px; padding: 10px 12px; border-radius: 10px; font-weight: 700; line-height: 1.35; background: #FEF3C7; color: #78350F; }
+.prep small { display: block; font-weight: 500; margin-top: 2px; }
 .cobrar { margin-top: 12px; padding: 10px 12px; border-radius: 10px; font-weight: 700; line-height: 1.35; }
 .cobrar small { display: block; font-weight: 500; margin-top: 2px; }
 .cobrar.dinheiro { background: #FEF3C7; color: #78350F; }
@@ -176,6 +178,7 @@ button { cursor: pointer; }
     </div>
     <div class="taxa-dia" id="tx-dia"></div>
     <div class="tabs" id="tabs">
+      <button data-t="preparo">Em preparo</button>
       <button data-t="sair">Para sair</button>
       <button data-t="rua">Na rua</button>
       <button data-t="hoje">Entregues</button>
@@ -229,6 +232,7 @@ button { cursor: pointer; }
   var tab = 'sair';
   var escutas = [];         // referências com .on() para desligar ao sair
   var prontosVistos = null; // 1ª carga não dispara aviso
+  var preparoVistos = null; // idem, para pedidos aceitos (em preparo)
   var som = lsGet('motSom', '1') !== '0';
   var swReg = null;
   var wake = null;
@@ -322,7 +326,7 @@ button { cursor: pointer; }
 
   /* ---------- Escutas do Firebase ---------- */
   function ouvir(r, evento, fn, fnErro) { r.on(evento, fn, fnErro || function (e) { console.warn(e && e.message); }); escutas.push([r, evento, fn]); }
-  function desligar() { escutas.forEach(function (x) { try { x[0].off(x[1], x[2]); } catch (e) {} }); escutas = []; prontosVistos = null; loopParar(); }
+  function desligar() { escutas.forEach(function (x) { try { x[0].off(x[1], x[2]); } catch (e) {} }); escutas = []; prontosVistos = null; preparoVistos = null; loopParar(); }
 
   function iniciar() {
     $('#tp-nome').textContent = eu.nome || 'Motoqueiro';
@@ -338,23 +342,29 @@ button { cursor: pointer; }
       cfg = s.val(); $('#tp-loja').textContent = (cfg && cfg.nome) || 'Restaurante'; render();
     });
     ouvir(ref('cardapio/' + eu.lojaId), 'value', function (s) { cardapio = s.val() || {}; render(); });
-    // O motoqueiro só enxerga (regras do Firebase): entregas prontas que ninguém pegou + as dele.
-    var prontosMap = {}, meusMap = {};
+    // O motoqueiro só enxerga (regras do Firebase): pedidos em preparo (já aceitos pela loja, para ele ir
+    // se deslocando), entregas prontas que ninguém pegou + as dele.
+    var prontosMap = {}, preparoMap = {}, meusMap = {};
+    var prim = { pronto: false, preparo: false, meus: false }; // só avisa depois que as 3 listas chegaram
     function juntar() {
-      var tudo = Object.assign({}, prontosMap, meusMap);
+      var tudo = Object.assign({}, prontosMap, preparoMap, meusMap);
       pedidos = Object.keys(tudo).filter(function (k) { return ID_OK.test(k); })
         .map(function (k) { return Object.assign({ id: k }, tudo[k]); })
         .filter(function (p) { return p.tipo === 'entrega'; });
-      detectar();
+      if (prim.pronto && prim.preparo && prim.meus) detectar();
       render();
     }
-    var semAcesso = function (e) { toast('Sem acesso aos pedidos. Fale com o restaurante.', false); console.warn(e); };
+    var semAcesso = function (q) { return function (e) { prim[q] = true; toast('Sem acesso aos pedidos. Fale com o restaurante.', false); console.warn(e); juntar(); }; };
     ouvir(ref('pedidos/' + eu.lojaId).orderByChild('status').equalTo('pronto').limitToLast(100), 'value', function (s) {
-      prontosMap = s.val() || {}; juntar();
-    }, semAcesso);
+      prontosMap = s.val() || {}; prim.pronto = true; juntar();
+    }, semAcesso('pronto'));
+    // Em preparo: se as regras do Firebase ainda não foram atualizadas, só não mostra essa aba (sem aviso de erro).
+    ouvir(ref('pedidos/' + eu.lojaId).orderByChild('status').equalTo('preparo').limitToLast(100), 'value', function (s) {
+      preparoMap = s.val() || {}; prim.preparo = true; juntar();
+    }, function (e) { console.warn('[preparo] sem acesso (publique as regras novas do Firebase):', e && e.message); prim.preparo = true; juntar(); });
     ouvir(ref('pedidos/' + eu.lojaId).orderByChild('motoqueiro').equalTo(eu.nome).limitToLast(100), 'value', function (s) {
-      meusMap = s.val() || {}; juntar();
-    }, semAcesso);
+      meusMap = s.val() || {}; prim.meus = true; juntar();
+    }, semAcesso('meus'));
     avisoNotif();
     travarTela();
   }
@@ -375,6 +385,7 @@ button { cursor: pointer; }
   function meu(p) { return !p.motoqueiro || p.motoqueiro === eu.nome; }
   function listas() {
     return {
+      preparo: pedidos.filter(function (p) { return p.status === 'preparo'; }).sort(function (a, b) { return (a.ts || 0) - (b.ts || 0); }),
       sair: pedidos.filter(function (p) { return p.status === 'pronto'; }).sort(function (a, b) { return (a.ts || 0) - (b.ts || 0); }),
       rua: pedidos.filter(function (p) { return p.status === 'saiu' && meu(p); }).sort(function (a, b) { return (a.ts || 0) - (b.ts || 0); }),
       hoje: pedidos.filter(function (p) { return p.status === 'entregue' && p.motoqueiro === eu.nome && hoje(tsEntrega(p)); }).sort(function (a, b) { return tsEntrega(b) - tsEntrega(a); })
@@ -397,7 +408,9 @@ button { cursor: pointer; }
     Array.prototype.forEach.call(document.querySelectorAll('#tabs button'), function (b) { b.classList.toggle('on', b.dataset.t === tab); });
     document.title = (L.sair.length ? '(' + L.sair.length + ') ' : '') + 'Entregas';
     atualizarBadge(L.sair.length);
-    var vazio = { sair: 'Nenhuma entrega pronta para sair.<br>Você será avisado quando uma ficar pronta.', rua: 'Nenhuma entrega na rua.', hoje: 'Nenhuma entrega concluída hoje.' }[tab];
+    var vazio = { preparo: 'Nenhum pedido em preparo.<br>Você será avisado assim que a loja aceitar um pedido.', sair: 'Nenhuma entrega pronta para sair.<br>Você será avisado quando uma ficar pronta.', rua: 'Nenhuma entrega na rua.', hoje: 'Nenhuma entrega concluída hoje.' }[tab];
+    var bp = document.querySelector('#tabs button[data-t="preparo"]');
+    if (bp) bp.textContent = 'Em preparo' + (L.preparo.length ? ' (' + L.preparo.length + ')' : '');
     var arr = L[tab] || [];
     var html = (arr.length ? arr.map(cartao).join('') : '<div class="card vazio">' + vazio + '</div>');
     $('#lista').innerHTML = html;
@@ -406,7 +419,7 @@ button { cursor: pointer; }
 
   function cartao(p) {
     var id = esc(p.id), t = totais(p), cli = p.cliente || {}, e = p.endereco || {};
-    var cor = p.status === 'pronto' ? 'var(--roxo)' : (p.status === 'saiu' ? 'var(--azul)' : 'var(--ok)');
+    var cor = p.status === 'preparo' ? '#D97706' : (p.status === 'pronto' ? 'var(--roxo)' : (p.status === 'saiu' ? 'var(--azul)' : 'var(--ok)'));
     var fin = p.status === 'entregue';
     var fone = String(cli.telefone || '').replace(/[^\d+]/g, '');
     var endTxt = [[e.rua, e.numero].filter(Boolean).join(', '), e.bairro, e.cep ? 'CEP ' + e.cep : ''].filter(Boolean).join(' — ');
@@ -424,6 +437,7 @@ button { cursor: pointer; }
     } else {
       cobrar = '<div class="cobrar cartao">💳 Cartão na entrega: ' + brl(t.total) + '<small>Leve a maquininha</small></div>';
     }
+    if (p.status === 'preparo') cobrar = '<div class="prep">🍳 Em preparo — vá para a loja' + (p.previsao ? ' · previsão ' + esc(p.previsao) : '') + '<small>Você será avisado quando o pedido ficar pronto.</small></div>' + cobrar;
     if (p.comCodigo && p.status === 'saiu') cobrar += '<div class="cobrar" style="background:#EDE9FE;color:#4C1D95">🔐 Peça o código de 4 números ao cliente<small>Sem ele não dá para confirmar a entrega</small></div>';
     var quando = fin ? '✓ Entregue às ' + hora(tsEntrega(p))
       : (p.status === 'saiu' && p.hist && p.hist.saiu ? 'Saiu às ' + hora(p.hist.saiu) : hora(p.ts) + ' · ' + ha(p.ts));
@@ -512,12 +526,33 @@ button { cursor: pointer; }
 
   /* ---------- Aviso de nova entrega ---------- */
   function detectar() {
+    var prep = pedidos.filter(function (p) { return p.status === 'preparo'; });
+    var pids = {}; prep.forEach(function (p) { pids[p.id] = 1; });
+    if (preparoVistos === null) preparoVistos = pids;
+    else {
+      var pn = prep.filter(function (p) { return !preparoVistos[p.id]; });
+      preparoVistos = pids;
+      if (pn.length) avisarPreparo(pn);
+    }
     var prontos = pedidos.filter(function (p) { return p.status === 'pronto'; });
     var ids = {}; prontos.forEach(function (p) { ids[p.id] = 1; });
     if (prontosVistos === null) { prontosVistos = ids; if (pendentes().length) loopIniciar(); return; }
     var novos = prontos.filter(function (p) { return !prontosVistos[p.id]; });
     prontosVistos = ids;
     if (novos.length) avisar(novos);
+  }
+  function avisarPreparo(novos) {
+    var p = novos[0], e = p.endereco || {};
+    var titulo = '🍳 Pedido aceito — vá para a loja' + (novos.length > 1 ? ' (+' + (novos.length - 1) + ')' : '');
+    var corpo = '#' + (p.codigo || '') + (e.bairro ? ' — ' + e.bairro : '') + (p.previsao ? ' · previsão ' + p.previsao : '');
+    bipar();
+    try { if (navigator.vibrate) navigator.vibrate([200, 100, 200]); } catch (x) {}
+    var a = $('#alerta');
+    a.innerHTML = esc(titulo) + '<small>' + esc(corpo) + '</small>';
+    a.classList.remove('hide'); a.style.animation = 'none'; void a.offsetWidth; a.style.animation = '';
+    clearTimeout(alertaTimer); alertaTimer = setTimeout(function () { a.classList.add('hide'); }, 9000);
+    a.onclick = function () { a.classList.add('hide'); tab = 'preparo'; render(); };
+    if (document.hidden) notificar(titulo, corpo, 'prep-' + p.id);
   }
   function avisar(novos) {
     var p = novos[0], e = p.endereco || {};
