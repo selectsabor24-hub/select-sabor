@@ -358,12 +358,24 @@
             ".read": "(auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true))",
             ".write": "(auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true)) || (auth != null && auth.uid == $uid && root.child('caixa/motoqueirosUid/' + auth.uid + '/ativo').val() === true && root.child('caixa/motoqueirosUid/' + auth.uid + '/lojaId').val() === $lojaId)",
             ".validate": "newData.val() == null || newData.hasChildren(['endpoint','p256dh','auth'])",
-            "endpoint": { ".validate": "newData.isString() && newData.val().length <= 800 && newData.val().beginsWith('https://')" },
-            "p256dh": { ".validate": "newData.isString() && newData.val().length <= 200" },
-            "auth": { ".validate": "newData.isString() && newData.val().length <= 60" },
-            "nome": { ".validate": "newData.isString() && newData.val().length <= 40" },
-            "ts": { ".validate": "newData.isNumber()" },
-            "$outro": { ".validate": "false" }
+            "endpoint": {
+              ".validate": "newData.isString() && newData.val().length <= 800 && newData.val().beginsWith('https://')"
+            },
+            "p256dh": {
+              ".validate": "newData.isString() && newData.val().length <= 200"
+            },
+            "auth": {
+              ".validate": "newData.isString() && newData.val().length <= 60"
+            },
+            "nome": {
+              ".validate": "newData.isString() && newData.val().length <= 40"
+            },
+            "ts": {
+              ".validate": "newData.isNumber()"
+            },
+            "$outro": {
+              ".validate": "false"
+            }
           }
         }
       },
@@ -372,9 +384,15 @@
           ".read": "(auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true))",
           ".write": "(auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true))",
           ".validate": "newData.val() == null || newData.hasChildren(['url','segredo'])",
-          "url": { ".validate": "newData.isString() && newData.val().length <= 300 && newData.val().beginsWith('https://')" },
-          "segredo": { ".validate": "newData.isString() && newData.val().length <= 200" },
-          "$outro": { ".validate": "false" }
+          "url": {
+            ".validate": "newData.isString() && newData.val().length <= 300 && newData.val().beginsWith('https://')"
+          },
+          "segredo": {
+            ".validate": "newData.isString() && newData.val().length <= 200"
+          },
+          "$outro": {
+            ".validate": "false"
+          }
         }
       },
       "motoqueirosUid": {
@@ -382,6 +400,18 @@
           ".read": "auth != null && auth.uid == $uid",
           ".write": "auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true)",
           ".validate": "newData.val() == null || (newData.hasChildren(['lojaId','nome','ativo']) && newData.child('lojaId').isString() && newData.child('ativo').isBoolean())"
+        }
+      },
+      "recusasEntrega": {
+        "$lojaId": {
+          ".read": "auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true)",
+          "$uid": {
+            ".read": "auth != null && auth.uid === $uid && root.child('caixa/motoqueirosUid/' + auth.uid + '/lojaId').val() === $lojaId",
+            "$pedidoId": {
+              ".write": "(auth != null && root.child('caixa/motoqueirosUid/' + auth.uid + '/ativo').val() === true && root.child('caixa/motoqueirosUid/' + auth.uid + '/lojaId').val() === $lojaId) && auth.uid === $uid && $pedidoId.matches(/^[-A-Za-z0-9_]{8,40}$/)",
+              ".validate": "newData.val() === null || newData.isNumber()"
+            }
+          }
         }
       }
     }

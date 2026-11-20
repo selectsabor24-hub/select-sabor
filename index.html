@@ -18085,16 +18085,23 @@ function pedPushCfgSalvar() {
     .catch(() => _pedPushMsg('Sem permissão. Publique as regras atualizadas do Firebase.', false));
 }
 /* Envia o aviso a todos os motoqueiros que ativaram. Devolve { enviados, aparelhos } ou null. */
-function _pedPushEnviar(titulo, msg, tag) {
+function _pedPushEnviar(titulo, msg, tag, opcoes) {
   if (!_lojaAtiva) return Promise.resolve(null);
   const loja = _lojaAtiva;
   return Promise.all([_dbRef('pushConfig/' + loja).once('value'), _dbRef('pushMotoqueiros/' + loja).once('value')]).then(r => {
     const cfg = r[0].val(), todos = r[1].val() || {};
     if (!cfg || !cfg.url || !cfg.segredo) return { semServidor: true };
-    const subs = Object.keys(todos).map(k => todos[k]).filter(x => x && x.endpoint && x.p256dh && x.auth)
-      .map(x => ({ endpoint: x.endpoint, p256dh: x.p256dh, auth: x.auth }));
-    if (!subs.length) return { enviados: 0, aparelhos: 0 };
-    let click = ''; try { click = new URL('motoqueiro.html', location.href).href; } catch (e) {}
+    const ped = opcoes && opcoes.pedido;
+    const uids = Object.keys(todos).filter(k => { const x = todos[k]; return x && x.endpoint && x.p256dh && x.auth; });
+    // Chamada de entrega: quem recusou este pedido não recebe mais; se já tem motoqueiro dono, só ele.
+    const recusou = ped
+      ? Promise.all(uids.map(k => _dbRef('recusasEntrega/' + loja + '/' + k + '/' + ped.id).once('value').then(sn => sn.exists()).catch(() => false)))
+      : Promise.resolve(uids.map(() => false));
+    return recusou.then(rec => {
+    const elegiveis = uids.filter((k, i) => !rec[i] && (!ped || !ped.motoqueiro || (todos[k].nome || '') === ped.motoqueiro));
+    const subs = elegiveis.map(k => todos[k]).map(x => ({ endpoint: x.endpoint, p256dh: x.p256dh, auth: x.auth }));
+    if (!subs.length) return { enviados: 0, aparelhos: 0, todosRecusaram: !!ped && uids.length > 0 && rec.every(Boolean) };
+    let click = ''; try { click = new URL('motoqueiro.html' + (ped ? '?chamada=' + encodeURIComponent(ped.id) : ''), location.href).href; } catch (e) {}
     return fetch(cfg.url, { method: 'POST', body: JSON.stringify({ segredo: cfg.segredo, subs, title: titulo, body: msg, url: click, tag: tag || 'entrega' }) })
       .then(x => x.json()).then(d => {
         if (d && d.mortos && d.mortos.length) {
@@ -18102,6 +18109,7 @@ function _pedPushEnviar(titulo, msg, tag) {
         }
         return { enviados: (d && d.enviados) || 0, aparelhos: subs.length, erro: d && d.erro };
       });
+    });
   }).catch(() => null);
 }
 function pedPushTestar() {
@@ -18121,8 +18129,29 @@ function _pedPushAvisarStatus(id, st) {
   const local = [e.bairro, e.rua].filter(Boolean).join(' — ');
   const corpo = '#' + (p.codigo || '') + (local ? ' — ' + local : '');
   if (st === 'preparo') _pedPushEnviar('🍳 Pedido aceito — vá para a loja', corpo, 'prep-' + id);
-  else _pedPushEnviar('🛵 Nova entrega pronta', corpo, 'pronto-' + id);
+  else _pedPushEnviar('🛵 Nova entrega pronta', corpo, 'pronto-' + id, { pedido: p });
 }
+/* Chamada insistente: enquanto a entrega estiver "pronta" e ninguém pegou, reenvia o aviso
+   a cada ~25 s (só para quem não recusou) por até 15 min. Precisa do painel aberto. */
+const _PED_CHAMADA_MS = 25000, _PED_CHAMADA_JANELA = 15 * 60 * 1000;
+const _pedTodosRecusaram = new Set();
+function _pedChamadaRepetir() {
+  if (!_lojaAtiva) return;
+  const agora = Date.now();
+  _pedLista().filter(p => p && p.tipo === 'entrega' && p.status === 'pronto').forEach(p => {
+    const t = (p.hist && p.hist.pronto) || p.atualizadoEm || 0;
+    if (!t || agora - t < 20000 || agora - t > _PED_CHAMADA_JANELA) return; // o 1º aviso já saiu ao marcar como pronto
+    const e = p.endereco || {};
+    const local = [e.bairro, e.rua].filter(Boolean).join(' — ');
+    _pedPushEnviar('🛵 Nova entrega pronta', '#' + (p.codigo || '') + (local ? ' — ' + local : ''), 'pronto-' + p.id, { pedido: p }).then(r => {
+      if (r && r.todosRecusaram && !_pedTodosRecusaram.has(p.id)) {
+        _pedTodosRecusaram.add(p.id);
+        showToast('Todos os motoqueiros recusaram a entrega #' + (p.codigo || '') + '. Chame um manualmente.', false);
+      }
+    });
+  });
+}
+setInterval(() => { try { _pedChamadaRepetir(); } catch (e) {} }, _PED_CHAMADA_MS);
 function pedMudar(id, st, extra) {
   if (!_lojaAtiva) return Promise.resolve();
   const upd = Object.assign({ status: st, atualizadoEm: firebase.database.ServerValue.TIMESTAMP }, extra || {});

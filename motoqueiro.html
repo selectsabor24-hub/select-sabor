@@ -132,6 +132,19 @@ button { cursor: pointer; }
 #alerta { position: fixed; left: 12px; right: 12px; top: calc(76px + var(--safe-t)); z-index: 55; background: var(--roxo); color: #fff; border-radius: 16px; padding: 14px 16px; box-shadow: 0 12px 30px rgba(0,0,0,.35); font-weight: 800; animation: pulso 1s ease-in-out 3; }
 #alerta small { display: block; font-weight: 500; opacity: .95; margin-top: 2px; }
 @keyframes pulso { 50% { transform: scale(1.03); } }
+/* Tela de chamada: toca e vibra até aceitar ou recusar */
+#chamada { position: fixed; inset: 0; z-index: 80; background: linear-gradient(160deg, #4C1D95, #7C3AED); color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: calc(24px + var(--safe-t)) 22px calc(24px + var(--safe-b)); }
+#chamada .ic { font-size: 76px; animation: tremer .9s ease-in-out infinite; }
+#chamada h2 { margin: 6px 0 4px; font-size: 26px; }
+#chamada .cd { font-size: 34px; font-weight: 900; letter-spacing: 3px; margin: 6px 0; }
+#chamada .en { font-size: 18px; font-weight: 600; max-width: 420px; line-height: 1.35; }
+#chamada .tx { margin-top: 10px; font-size: 16px; opacity: .95; }
+#chamada .mais { margin-top: 8px; font-size: 14px; opacity: .85; }
+#chamada .bs { display: flex; gap: 14px; width: 100%; max-width: 420px; margin-top: 34px; }
+#chamada .bs button { flex: 1; min-height: 72px; border: 0; border-radius: 40px; font-size: 20px; font-weight: 900; color: #fff; box-shadow: 0 10px 24px rgba(0,0,0,.35); }
+#chamada .bs .ac { background: var(--ok); animation: pulso 1s ease-in-out infinite; }
+#chamada .bs .rc { background: var(--erro); }
+@keyframes tremer { 0%,100% { transform: rotate(0); } 20% { transform: rotate(-14deg); } 40% { transform: rotate(14deg); } 60% { transform: rotate(-10deg); } 80% { transform: rotate(10deg); } }
 @media (max-width: 380px) { .links a, .links button { flex: 1 1 calc(50% - 8px); } }
 </style>
 </head>
@@ -189,6 +202,7 @@ button { cursor: pointer; }
 </div>
 
 <div id="alerta" class="hide" role="alert"></div>
+<div id="chamada" class="hide" role="alertdialog" aria-live="assertive"></div>
 <div id="toast"></div>
 <div id="modal" class="hide"></div>
 
@@ -238,6 +252,8 @@ button { cursor: pointer; }
   var wake = null;
   var audio = null;
   var alertaTimer = null;
+  var recusas = {}, recusasOk = false; // entregas que ESTE motoqueiro recusou (não tocam mais para ele)
+  var chamadaT = null, chamadaKey = null, acaoPend = null;
 
   function ref(p) { return db.ref('caixa/' + p); }
   function pedRef(id) { return ref('pedidos/' + eu.lojaId + '/' + id); }
@@ -327,7 +343,7 @@ button { cursor: pointer; }
 
   /* ---------- Escutas do Firebase ---------- */
   function ouvir(r, evento, fn, fnErro) { r.on(evento, fn, fnErro || function (e) { console.warn(e && e.message); }); escutas.push([r, evento, fn]); }
-  function desligar() { escutas.forEach(function (x) { try { x[0].off(x[1], x[2]); } catch (e) {} }); escutas = []; prontosVistos = null; preparoVistos = null; loopParar(); }
+  function desligar() { escutas.forEach(function (x) { try { x[0].off(x[1], x[2]); } catch (e) {} }); escutas = []; prontosVistos = null; preparoVistos = null; recusas = {}; recusasOk = false; acaoPend = null; loopParar(); chamadaParar(); }
 
   function iniciar() {
     $('#tp-nome').textContent = eu.nome || 'Motoqueiro';
@@ -345,6 +361,10 @@ button { cursor: pointer; }
     ouvir(ref('cardapio/' + eu.lojaId), 'value', function (s) { cardapio = s.val() || {}; render(); });
     // O motoqueiro só enxerga (regras do Firebase): pedidos em preparo (já aceitos pela loja, para ele ir
     // se deslocando), entregas prontas que ninguém pegou + as dele.
+    // Entregas que este motoqueiro recusou (cada um lê só as suas)
+    ouvir(ref('recusasEntrega/' + eu.lojaId + '/' + eu.uid).limitToLast(200), 'value', function (s) {
+      recusas = s.val() || {}; recusasOk = true; chamadaAtualizar();
+    }, function (e) { recusasOk = true; console.warn('[recusas] sem acesso (publique as regras novas do Firebase):', e && e.message); chamadaAtualizar(); });
     var prontosMap = {}, preparoMap = {}, meusMap = {};
     var prim = { pronto: false, preparo: false, meus: false }; // só avisa depois que as 3 listas chegaram
     function juntar() {
@@ -416,6 +436,7 @@ button { cursor: pointer; }
     var html = (arr.length ? arr.map(cartao).join('') : '<div class="card vazio">' + vazio + '</div>');
     $('#lista').innerHTML = html;
     $('#rodape').textContent = 'Atualizado às ' + hora(Date.now());
+    chamadaAtualizar();
   }
 
   function cartao(p) {
@@ -566,7 +587,7 @@ button { cursor: pointer; }
     }
     var prontos = pedidos.filter(function (p) { return p.status === 'pronto'; });
     var ids = {}; prontos.forEach(function (p) { ids[p.id] = 1; });
-    if (prontosVistos === null) { prontosVistos = ids; if (pendentes().length) loopIniciar(); return; }
+    if (prontosVistos === null) { prontosVistos = ids; chamadaAtualizar(); return; }
     var novos = prontos.filter(function (p) { return !prontosVistos[p.id]; });
     prontosVistos = ids;
     if (novos.length) avisar(novos);
@@ -588,77 +609,74 @@ button { cursor: pointer; }
     var p = novos[0], e = p.endereco || {};
     var titulo = '🛵 Nova entrega pronta' + (novos.length > 1 ? ' (+' + (novos.length - 1) + ')' : '');
     var corpo = '#' + (p.codigo || '') + ' — ' + [[e.rua, e.numero].filter(Boolean).join(', '), e.bairro, e.cep ? 'CEP ' + e.cep : ''].filter(Boolean).join(' — ');
-    bipar();
-    loopIniciar();
-    vibrar([500, 150, 500, 150, 500]);
-    var a = $('#alerta');
-    a.innerHTML = esc(titulo) + '<small>' + esc(corpo) + '</small>';
-    a.classList.remove('hide'); a.style.animation = 'none'; void a.offsetWidth; a.style.animation = '';
-    clearTimeout(alertaTimer); alertaTimer = setTimeout(function () { a.classList.add('hide'); }, 9000);
-    a.onclick = function () { a.classList.add('hide'); tab = 'sair'; render(); };
+    chamadaAtualizar();
     if (document.hidden) notificar(titulo, corpo, p.id);
-  }
-  function notificar(titulo, corpo, id) {
-    if (!('Notification' in window) || Notification.permission !== 'granted') return;
-    var op = { body: corpo, icon: 'icon-192.png', badge: 'icon-192.png', tag: 'entrega-' + id, renotify: true, requireInteraction: true, vibrate: [500, 150, 500, 150, 500] };
-    try {
-      if (swReg && swReg.showNotification) swReg.showNotification(titulo, op);
-      else new Notification(titulo, op);
-    } catch (e) { console.warn(e); }
-  }
-  function atualizarBadge(n) {
-    try { if (navigator.setAppBadge) { if (n > 0) navigator.setAppBadge(n); else navigator.clearAppBadge(); } } catch (e) {}
-  }
-
-  /* ---------- Som ---------- */
-  function destravarAudio() {
-    try {
-      var AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
-      audio = audio || new AC();
-      if (audio.state === 'suspended') audio.resume();
-    } catch (e) {}
-  }
-  ['pointerdown', 'keydown', 'touchstart'].forEach(function (ev) { document.addEventListener(ev, destravarAudio, { passive: true }); });
-  /* Toque escolhido, volume e repetição (salvo neste aparelho) */
-  function somCfg() {
-    var c = {}; try { c = JSON.parse(lsGet('motSomCfg', '{}')) || {}; } catch (e) {}
-    return { tipo: (c.tipo === 2 || c.tipo === 3) ? c.tipo : 1, vol: (c.vol >= 0.2 && c.vol <= 1) ? c.vol : 0.9, repetir: c.repetir !== false, vib: c.vib !== false };
-  }
-  /* Vibração (padrão: ligada) — independe do som estar mudo */
-  function vibrar(padrao) {
-    try { if (somCfg().vib && navigator.vibrate) navigator.vibrate(padrao || [400, 150, 400, 150, 400]); } catch (x) {}
-  }
-  function tocar(c) {
-    try {
-      destravarAudio(); if (!audio) return;
-      var t0 = audio.currentTime + 0.02;
-      var nota = function (freq, ini, dur, onda, ganho) {
-        var o = audio.createOscillator(), g = audio.createGain();
-        o.type = onda; o.frequency.value = freq;
-        g.gain.setValueAtTime(0.0001, t0 + ini);
-        g.gain.exponentialRampToValueAtTime(Math.max(0.001, ganho * c.vol), t0 + ini + 0.02);
-        g.gain.exponentialRampToValueAtTime(0.0001, t0 + ini + dur);
-        o.connect(g); g.connect(audio.destination);
-        o.start(t0 + ini); o.stop(t0 + ini + dur + 0.02);
-      };
-      var i;
-      if (c.tipo === 1) { [0, 0.9].forEach(function (b) { nota(880, b, 0.55, 'triangle', 0.6); nota(659, b + 0.35, 0.7, 'triangle', 0.6); }); }
-      else if (c.tipo === 2) { for (i = 0; i < 6; i++) nota(i % 2 ? 1175 : 1046, i * 0.16, 0.12, 'square', 0.35); }
-      else { for (i = 0; i < 4; i++) { nota(660, i * 0.45, 0.22, 'sawtooth', 0.3); nota(880, i * 0.45 + 0.22, 0.22, 'sawtooth', 0.3); } }
-    } catch (e) {}
   }
   function bipar(forcar) {
     if (!som && !forcar) return;
     tocar(somCfg());
   }
+  /* ---------- Tela de chamada: toca e vibra até aceitar ou recusar ---------- */
+  function chamadaLista() { return pendentes().sort(function (a, b) { return (a.ts || 0) - (b.ts || 0); }); }
+  function chamadaToque() {
+    if (!chamadaLista().length) { chamadaParar(); return; }
+    bipar(); vibrar([700, 250, 700, 250, 700]);
+  }
+  function chamadaParar() {
+    if (chamadaT) { clearInterval(chamadaT); chamadaT = null; }
+    chamadaKey = null;
+    try { if (navigator.vibrate) navigator.vibrate(0); } catch (x) {}
+    var b = $('#chamada'); if (b) { b.classList.add('hide'); b.innerHTML = ''; }
+  }
+  function recusarEntrega(p) {
+    recusas[p.id] = Date.now();
+    chamadaAtualizar();
+    db.ref('caixa/recusasEntrega/' + eu.lojaId + '/' + eu.uid + '/' + p.id).set(TS()).then(function () {
+      toast('Entrega recusada. Ela segue para os outros motoqueiros.');
+    }).catch(function (e) { delete recusas[p.id]; erroGrav(e); chamadaAtualizar(); });
+  }
+  function processarAcaoPend() {
+    if (!acaoPend || !eu) return;
+    var a = acaoPend, p = null;
+    pedidos.forEach(function (x) { if (x.id === a.id) p = x; });
+    if (!p) { if (Date.now() - a.t > 20000) acaoPend = null; return; }
+    acaoPend = null;
+    if (p.status !== 'pronto') { toast('Essa entrega já foi pega por outro motoqueiro.', false); return; }
+    if (a.acao === 'recusar') recusarEntrega(p);
+    else sairParaEntrega(p, document.createElement('button'));
+  }
+  function chamadaAtualizar() {
+    var box = $('#chamada'); if (!box) return;
+    if (!eu || !recusasOk) return;
+    processarAcaoPend();
+    var lista = chamadaLista();
+    if (!lista.length) { chamadaParar(); return; }
+    var p = lista[0], e = p.endereco || {}, t = totais(p);
+    var key = p.id + '|' + lista.length;
+    if (chamadaKey !== key) {
+      chamadaKey = key;
+      var end = [[e.rua, e.numero].filter(Boolean).join(', '), e.bairro].filter(Boolean).join(' — ');
+      box.innerHTML = '<div class="ic">📞</div><h2>Nova entrega!</h2><div class="cd">#' + esc(p.codigo || '') + '</div>' +
+        '<div class="en">' + esc(end) + '</div>' +
+        '<div class="tx">Taxa de entrega: <b>' + brl(t.taxa) + '</b></div>' +
+        (lista.length > 1 ? '<div class="mais">+ ' + (lista.length - 1) + ' outra' + (lista.length > 2 ? 's' : '') + ' esperando</div>' : '') +
+        '<div class="bs"><button type="button" class="rc" id="ch-rec">❌ Recusar</button><button type="button" class="ac" id="ch-ace">✅ Aceitar</button></div>';
+      $('#ch-ace').onclick = function () { var b = this; b.disabled = true; sairParaEntrega(p, b); };
+      $('#ch-rec').onclick = function () { recusarEntrega(p); };
+    }
+    box.classList.remove('hide');
+    loopParar();
+    if (!chamadaT) { chamadaToque(); chamadaT = setInterval(chamadaToque, 3000); }
+  }
+
   /* Repete o toque enquanto houver entrega pronta esperando (das últimas 3 horas) */
   var loopT = null;
   function pendentes() {
     var lim = Date.now() - 36e5 * 3;
-    return pedidos.filter(function (p) { return p.status === 'pronto' && meu(p) && (((p.hist && p.hist.pronto) || p.atualizadoEm || p.ts || 0) > lim); });
+    return pedidos.filter(function (p) { return p.status === 'pronto' && meu(p) && !recusas[p.id] && (((p.hist && p.hist.pronto) || p.atualizadoEm || p.ts || 0) > lim); });
   }
   function loopIniciar() {
-    if (loopT || !somCfg().repetir) return;
+    if (loopT || chamadaT || !somCfg().repetir) return;
     loopT = setInterval(function () {
       if (!eu || (!som && !somCfg().vib) || !somCfg().repetir || !pendentes().length) { loopParar(); return; }
       bipar();
@@ -745,6 +763,24 @@ button { cursor: pointer; }
     if (!document.hidden && eu) { if (!wake) travarTela(); render(); }
   });
   setInterval(function () { if (eu && !document.hidden) render(); }, 30000);
+
+  /* ---------- Botões da notificação (Aceitar / Recusar) ---------- */
+  function guardarAcao(acao, id) {
+    if ((acao !== 'aceitar' && acao !== 'recusar') || !ID_OK.test(String(id || ''))) return;
+    acaoPend = { acao: acao, id: id, t: Date.now() };
+    chamadaAtualizar();
+  }
+  try {
+    var qs = new URLSearchParams(location.search);
+    if (qs.get('acao')) { guardarAcao(qs.get('acao'), qs.get('id')); }
+    if (qs.get('acao') || qs.get('chamada')) history.replaceState(null, '', location.pathname);
+  } catch (x) {}
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('message', function (ev) {
+      var d = ev.data || {};
+      if (d.tipo === 'acao') guardarAcao(d.acao, d.id);
+    });
+  }
 
   /* ---------- Service Worker (notificações e uso offline do shell) ---------- */
   if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {

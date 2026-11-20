@@ -4,7 +4,7 @@
 // Estratégia: network-first (sempre a versão mais nova); cache só se a rede falhar.
 // Firebase e demais domínios externos nunca passam pelo cache.
 // Também cuida do toque na notificação de "nova entrega": abre/foca o app.
-const CACHE_NAME = 'motoqueiro-v1';
+const CACHE_NAME = 'motoqueiro-v2';
 
 self.addEventListener('install', () => { self.skipWaiting(); });
 
@@ -36,30 +36,43 @@ self.addEventListener('fetch', event => {
   );
 });
 
-// Push (avisos com a tela bloqueada): mostra a notificação com som e vibração
+// Push (avisos com a tela bloqueada): mostra a notificação com som e vibração.
+// Entrega pronta (tag "pronto-...") vira "chamada": vibração longa + botões Aceitar / Recusar.
 self.addEventListener('push', event => {
   let d = {};
   try { d = event.data ? event.data.json() : {}; } catch (e) { d = { title: 'Select Sabor', body: event.data ? event.data.text() : '' }; }
+  const tag = d.tag || 'entrega';
+  let pedido = '';
+  try { pedido = new URL(d.url || '', self.location.href).searchParams.get('chamada') || ''; } catch (e) {}
+  const chamada = /^pronto-/.test(tag) && !!pedido;
   event.waitUntil(self.registration.showNotification(d.title || 'Select Sabor', {
     body: d.body || '',
     icon: 'icon-192.png',
     badge: 'icon-192.png',
-    tag: d.tag || 'entrega',
+    tag: tag,
     renotify: true,
     requireInteraction: true,
-    vibrate: [500, 150, 500, 150, 500],
-    data: { url: d.url || '' }
+    vibrate: chamada ? [800, 250, 800, 250, 800, 250, 800] : [500, 150, 500, 150, 500],
+    actions: chamada ? [{ action: 'aceitar', title: '✅ Aceitar' }, { action: 'recusar', title: '❌ Recusar' }] : [],
+    data: { url: d.url || '', pedido: pedido }
   }));
 });
 
 self.addEventListener('notificationclick', event => {
   event.notification.close();
+  const dados = event.notification.data || {};
+  const acao = (event.action === 'aceitar' || event.action === 'recusar') ? event.action : '';
+  const id = dados.pedido || '';
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(lista => {
       for (const c of lista) {
-        if ('focus' in c) return c.focus();
+        if ('focus' in c) {
+          if (acao && id) c.postMessage({ tipo: 'acao', acao: acao, id: id });
+          return c.focus();
+        }
       }
-      return self.clients.openWindow('./motoqueiro.html');
+      const q = acao && id ? '?acao=' + acao + '&id=' + encodeURIComponent(id) : '';
+      return self.clients.openWindow('./motoqueiro.html' + q);
     })
   );
 });
