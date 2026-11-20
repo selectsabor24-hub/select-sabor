@@ -50,6 +50,9 @@ button { cursor: pointer; }
 .login-box img { width: 76px; height: 76px; border-radius: 50%; display: block; margin: 0 auto 10px; }
 .login-box h1 { margin: 0 0 4px; font-size: 22px; text-align: center; }
 .login-box p.sub { margin: 0 0 18px; text-align: center; color: var(--mut); font-size: 14px; }
+.login-box .senha-wrap { position: relative; }
+.login-box .senha-wrap input { padding-right: 56px; }
+.login-box .ver-senha { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 48px; height: 48px; border: 0; background: transparent; font-size: 22px; cursor: pointer; padding: 0; }
 .login-box label { display: block; font-size: 13px; font-weight: 700; margin: 12px 0 4px; }
 .login-box input { width: 100%; padding: 13px 12px; border: 1.5px solid var(--borda); border-radius: 12px; font-size: 16px; background: #fff; }
 .login-box input:focus { outline: 0; border-color: var(--verde2); }
@@ -137,7 +140,10 @@ button { cursor: pointer; }
     <label for="lg-email">E-mail</label>
     <input id="lg-email" type="email" inputmode="email" autocomplete="username" autocapitalize="off" required>
     <label for="lg-senha">Senha</label>
-    <input id="lg-senha" type="password" autocomplete="current-password" required>
+    <div class="senha-wrap">
+      <input id="lg-senha" type="password" autocomplete="current-password" required>
+      <button type="button" class="ver-senha" id="lg-ver" aria-label="Mostrar senha" aria-pressed="false">👁</button>
+    </div>
     <button class="btn-prim" id="lg-btn" type="submit">Entrar</button>
     <div class="msg-erro hide" id="lg-erro"></div>
   </form>
@@ -254,6 +260,19 @@ button { cursor: pointer; }
       'auth/network-request-failed': 'Sem internet. Verifique a conexão.'
     })[c] || 'Não foi possível entrar. Tente de novo.';
   }
+  /* Mostrar/ocultar senha no login */
+  (function () {
+    var b = document.getElementById('lg-ver'), i = document.getElementById('lg-senha');
+    if (!b || !i) return;
+    b.onclick = function () {
+      var mostrar = i.type === 'password';
+      i.type = mostrar ? 'text' : 'password';
+      b.textContent = mostrar ? '🙈' : '👁';
+      b.setAttribute('aria-label', mostrar ? 'Ocultar senha' : 'Mostrar senha');
+      b.setAttribute('aria-pressed', mostrar ? 'true' : 'false');
+      i.focus();
+    };
+  })();
   function loginErro(msg) { var e = $('#lg-erro'); e.textContent = msg || ''; e.classList.toggle('hide', !msg); }
 
   $('#form-login').addEventListener('submit', function (ev) {
@@ -291,7 +310,7 @@ button { cursor: pointer; }
   function mostrar(qual) {
     $('#tela-login').classList.toggle('hide', qual !== 'login');
     $('#tela-app').classList.toggle('hide', qual !== 'app');
-    if (qual === 'login') { $('#lg-senha').value = ''; document.title = 'Entregas — Motoqueiro'; atualizarBadge(0); }
+    if (qual === 'login') { $('#lg-senha').value = ''; $('#lg-senha').type = 'password'; $('#lg-ver').textContent = '👁'; document.title = 'Entregas — Motoqueiro'; atualizarBadge(0); }
   }
 
   /* ---------- Escutas do Firebase ---------- */
