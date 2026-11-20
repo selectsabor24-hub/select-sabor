@@ -33,7 +33,7 @@
 <!--
   ╔══════════════════════════════════════════════════════════════════════╗
   ║           CONTROLE DE CAIXA                                           ║
-  ║           Versão: 5.4 — App do motoqueiro (motoqueiro.html)           ║
+  ║           Versão: 5.5 — Código de confirmação da entrega              ║
   ╠══════════════════════════════════════════════════════════════════════╣
   ║  HISTÓRICO DE VERSÕES                                                ║
   ║  ─────────────────────────────────────────────────────────────────  ║
@@ -44,6 +44,11 @@
   ║         · Melhoria: renderContas usa cache; seção 3.22 documentada   ║
   ║  v3.3 — Seções novas: Planilhas já lançadas (3.23), calendário       ║
   ║         visual de lançamentos com marcação de cartão                 ║
+  ║  v5.5 — Código de confirmação da entrega: ao pedir por entrega o   ║
+  ║         cliente recebe um código de 4 números (só ele e a loja veem║
+  ║         O motoqueiro digita o código para dar a entrega como feita.║
+  ║         Regras Firebase: codigosEntrega + comCodigo/codigoConfirm. ║
+  ║         Arquivos: index.html, pedido.html, motoqueiro.html, regras ║
   ║  v5.4 — App do motoqueiro: página motoqueiro.html (PWA, login      ║
   ║         próprio) com aviso de nova entrega. Cadastro cria o login   ║
   ║         (e-mail + senha), mostra o link e envia por WhatsApp.       ║
@@ -6542,6 +6547,13 @@ function setLojaAtiva(id) {
   _listenersLoja.push(refMotoqueiros);
 
   // Pedidos online da loja ativa
+  _cache.codigosEntrega = {};
+  const refCodEnt = _dbRef('codigosEntrega/' + id);
+  refCodEnt.on('value', snap => {
+    _cache.codigosEntrega = snap.val() || {};
+    if (_currentSection === 'pedidos' || _currentSection === 'motoqueiro') _refreshCurrentSection();
+  }, e => console.warn('[codigosEntrega] sem acesso:', e && e.message));
+  _listenersLoja.push(refCodEnt);
   _cache.pedidos = [];
   _cache.pedidosCfg = null;
   _pedVistos = null; // a 1ª carga não dispara alerta
@@ -17624,6 +17636,15 @@ const PED_PAG = { dinheiro: '💵 Dinheiro', cartao: '💳 Cartão', pix: '📲 
 function _pedLista()   { return _cache.pedidos || []; }
 function _pedGet(id)   { return _pedLista().find(p => p.id === id) || null; }
 function _pedRef(id)   { return _dbRef('pedidos/' + _lojaAtiva + '/' + id); }
+/** Código de confirmação da entrega (só admin/equipe leem; o motoqueiro não tem acesso). */
+function _pedCodEntregaHtml(p) {
+  if (p.tipo !== 'entrega' || !p.comCodigo || p.status === 'cancelado') return '';
+  if (p.status === 'entregue') return p.codigoConfirm ? '<div class="ped-obs">🔐 Entrega confirmada com o código do cliente</div>' : '';
+  const c = (_cache.codigosEntrega || {})[p.id];
+  return '<div class="ped-obs" style="background:#EDE9FE;color:#4C1D95">🔐 Código de entrega: ' +
+    (c ? '<strong style="font-size:20px;letter-spacing:4px">' + escapeHtml(c) + '</strong>' : '<em>indisponível</em>') +
+    '<br><small>Só você e o cliente sabem. O motoqueiro digita para confirmar a entrega.</small></div>';
+}
 function _pedCfg()     { return _cache.pedidosCfg || null; }
 function _pedRound(v)  { return Math.round((v + Number.EPSILON) * 100) / 100; }
 function _pedNum(str)  {
@@ -17820,6 +17841,7 @@ function _pedCardHtml(p) {
     </div>
     <div class="ped-cli"><strong>${escapeHtml(cli.nome || '')}</strong> · <a href="tel:${escapeHtml(String(cli.telefone || '').replace(/[^\d+]/g, ''))}">${escapeHtml(cli.telefone || '')}</a></div>
     ${ent ? `<div class="ped-end">📍 ${escapeHtml((e.rua || '') + ', ' + (e.numero || '') + ' — ' + (e.bairro || ''))}${e.complemento ? ' · ' + escapeHtml(e.complemento) : ''}${e.referencia ? ' · ref.: ' + escapeHtml(e.referencia) : ''}</div>` : ''}
+    ${_pedCodEntregaHtml(p)}
     <ul class="ped-itens">${itens}</ul>
     ${p.obs ? `<div class="ped-obs">📝 ${escapeHtml(p.obs)}</div>` : ''}
     ${p.status === 'cancelado' && p.motivo ? `<div class="ped-obs">Motivo: ${escapeHtml(p.motivo)}</div>` : ''}
@@ -17925,6 +17947,7 @@ function pedExcluir(id) {
         const apagarComanda = c ? _cmdRef(cid).remove() : Promise.resolve();
         apagarComanda
           .then(() => _pedRef(id).remove())
+          .then(() => _dbRef('codigosEntrega/' + _lojaAtiva + '/' + id).remove().catch(() => {}))
           .then(() => showToast('Pedido ' + (p.codigo || '') + ' excluído'))
           .catch(e => {
             console.error(e);
@@ -18577,6 +18600,7 @@ function _motCardHtml(p) {
     <div class="mot-cli"><strong>${escapeHtml(cli.nome || '')}</strong>${cli.telefone ? ' · ' + escapeHtml(cli.telefone) : ''}</div>
     ${links}
     ${cobrar}
+    ${_pedCodEntregaHtml(p)}
     <div class="mot-itens">${t.itens.map(i => i.q + '× ' + escapeHtml(i.n)).join(' · ')}</div>
     ${p.obs ? `<div class="ped-obs">📝 ${escapeHtml(p.obs)}</div>` : ''}
     ${acoes ? `<div class="mot-acoes">${acoes}</div>` : ''}

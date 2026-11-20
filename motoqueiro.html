@@ -397,6 +397,7 @@ button { cursor: pointer; }
     } else {
       cobrar = '<div class="cobrar cartao">💳 Cartão na entrega: ' + brl(t.total) + '<small>Leve a maquininha</small></div>';
     }
+    if (p.comCodigo && p.status === 'saiu') cobrar += '<div class="cobrar" style="background:#EDE9FE;color:#4C1D95">🔐 Peça o código de 4 números ao cliente<small>Sem ele não dá para confirmar a entrega</small></div>';
     var quando = fin ? '✓ Entregue às ' + hora(tsEntrega(p))
       : (p.status === 'saiu' && p.hist && p.hist.saiu ? 'Saiu às ' + hora(p.hist.saiu) : hora(p.ts) + ' · ' + ha(p.ts));
 
@@ -447,12 +448,31 @@ button { cursor: pointer; }
       tab = 'rua'; render(); toast('Boa entrega, ' + (eu.nome.split(' ')[0] || '') + '! 🛵');
     }, false);
   }
-  function confirmarEntrega(p) {
+  function confirmarEntrega(p, erro) {
     var t = totais(p), forma = { dinheiro: 'dinheiro', pix: 'Pix', cartao: 'cartão' }[p.pagamento] || '';
-    modal('Confirmar entrega', 'Pedido <strong>' + esc(p.codigo || '') + '</strong> entregue?<br><br>Valor: <strong>' + brl(t.total) + '</strong> em ' + forma + '.', 'Sim, entregue', function () {
+    var temCod = !!p.comCodigo;
+    var corpo = 'Pedido <strong>' + esc(p.codigo || '') + '</strong> entregue?<br><br>Valor: <strong>' + brl(t.total) + '</strong> em ' + forma + '.';
+    if (temCod) {
+      corpo += '<div style="margin-top:16px;font-weight:800">🔐 Código do cliente</div>' +
+        '<div style="font-size:13px;color:var(--mut);margin:2px 0 8px">Peça ao cliente o código de 4 números.</div>' +
+        '<input id="md-cod" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" placeholder="0000" ' +
+        'style="width:100%;min-height:58px;font-size:30px;font-weight:900;letter-spacing:10px;text-align:center;border:2px solid var(--borda);border-radius:12px;box-sizing:border-box">' +
+        (erro ? '<div style="color:#B91C1C;font-weight:800;margin-top:8px">' + esc(erro) + '</div>' : '');
+    }
+    modal('Confirmar entrega', corpo, 'Sim, entregue', function () {
       var up = { status: 'entregue', atualizadoEm: TS() }; up['hist/entregue'] = TS();
-      pedRef(p.id).update(up).then(function () { toast('Pedido ' + (p.codigo || '') + ' entregue ✅'); }).catch(erroGrav);
+      if (temCod) {
+        var c = String(($('#md-cod') || {}).value || '').replace(/\D/g, '');
+        if (c.length !== 4) { confirmarEntrega(p, 'Digite os 4 números do código.'); return; }
+        up.codigoConfirm = c;
+      }
+      pedRef(p.id).update(up).then(function () { toast('Pedido ' + (p.codigo || '') + ' entregue ✅'); }).catch(function (e) {
+        if (temCod && e && /permission/i.test(e.message || e.code || '')) confirmarEntrega(p, 'Código incorreto. Confira com o cliente e tente de novo.');
+        else erroGrav(e);
+      });
     });
+    var inp = $('#md-cod');
+    if (inp) { inp.oninput = function () { inp.value = inp.value.replace(/\D/g, '').slice(0, 4); }; setTimeout(function () { inp.focus(); }, 50); }
   }
   function voltar(p) {
     var up = { status: 'pronto', atualizadoEm: TS() }; up['hist/pronto'] = TS();

@@ -114,6 +114,10 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
 /* Acompanhamento */
 .codigo { text-align: center; padding: 18px 10px 6px; }
 .codigo .rot { font-size: 13px; color: var(--mut); text-transform: uppercase; letter-spacing: .5px; }
+.cod-ent { text-align: center; border: 2px dashed var(--verde); background: #F0FDF4; }
+.cod-ent .rot { font-size: 13px; color: var(--mut); text-transform: uppercase; letter-spacing: .5px; font-weight: 700; }
+.cod-ent .num { font-size: 44px; font-weight: 900; letter-spacing: 10px; color: var(--verde); padding: 6px 0 6px 10px; }
+.cod-ent p { margin: 4px 0 0; font-size: 14px; color: var(--mut); line-height: 1.4; }
 .codigo .cod { font-size: 40px; font-weight: 900; letter-spacing: 4px; color: var(--verde); }
 .status-card { text-align: center; border-radius: var(--raio); padding: 20px 14px; margin-top: 8px; background: var(--verde-bg); border: 1px solid #BBD7BF; }
 .status-card .ic { font-size: 46px; line-height: 1; }
@@ -561,6 +565,19 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     for (var i = 0; i < 4; i++) s += A.charAt(Math.floor(Math.random() * A.length));
     return s;
   }
+  /* Código de confirmação da entrega: só a loja e o cliente conhecem (fica em caixa/codigosEntrega, que o motoqueiro não consegue ler). */
+  function codigoEntrega() {
+    var s = '';
+    try { var a = new Uint32Array(4); crypto.getRandomValues(a); for (var i = 0; i < 4; i++) s += String(a[i] % 10); }
+    catch (e) { for (var j = 0; j < 4; j++) s += String(Math.floor(Math.random() * 10)); }
+    return s;
+  }
+  function codEntSalvar(id, c) {
+    var m = lsGet('codsEntrega') || {}; m[id] = c;
+    var ks = Object.keys(m); if (ks.length > 15) ks.slice(0, ks.length - 15).forEach(function (k) { delete m[k]; });
+    lsSet('codsEntrega', m);
+  }
+  function codEntObter(id) { var m = lsGet('codsEntrega') || {}; return m[id] || ''; }
   function montarPedido() {
     var itens = {};
     Object.keys(cart).forEach(function (id) {
@@ -574,6 +591,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
       cliente: { nome: $('#f-nome').value.trim(), telefone: mascaraTel($('#f-tel').value) }
     };
     if (modo === 'entrega') {
+      p.comCodigo = true;
       p.endereco = { rua: $('#f-rua').value.trim(), numero: $('#f-num').value.trim(), bairro: $('#f-bairro').value.trim() };
       if ($('#f-comp').value.trim()) p.endereco.complemento = $('#f-comp').value.trim();
       if ($('#f-ref').value.trim()) p.endereco.referencia = $('#f-ref').value.trim();
@@ -582,22 +600,28 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     if ($('#f-obs').value.trim()) p.obs = $('#f-obs').value.trim().slice(0, 300);
     return p;
   }
-  var pendenteCodigo = null;
+  var pendenteCodigo = null, pendenteCodEnt = null;
   function enviar() {
     if (enviando) return;
     var e = validar(); setErro(e); if (e) return;
     enviando = true;
     var btn = $('#btn-enviar'); btn.disabled = true; btn.textContent = 'Enviando…';
-    if (!pendenteId) { pendenteId = base('pedidos/' + LOJA).push().key; pendenteCodigo = codigoCurto(); }
+    if (!pendenteId) { pendenteId = base('pedidos/' + LOJA).push().key; pendenteCodigo = codigoCurto(); pendenteCodEnt = codigoEntrega(); }
     var dados = montarPedido();
     var ref = base('pedidos/' + LOJA + '/' + pendenteId);
     var temporizador = new Promise(function (_, rej) { setTimeout(function () { rej({ code: 'TIMEOUT' }); }, 15000); });
-    Promise.race([ref.set(dados), temporizador]).then(function () {
+    var envio;
+    if (dados.comCodigo) {
+      codEntSalvar(pendenteId, pendenteCodEnt); // guarda neste aparelho antes de enviar (não se perde se a internet cair)
+      var up = {}; up['pedidos/' + LOJA + '/' + pendenteId] = dados; up['codigosEntrega/' + LOJA + '/' + pendenteId] = pendenteCodEnt;
+      envio = base('').update(up); // pedido + código gravados juntos
+    } else envio = ref.set(dados);
+    Promise.race([envio, temporizador]).then(function () {
       lsSet('cliente', { nome: dados.cliente.nome, tel: dados.cliente.telefone, rua: $('#f-rua').value.trim(), num: $('#f-num').value.trim(), bairro: $('#f-bairro').value.trim(), comp: $('#f-comp').value.trim(), ref: $('#f-ref').value.trim() });
       var lista = lsGet('meusPedidos') || [];
       lista.unshift({ loja: LOJA, id: pendenteId, codigo: pendenteCodigo, ts: Date.now() });
       lsSet('meusPedidos', lista.slice(0, 10));
-      var id = pendenteId; pendenteId = null; pendenteCodigo = null;
+      var id = pendenteId; pendenteId = null; pendenteCodigo = null; pendenteCodEnt = null;
       cart = {}; salvarCart(); $('#f-obs').value = ''; $('#f-troco').value = '';
       enviando = false; btn.disabled = false;
       abrirAcompanhamento(id, true);
@@ -661,6 +685,12 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     var h = '<div class="codigo"><div class="rot">Pedido</div><div class="cod">' + esc(pedido.codigo || '') + '</div><div style="color:var(--mut);font-size:14px">' + esc((cfg && cfg.nome) || '') + (pedido.ts ? ' · ' + hora(pedido.ts) : '') + '</div></div>';
     h += '<div class="status-card ' + (st === 'cancelado' ? 'cancel' : '') + '"><div class="ic">' + r.ic + '</div><div class="tt">' + esc(titulo) + '</div><div class="ds">' + esc(desc) + '</div>' +
       (pedido.previsao && STATUS_FINAIS.indexOf(st) < 0 ? '<div class="prev">⏱ Previsão: ' + esc(pedido.previsao) + '</div>' : '') + '</div>';
+    if (entrega && pedido.comCodigo && st !== 'entregue' && st !== 'cancelado') {
+      var ce = codEntObter(PED_ID);
+      h += '<div class="bloco cod-ent"><div class="rot">🔐 Código de entrega</div>' +
+        (ce ? '<div class="num">' + esc(ce) + '</div><p>Passe este código ao motoqueiro <strong>só quando ele chegar</strong> com o seu pedido. Não envie para mais ninguém.</p>'
+            : '<p>Não encontramos o código neste aparelho. Chame a loja pelo WhatsApp para receber o seu código de entrega.</p>') + '</div>';
+    }
     h += '<div id="chat-slot"></div>';
     if (st !== 'cancelado') {
       var ps = passos(pedido.tipo), ix = ps.findIndex(function (p) { return p[0] === st; });
