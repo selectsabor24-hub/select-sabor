@@ -433,8 +433,7 @@ button { cursor: pointer; }
     if (p.status === 'pronto') acoes = '<button class="p" data-a="sair" data-id="' + id + '">🛵 Saí para entrega</button>';
     else if (p.status === 'saiu') acoes = '<button class="p" data-a="entregue" data-id="' + id + '">✅ Entregue</button><button data-a="voltar" data-id="' + id + '">↩ Ainda não saí</button>';
 
-    var links = fin ? '' : '<div class="links"><a href="' + esc(rota) + '" target="_blank" rel="noopener">🗺 Rota</a>' +
-      (fone ? '<a href="tel:' + esc(fone) + '">📞 Ligar</a><button data-a="whats" data-id="' + id + '">💬 WhatsApp</button>' : '') + '</div>';
+    var links = fin ? '' : '<div class="links"><a href="' + esc(rota) + '" target="_blank" rel="noopener">🗺 Rota</a></div>';
 
     return '<div class="card" style="--cor:' + cor + '">' +
       '<div class="cab"><span class="cod">#' + esc(p.codigo || '') + '</span><span class="hora">' + quando + '</span></div>' +
