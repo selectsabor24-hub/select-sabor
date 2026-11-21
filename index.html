@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <script>try{var t=localStorage.getItem("caixa-theme");if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Controle de Caixa v6.12</title>
+<title>Controle de Caixa v6.13</title>
 
 <!-- ============================================================
      PWA — Progressive Web App
@@ -45,6 +45,8 @@
   ║         · Melhoria: renderContas usa cache; seção 3.22 documentada   ║
   ║  v3.3 — Seções novas: Planilhas já lançadas (3.23), calendário       ║
   ║         visual de lançamentos com marcação de cartão                 ║
+  ║  v6.13 — QR Code das mesas: o pedido soma na comanda da mesa (conta aberta) e   ║
+  ║          só é paga/fechada no caixa; cliente pode pedir mais quantas vezes quiser ║
   ║  v6.12 — Cardápio: campo da promoção na mesma linha do preço normal              ║
   ║  v6.11 — Cardápio: promoção (preço de/por) no admin e no pedido do cliente        ║
   ║  v6.10 — Pedidos online: complementos separados por grupo, cada um com a sua soma║
@@ -3665,7 +3667,7 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
           <img src="img/logo.png" alt="Select Sabor" style="width:44px;height:44px;border-radius:50%;flex-shrink:0;background:#fff;box-shadow:0 0 0 2px rgba(255,255,255,0.18)">
           <div>
             <div class="logo-title">Controle de Caixa</div>
-            <div class="logo-sub">v6.12</div>
+            <div class="logo-sub">v6.13</div>
           </div>
         </div>
         <span id="status-dot" style="display:none;width:8px;height:8px;border-radius:50%;background:#4ADE80;flex-shrink:0;box-shadow:0 0 0 2px rgba(74,222,128,0.2)" title="Conectado"></span>
@@ -6894,9 +6896,12 @@ function setLojaAtiva(id) {
   // Comandas / Mesas e cardápio da loja ativa
   _cache.comandas = [];
   _cache.cardapio = [];
+  _comandasCarregadas = false;
   const refComandas = _dbRef('comandas/' + id);
   refComandas.on('value', snap => {
     _cache.comandas = snap.val() ? Object.values(snap.val()) : [];
+    _comandasCarregadas = true;
+    try { _pedMesaSincronizar(); } catch (e) { console.error(e); }
     if (_currentSection === 'comandas') _refreshCurrentSection();
   });
   _listenersLoja.push(refComandas);
@@ -6940,6 +6945,7 @@ function setLojaAtiva(id) {
     _cache.pedidos = Object.keys(v).filter(k => /^[-A-Za-z0-9_]{8,40}$/.test(k)).map(k => Object.assign({ id: k }, v[k]));
     _pedDetectarNovos();
     _pedAutoLancar();
+    try { _pedMesaSincronizar(); } catch (e) { console.error(e); }
     _chatDetectar();
     _pedAtualizarBadge();
     _motDetectar();
@@ -18527,12 +18533,14 @@ function _pedMiniHtml(p) {
   const nome = p.cliente && p.cliente.nome ? escapeHtml(p.cliente.nome) : '';
   let prox = null;
   if (p.status === 'preparo') prox = ['pronto', '✅ Pedido pronto'];
-  else if (p.status === 'pronto') prox = ent ? ['saiu', '🛵 Saiu para entrega'] : ['entregue', '✅ Cliente retirou'];
+  else if (p.status === 'pronto') prox = ent ? ['saiu', '🛵 Saiu para entrega'] : (p.mesa ? ['entregue', '✅ Entregue na mesa'] : ['entregue', '✅ Cliente retirou']);
   else if (p.status === 'saiu') prox = ['entregue', '✅ Entregue'];
-  else if (p.status === 'entregue' && !p.lancado) prox = ['caixa', '💰 Lançar no caixa'];
+  else if (p.status === 'entregue' && !p.lancado) prox = _pedEhMesa(p) ? ['caixa', '🧾 Enviar para a comanda'] : ['caixa', '💰 Lançar no caixa'];
   let rodape = '';
   if (prox) rodape = `<div class="pv-mini-acoes"><button class="btn btn-primary btn-md" data-ped="${id}" onclick="pedAcao('${prox[0]}', this.dataset.ped)">${prox[1]}</button></div>`;
-  else if (p.status === 'entregue') rodape = '<span class="pv-fim-chip" style="color:#15803d">✓ Concluído · lançado no caixa</span>';
+  else if (p.status === 'entregue') rodape = _pedEhMesa(p)
+    ? '<span class="pv-fim-chip" style="color:#15803d">✓ Na comanda da mesa · pago no caixa</span>'
+    : '<span class="pv-fim-chip" style="color:#15803d">✓ Concluído · lançado no caixa</span>';
   else if (p.status === 'cancelado') rodape = '<span class="pv-fim-chip" style="color:#b91c1c">✖ Cancelado</span>';
   return `<div class="pv-mini" style="--ped-cor:${st.cor}">
     <div class="pv-mini-top" data-ped="${id}" onclick="pedToggleCard(this.dataset.ped)">
@@ -18657,9 +18665,11 @@ function _pedCardHtml(p) {
   let acoes = '';
   if (p.status === 'novo')          acoes = btn('aceitar', '✅ Aceitar pedido', 'btn-primary') + btn('cancelar', '✖ Recusar');
   else if (p.status === 'preparo')  acoes = btn('pronto', '✅ Pedido pronto', 'btn-primary') + btn('cancelar', '✖ Cancelar');
-  else if (p.status === 'pronto')   acoes = (ent ? btn('saiu', '🛵 Saiu para entrega', 'btn-primary') : btn('entregue', '✅ Cliente retirou', 'btn-primary')) + btn('cancelar', '✖ Cancelar');
+  else if (p.status === 'pronto')   acoes = (ent ? btn('saiu', '🛵 Saiu para entrega', 'btn-primary') : btn('entregue', p.mesa ? '✅ Entregue na mesa' : '✅ Cliente retirou', 'btn-primary')) + btn('cancelar', '✖ Cancelar');
   else if (p.status === 'saiu')     acoes = btn('entregue', '✅ Entregue', 'btn-primary') + btn('cancelar', '✖ Cancelar');
-  else if (p.status === 'entregue') acoes = p.lancado ? '<span class="ped-ok">✓ Lançado no caixa</span>' : btn('caixa', '💰 Lançar no caixa', 'btn-primary');
+  else if (p.status === 'entregue') acoes = _pedEhMesa(p)
+    ? (p.lancado ? '<span class="ped-ok">✓ Na comanda da mesa ' + escapeHtml(String(p.mesa)) + '</span>' : btn('caixa', '🧾 Enviar para a comanda', 'btn-primary'))
+    : (p.lancado ? '<span class="ped-ok">✓ Lançado no caixa</span>' : btn('caixa', '💰 Lançar no caixa', 'btn-primary'));
   const nChat = _chatNaoLidas(p), totChat = _chatMsgs(p).length;
   acoes += btn('chat', '💬 Chat' + (nChat ? ' (' + nChat + ' nova' + (nChat > 1 ? 's' : '') + ')' : (totChat ? ' (' + totChat + ')' : '')), nChat ? 'btn-primary' : 'btn-secondary');
   acoes += btn('whats', '💬 WhatsApp') + btn('imprimir', '🖨 Imprimir');
@@ -18694,7 +18704,7 @@ function _pedCardHtml(p) {
       <span>Subtotal ${fmt(t.sub)}${ent ? ' · Entrega ' + (t.taxa > 0 ? fmt(t.taxa) : 'grátis') : ''}</span>
       <strong>Total ${fmt(t.total)}${t.confirmado ? '' : ' <small>(estimado)</small>'}</strong>
     </div>
-    <div class="ped-pag">${PED_PAG[p.pagamento] || ''}${escapeHtml(trocoTxt)} · paga ${p.mesa ? 'na mesa' : 'na ' + (ent ? 'entrega' : 'retirada')}</div>
+    <div class="ped-pag">${_pedEhMesa(p) ? '🧾 Conta da mesa — pagamento no caixa, ao fechar a comanda' : (PED_PAG[p.pagamento] || '') + escapeHtml(trocoTxt) + ' · paga ' + (p.mesa ? 'na mesa' : 'na ' + (ent ? 'entrega' : 'retirada'))}</div>
     <div class="ped-acoes">${acoes}</div>
   </div>`;
 }
@@ -18847,7 +18857,14 @@ function pedCancelar(id) {
     'O cliente verá que o pedido foi cancelado. Informe o motivo (opcional):<br><br><input id="ped-motivo" class="input-base" maxlength="200" placeholder="Ex.: Item em falta" style="width:100%">',
     [{ label: 'Cancelar pedido', style: 'danger', action: () => {
         const m = (document.getElementById('ped-motivo') || {}).value || '';
-        pedMudar(id, 'cancelado', m.trim() ? { motivo: m.trim().slice(0, 200) } : {});
+        const extra = m.trim() ? { motivo: m.trim().slice(0, 200) } : {};
+        if (_pedEhMesa(p) && p.lancado) {
+          _pedMesaRemoverDaComanda(p).then(r => {
+            if (r === 'fechada') showToast('Atenção: a comanda da mesa já foi fechada; ajuste o valor manualmente se necessário.', false);
+            if (r) _pedRef(id).child('lancado').remove().catch(() => {});
+          }).catch(e => { console.error(e); showToast('Não foi possível tirar o pedido da comanda. Remova os itens manualmente.', false); });
+        }
+        pedMudar(id, 'cancelado', extra);
     }}, { label: 'Voltar', style: 'secondary' }]);
 }
 
@@ -18874,6 +18891,7 @@ function pedExcluir(id) {
         if (doCaixa) {
           _cmdLancAplicar({ id: c.id, data: c.data, pagamentos: c.pagamentos }, -1);
         }
+        if (_pedEhMesa(p) && p.lancado) _pedMesaRemoverDaComanda(p).catch(e => console.error(e));
         const apagarComanda = c ? _cmdRef(cid).remove() : Promise.resolve();
         apagarComanda
           .then(() => _pedRef(id).remove())
@@ -18892,6 +18910,7 @@ function pedExcluir(id) {
  *  ao mesmo tempo nunca lancem o mesmo pedido duas vezes. */
 function pedLancarCaixa(id, auto) {
   const p = _pedGet(id); if (!p || p.lancado || _pedLancando.has(id)) return;
+  if (_pedEhMesa(p)) return _pedMesaParaComanda(id, true); // pedido de mesa: soma na comanda; o caixa fecha a conta
   const hoje = _cmdHoje();
   if (auto) { if (_caixaEstaFechado(hoje)) return; }
   else if (!_cmdGarantirCaixaAberto(hoje)) return;
@@ -18927,6 +18946,94 @@ function pedLancarCaixa(id, auto) {
     .then(() => _pedLancando.delete(id));
 }
 
+/* ───────── Pedidos de MESA (QR Code) ─────────
+   O cliente fica na mesa e pode pedir várias vezes. Cada pedido aceito pela loja é SOMADO na comanda
+   aberta da mesa (criada na hora se não existir). Nada vai para o caixa até alguém fechar a conta da
+   comanda em Comandas / Mesas (mesmo fluxo de dinheiro/pix/cartão das demais mesas).
+   `lancado: true` no pedido = "já está na comanda" (campo já aceito pelas regras do Firebase). */
+let _comandasCarregadas = false;
+const _pedMesaBusy = new Set();
+function _pedEhMesa(p) { return !!(p && p.mesa && p.tipo !== 'entrega'); }
+function _pedMesaChave(m) { return String(m || '').trim().toLowerCase().replace(/^mesa\s+/, ''); }
+function _pedMesaSlug(m) { return _pedMesaChave(m).replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 20) || 'x'; }
+function _pedMesaDia(ts) {
+  const d = new Date(ts); if (isNaN(d)) return '';
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+function _pedMesaComandaAberta(mesa) {
+  const k = _pedMesaChave(mesa);
+  return _cmdLista().find(c => c.status === 'aberta' && _pedMesaChave(c.mesa) === k) || null;
+}
+/** Devolve o id da comanda aberta da mesa; se não houver, abre uma nova (id determinístico + transação:
+ *  dois computadores abertos ao mesmo tempo nunca criam duas comandas para o mesmo atendimento). */
+async function _pedMesaGarantirComanda(mesa) {
+  const aberta = _pedMesaComandaAberta(mesa);
+  if (aberta) return aberta.id;
+  const base = 'qr_' + _pedMesaSlug(mesa) + '_' + _cmdHoje().replace(/-/g, '');
+  let n = _cmdLista().filter(x => String(x.id).indexOf(base + '_') === 0).length + 1;
+  for (let k = 0; k < 8; k++, n++) {
+    const cid = base + '_' + n;
+    const nova = { id: cid, mesa: String(mesa), pessoas: '', garcom: '', status: 'aberta',
+      abertaEm: new Date().toISOString(), servicoPct: 10, desconto: 0, origem: 'qr_mesa' };
+    const r = await _cmdRef(cid).transaction(cur => cur ? undefined : nova);
+    const v = r && r.snapshot && r.snapshot.val();
+    if (v && v.status === 'aberta') return cid; // criada agora (ou já criada por outro computador)
+  }
+  throw new Error('Não foi possível abrir a comanda da mesa');
+}
+/** Soma os itens do pedido na comanda da mesa. manual = botão "Enviar para a comanda" (qualquer dia/status). */
+function _pedMesaParaComanda(id, manual) {
+  const p = _pedGet(id);
+  if (!_pedEhMesa(p) || p.lancado || _pedMesaBusy.has(id) || !_lojaAtiva) return;
+  if (!manual && ['preparo', 'pronto', 'entregue'].indexOf(p.status) < 0) return;
+  if (p.status === 'cancelado') return;
+  _pedMesaBusy.add(id);
+  const t = _pedTotais(p);
+  let reservou = false;
+  _pedRef(id).child('lancado').transaction(cur => cur ? undefined : true)
+    .then(r => {
+      reservou = !!(r && r.committed);
+      if (!reservou) return null;
+      return _pedMesaGarantirComanda(p.mesa).then(cid => {
+        const up = {};
+        t.itens.forEach(i => {
+          const key = 'ped_' + id + '_' + i.id;
+          up['itens/' + key] = { id: key, nome: i.n, preco: i.preco, qtd: i.q, pedido: p.codigo || '' };
+        });
+        up['pedidos/' + id] = p.codigo || id;
+        return _cmdRef(cid).update(up).then(() => cid);
+      });
+    })
+    .then(cid => { if (cid) showToast('Pedido ' + (p.codigo || '') + ' somado na comanda da mesa ' + p.mesa + ' (' + fmt(t.sub) + ')'); })
+    .catch(e => {
+      console.error(e);
+      if (reservou) _pedRef(id).child('lancado').remove().catch(() => {}); // libera para tentar de novo
+      showToast('Erro ao enviar o pedido para a comanda da mesa ' + p.mesa, false);
+    })
+    .then(() => _pedMesaBusy.delete(id));
+}
+/** Pedidos de mesa aceitos HOJE e ainda fora da comanda entram sozinhos (em qualquer computador aberto). */
+function _pedMesaSincronizar() {
+  if (!_lojaAtiva || !_comandasCarregadas) return;
+  const hoje = _cmdHoje();
+  _pedLista().forEach(p => {
+    if (!_pedEhMesa(p) || p.lancado || _pedMesaBusy.has(p.id)) return;
+    if (['preparo', 'pronto', 'entregue'].indexOf(p.status) < 0) return;
+    if (_pedMesaDia(p.ts) !== hoje) return; // pedidos de dias antigos: só pelo botão manual
+    _pedMesaParaComanda(p.id, false);
+  });
+}
+/** Pedido de mesa cancelado/excluído: tira os itens dele da comanda (se ela ainda estiver aberta). */
+function _pedMesaRemoverDaComanda(p) {
+  const pref = 'ped_' + p.id + '_';
+  const c = _cmdLista().find(x => x.itens && Object.keys(x.itens).some(k => k.indexOf(pref) === 0));
+  if (!c || c.status !== 'aberta') return Promise.resolve(!!c && c.status !== 'aberta' ? 'fechada' : false);
+  const up = {};
+  Object.keys(c.itens).filter(k => k.indexOf(pref) === 0).forEach(k => { up['itens/' + k] = null; });
+  up['pedidos/' + p.id] = null;
+  return _cmdRef(c.id).update(up).then(() => true);
+}
+
 /** Lançamento automático: todo pedido ENTREGUE hoje que ainda não foi lançado entra no caixa do dia.
  *  Funciona qualquer que seja a origem da finalização (painel ou app do motoqueiro), em qualquer
  *  computador com o sistema aberto. Só considera pedidos entregues HOJE (não mexe em dias antigos)
@@ -18944,7 +19051,7 @@ function _pedAutoLancar() {
   }
   const hoje = _cmdHoje();
   _pedLista().forEach(p => {
-    if (p.status !== 'entregue' || p.lancado || _pedLancando.has(p.id) || _pedAutoTentou.has(p.id)) return;
+    if (_pedEhMesa(p) || p.status !== 'entregue' || p.lancado || _pedLancando.has(p.id) || _pedAutoTentou.has(p.id)) return;
     const ts = p.hist && p.hist.entregue;
     if (!ts) return;
     const d = new Date(ts);
@@ -20219,7 +20326,7 @@ function _cmdHtmlAbertas(abertas) {
     const nItens = _cmdItens(c).reduce((s, i) => s + (parseInt(i.qtd) || 0), 0);
     return `<button class="cmd-card${min >= 90 ? ' demora' : ''}" onclick="cmdAbrir('${c.id}')">
       <div class="cmd-mesa">${escapeHtml(_cmdRotulo(c))}</div>
-      <div>${_cmdIdentHtml(c)}</div>
+      <div>${_cmdIdentHtml(c)}${c.origem === 'qr_mesa' || _cmdItens(c).some(i => i.pedido) ? ' <span class="cmd-vez" title="Tem pedidos feitos pelo QR Code da mesa">📱 QR</span>' : ''}</div>
       <div class="cmd-meta">${c.pessoas ? escapeHtml(c.pessoas) + ' pessoa(s) · ' : ''}${nItens} item(ns)</div>
       <div class="cmd-meta">${c.garcom ? escapeHtml(c.garcom) + ' · ' : ''}há ${_cmdDuracao(min)}</div>
       <div class="cmd-total">${fmt(t.total)}</div>
@@ -20236,21 +20343,63 @@ function _cmdFormaTexto(p) {
   return partes.join(' · ') || '—';
 }
 
+/** Códigos dos pedidos online ligados à comanda (ex.: ["AB12","CD34"]). */
+function _cmdCodigosPedidos(c) {
+  const cods = [];
+  if (c.origem === 'pedido_online') {
+    const p = c.pedidoId ? _pedGet(c.pedidoId) : null;
+    const cod = (p && p.codigo) || String(c.mesa || '').replace(/^Online\s+/i, '');
+    if (cod) cods.push(cod);
+  } else {
+    Object.values(c.pedidos || {}).forEach(v => { if (v) cods.push(String(v)); });
+    _cmdItens(c).forEach(i => { if (i.pedido && !cods.includes(String(i.pedido))) cods.push(String(i.pedido)); });
+  }
+  return cods;
+}
+/** Coluna "Mesa / Pedido" das contas fechadas: mesa e número do pedido bem visíveis. */
+function _cmdOrigemHtml(c) {
+  const cods = _cmdCodigosPedidos(c).map(x => '#' + escapeHtml(x));
+  if (c.origem === 'pedido_online') {
+    const p = c.pedidoId ? _pedGet(c.pedidoId) : null;
+    const onde = p ? (p.mesa && p.tipo !== 'entrega' ? '🍽 Mesa ' + escapeHtml(String(p.mesa)) : (p.tipo === 'entrega' ? '🛵 Entrega' : '🏪 Retirada')) : '🌐 Pedido online';
+    return `<strong>Pedido ${cods.join(', ') || '—'}</strong><div style="font-size:12px;color:var(--text2)">${onde}</div>`;
+  }
+  return `<strong>${escapeHtml(_cmdRotulo(c))}</strong>` + (cods.length ? `<div style="font-size:12px;color:var(--text2)">📱 Pedido${cods.length > 1 ? 's' : ''} ${cods.join(', ')}</div>` : '');
+}
+/** Exclui uma conta fechada: desfaz o lançamento no caixa do dia e apaga a comanda. */
+function cmdExcluir(id) {
+  const c = _cmdGet(id); if (!c || !_lojaAtiva) return;
+  const fechada = c.status === 'fechada' && !!c.data;
+  if (fechada && typeof _bloquearSeCaixaFechado === 'function' && _bloquearSeCaixaFechado(c.data, 'excluir conta')) return;
+  const cods = _cmdCodigosPedidos(c).map(x => '#' + escapeHtml(x)).join(', ');
+  const desc = (c.origem === 'pedido_online' ? 'Pedido ' + (cods || '') : escapeHtml(_cmdRotulo(c)) + (cods ? ' (pedidos ' + cods + ')' : ''));
+  showModal('Excluir conta',
+    'Excluir a conta <strong>' + desc + '</strong> de ' + fmt(parseFloat(c.total) || 0) + '? Não é possível desfazer.' +
+    (fechada ? '<br><br>O valor será descontado do caixa de ' + _formatarDataBR(c.data) + '.' : ''),
+    [{ label: 'Excluir conta', style: 'danger', action: () => {
+        if (fechada) _cmdLancAplicar({ id: c.id, data: c.data, pagamentos: c.pagamentos }, -1);
+        _cmdRef(id).remove()
+          .then(() => showToast('Conta excluída'))
+          .catch(e => { console.error(e); showToast('Erro ao excluir a conta', false); });
+    }}, { label: 'Voltar', style: 'secondary' }]);
+}
+
 function _cmdHtmlFechadas(fech) {
   if (!fech.length) {
     return `<div class="empty"><div class="empty-icon">🧾</div>Nenhuma conta fechada hoje.</div>`;
   }
   const ord = fech.slice().sort((a, b) => String(b.fechadaEm).localeCompare(String(a.fechadaEm)));
   return `<div class="card"><div style="overflow-x:auto"><table class="cmd-itens">
-    <thead><tr><th>Hora</th><th>Mesa / Atendimento</th><th>Pagamento</th><th class="num">Total</th><th></th></tr></thead><tbody>` +
+    <thead><tr><th>Hora</th><th>Mesa / Pedido</th><th>Pagamento</th><th class="num">Total</th><th></th></tr></thead><tbody>` +
     ord.map(c => `<tr>
       <td style="white-space:nowrap">${_cmdHora(c.abertaEm)} → ${_cmdHora(c.fechadaEm)}</td>
-      <td><strong>${escapeHtml(_cmdRotulo(c))}</strong><div>${_cmdIdentHtml(c)}</div></td>
+      <td>${_cmdOrigemHtml(c)}<div>${_cmdIdentHtml(c)}</div></td>
       <td style="font-size:12px;color:var(--text2)">${escapeHtml(_cmdFormaTexto(c.pagamentos))}</td>
       <td class="num">${fmt(parseFloat(c.total) || 0)}</td>
       <td style="text-align:right;white-space:nowrap">
         <button class="btn btn-secondary" style="padding:4px 10px;font-size:12px" onclick="cmdAbrir('${c.id}')">Ver</button>
         <button class="btn btn-secondary" style="padding:4px 10px;font-size:12px" onclick="cmdReabrir('${c.id}')">Reabrir</button>
+        <button class="btn btn-secondary" style="padding:4px 10px;font-size:12px;color:var(--red-mid)" title="Excluir esta conta e descontar do caixa" onclick="cmdExcluir('${c.id}')">🗑 Excluir</button>
       </td></tr>`).join('') + `</tbody></table></div></div>`;
 }
 
@@ -20907,7 +21056,7 @@ function _cmdHtmlModalComanda(c) {
   const aberta = c.status === 'aberta';
   const itens = _cmdItens(c).sort((a, b) => String(a.nome).localeCompare(String(b.nome)));
   const linhas = itens.length ? itens.map(i => `<tr>
-      <td>${escapeHtml(i.nome)}</td>
+      <td>${escapeHtml(i.nome)}${i.pedido ? ` <small style="color:var(--text3)">📱 #${escapeHtml(String(i.pedido))}</small>` : ''}</td>
       <td>${aberta
         ? `<span class="cmd-qtd"><button onclick="cmdQtd('${i.key || i.id}', -1)">−</button><strong>${parseInt(i.qtd) || 0}</strong><button onclick="cmdQtd('${i.key || i.id}', 1)">+</button></span>`
         : (parseInt(i.qtd) || 0)}</td>
@@ -21068,8 +21217,16 @@ function cmdSetCampo(campo, valor) {
 function cmdIrPagar() {
   const c = _cmdAberta(); if (!c) return;
   if (!_cmdItens(c).length) { showToast('Lance ao menos um item antes de fechar a conta', false); return; }
-  _cmdModal = { modo: 'pagar', id: c.id };
-  _cmdAtualizarModal(true);
+  const k = _pedMesaChave(c.mesa);
+  const pend = _pedLista().filter(p => _pedEhMesa(p) && p.status === 'novo' && !p.lancado && _pedMesaChave(p.mesa) === k && Date.now() - (p.ts || 0) < 12 * 3600 * 1000);
+  const seguir = () => { _cmdModal = { modo: 'pagar', id: c.id }; _cmdAtualizarModal(true); };
+  if (pend.length) {
+    showModal('Pedidos da mesa ainda não aceitos',
+      'A mesa <strong>' + escapeHtml(_cmdRotulo(c)) + '</strong> tem ' + pend.length + ' pedido(s) pelo QR Code aguardando aceite (' + pend.map(p => '#' + escapeHtml(p.codigo || '')).join(', ') + '). Eles <strong>não entram</strong> nesta conta.<br><br>Aceite-os em <em>Pedidos online</em> antes de fechar, ou feche assim mesmo.',
+      [{ label: 'Fechar mesmo assim', style: 'primary', action: seguir }, { label: 'Voltar', style: 'secondary' }]);
+    return;
+  }
+  seguir();
 }
 function cmdVoltarComanda() {
   if (!_cmdModal) return;

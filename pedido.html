@@ -449,7 +449,11 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
       <div class="campo"><label for="f-ref">Ponto de referência (opcional)</label><input id="f-ref" maxlength="120" placeholder="Perto de…"></div>
     </div>
 
-    <div class="bloco"><h3>Pagamento na entrega / retirada</h3>
+    <div class="bloco hide" id="bl-mesa-info"><h3>🍽 Conta da mesa</h3>
+      <p class="nota" style="margin:0">Este pedido será somado à conta da sua mesa. Você pode fazer quantos pedidos quiser enquanto estiver aqui e <strong>paga tudo de uma vez no caixa</strong>, quando for embora.</p>
+    </div>
+
+    <div class="bloco" id="bl-pag"><h3>Pagamento na entrega / retirada</h3>
       <div class="opcoes" id="op-pag">
         <button type="button" data-v="dinheiro">💵 Dinheiro</button>
         <button type="button" data-v="cartao">💳 Cartão</button>
@@ -1374,7 +1378,9 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     $('#bl-end').classList.toggle('hide', modo !== 'entrega');
     $('#r-taxa-l').classList.toggle('hide', modo !== 'entrega');
     document.querySelectorAll('#op-pag button').forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-v') === pag); });
-    $('#bl-troco').classList.toggle('hide', pag !== 'dinheiro');
+    $('#bl-pag').classList.toggle('hide', !!MESA);          // mesa: o pagamento é feito no caixa, ao final
+    $('#bl-mesa-info').classList.toggle('hide', !MESA);
+    $('#bl-troco').classList.toggle('hide', pag !== 'dinheiro' || !!MESA);
     var sub = subtotal(), tx = taxa();
     $('#r-sub').textContent = brl(sub);
     $('#r-taxa').textContent = tx > 0 ? brl(tx) : 'Grátis';
@@ -1429,8 +1435,8 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
         if (dist.km != null && taxaPorKm(dist.km) == null) return 'Seu endereço está fora da área de entrega (máximo ' + fmtKm(kmMax()) + ' km). Escolha "Retirar na loja".';
       }
     }
-    if (!pag) return 'Escolha a forma de pagamento.';
-    if (pag === 'dinheiro' && $('#f-troco').value.trim()) {
+    if (!MESA && !pag) return 'Escolha a forma de pagamento.';
+    if (!MESA && pag === 'dinheiro' && $('#f-troco').value.trim()) {
       var t = parseFloat($('#f-troco').value.replace(/\./g, '').replace(',', '.'));
       if (!(t > 0)) return 'Valor do troco inválido.';
       if (t < round2(subtotal() + taxa())) return 'O valor do troco precisa ser maior ou igual ao total do pedido.';
@@ -1469,7 +1475,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     var p = {
       ts: firebase.database.ServerValue.TIMESTAMP,
       codigo: pendenteCodigo,
-      status: 'novo', tipo: modo, pagamento: pag, itens: itens,
+      status: 'novo', tipo: modo, pagamento: MESA ? 'dinheiro' : pag, itens: itens, // mesa: valor só para cumprir a regra do banco; quem define o pagamento é o caixa
       cliente: { nome: $('#f-nome').value.trim(), telefone: mascaraTel($('#f-tel').value) }
     };
     if (modo === 'entrega') {
@@ -1480,7 +1486,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
       if (usaFaixas() && dist.km != null) { p.endereco.distanciaKm = dist.km; if (dist.aprox) p.endereco.distAprox = true; }
     }
     if (MESA) p.mesa = MESA;
-    if (pag === 'dinheiro' && $('#f-troco').value.trim()) p.troco = parseFloat($('#f-troco').value.replace(/\./g, '').replace(',', '.'));
+    if (!MESA && pag === 'dinheiro' && $('#f-troco').value.trim()) p.troco = parseFloat($('#f-troco').value.replace(/\./g, '').replace(',', '.'));
     if ($('#f-obs').value.trim()) p.obs = $('#f-obs').value.trim().slice(0, 300);
     return p;
   }
@@ -1534,14 +1540,15 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     entregue:  { ic: '🎉', t: 'Pedido entregue', tRetirada: 'Pedido retirado', d: 'Obrigado pela preferência! Bom apetite.' },
     cancelado: { ic: '✖️', t: 'Pedido cancelado', d: 'Este pedido foi cancelado.' }
   };
-  function passos(tipo) {
+  function passos(tipo, mesa) {
+    if (mesa) return [['novo', 'Pedido recebido'], ['preparo', 'Em preparo'], ['pronto', 'Pronto'], ['entregue', 'Entregue na mesa']];
     return tipo === 'entrega'
       ? [['novo', 'Pedido recebido'], ['preparo', 'Em preparo'], ['pronto', 'Pronto'], ['saiu', 'Saiu para entrega'], ['entregue', 'Entregue']]
       : [['novo', 'Pedido recebido'], ['preparo', 'Em preparo'], ['pronto', 'Pronto para retirar'], ['entregue', 'Retirado']];
   }
   function abrirAcompanhamento(id, novo) {
     PED_ID = id;
-    try { history.replaceState(null, '', '?loja=' + encodeURIComponent(LOJA) + '&p=' + encodeURIComponent(id)); } catch (e) {}
+    try { history.replaceState(null, '', '?loja=' + encodeURIComponent(LOJA) + '&p=' + encodeURIComponent(id) + (MESA ? '&mesa=' + encodeURIComponent(MESA) : '')); } catch (e) {}
     if (refPedido) refPedido.off();
     pedido = null; ultimoStatus = null; chatUlt = null;
     $('#tr-corpo').innerHTML = '<div class="carregando">Carregando seu pedido…</div>';
@@ -1565,8 +1572,9 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     var corpo = $('#tr-corpo');
     if (!pedido) { corpo.innerHTML = '<div class="vazio">Pedido não encontrado. Confira o link ou faça um novo pedido.</div><button class="btn-sec" id="tr-novo2">Fazer um pedido</button>'; var b = $('#tr-novo2'); if (b) b.onclick = voltarMenu; return; }
     var st = pedido.status || 'novo', r = ROTULOS[st] || ROTULOS.novo, entrega = pedido.tipo === 'entrega';
-    var titulo = (st === 'entregue' && !entrega) ? r.tRetirada : r.t;
-    var desc = st === 'pronto' ? (entrega ? r.dEntrega : r.dRetirada) : r.d;
+    var titulo = (st === 'entregue' && !entrega) ? (pedido.mesa ? 'Pedido entregue na mesa' : r.tRetirada) : r.t;
+    var desc = st === 'pronto' ? (entrega ? r.dEntrega : (pedido.mesa ? 'Pronto! Já está indo para a sua mesa.' : r.dRetirada)) : r.d;
+    if (st === 'entregue' && pedido.mesa) desc = 'Bom apetite! Se quiser mais alguma coisa, é só pedir de novo. A conta é paga no caixa.';
     if (st === 'cancelado' && pedido.motivo) desc = 'Motivo: ' + pedido.motivo;
     var h = '<div class="codigo"><div class="rot">Pedido</div><div class="cod">' + esc(pedido.codigo || '') + '</div><div style="color:var(--mut);font-size:14px">' + esc((cfg && cfg.nome) || '') + (pedido.ts ? ' · ' + hora(pedido.ts) : '') + '</div>' + (pedido.cliente && pedido.cliente.nome ? '<div style="font-weight:800;font-size:18px;margin-top:4px">' + esc(pedido.cliente.nome) + '</div>' : '') + '</div>';
     h += '<div class="status-card ' + (st === 'cancelado' ? 'cancel' : '') + '"><div class="ic">' + r.ic + '</div><div class="tt">' + esc(titulo) + '</div><div class="ds">' + esc(desc) + '</div>' +
@@ -1579,7 +1587,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     }
     h += '<div id="chat-slot"></div>';
     if (st !== 'cancelado') {
-      var ps = passos(pedido.tipo), ix = ps.findIndex(function (p) { return p[0] === st; });
+      var ps = passos(pedido.tipo, pedido.mesa), ix = ps.findIndex(function (p) { return p[0] === st; });
       h += '<div class="bloco"><h3>Andamento</h3><ul class="linha-tempo">' + ps.map(function (p, i) {
         var cls = i < ix || st === 'entregue' ? 'feito' : (i === ix ? 'atual' : '');
         var ts = p[0] === 'novo' ? pedido.ts : (pedido.hist && pedido.hist[p[0]]);
@@ -1601,18 +1609,18 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
       '<div class="total-linha forte"><span>Total' + (confirmado ? '' : ' (estimado)') + '</span><span>' + brl(total) + '</span></div></div>';
     // detalhes
     var pg = { dinheiro: 'Dinheiro', cartao: 'Cartão', pix: 'Pix' }[pedido.pagamento] || '';
-    var det = '<div class="linha"><span>Recebimento</span><span class="v">' + (entrega ? '🛵 Entrega' : '🏪 Retirada na loja') + '</span></div>';
+    var det = '<div class="linha"><span>Recebimento</span><span class="v">' + (entrega ? '🛵 Entrega' : (pedido.mesa ? '🍽 Mesa ' + esc(pedido.mesa) : '🏪 Retirada na loja')) + '</span></div>';
     if (entrega && pedido.endereco) {
       var e = pedido.endereco;
       det += '<div class="linha"><span class="n">Endereço</span><span class="v" style="text-align:right;font-weight:600">' + esc(e.rua + ', ' + e.numero + ' — ' + e.bairro + (e.cep ? ' · CEP ' + e.cep : '') + (e.complemento ? ' (' + e.complemento + ')' : '')) + '</span></div>';
     }
-    det += '<div class="linha"><span>Pagamento</span><span class="v">' + esc(pg) + (pedido.pagamento === 'dinheiro' && pedido.troco ? ' · troco p/ ' + brl(pedido.troco) : '') + '</span></div>';
+    det += '<div class="linha"><span>Pagamento</span><span class="v">' + (pedido.mesa ? 'No caixa, ao final' : esc(pg) + (pedido.pagamento === 'dinheiro' && pedido.troco ? ' · troco p/ ' + brl(pedido.troco) : '')) + '</span></div>';
     if (pedido.obs) det += '<div class="linha"><span class="n">Observações</span><span class="v" style="text-align:right;font-weight:600">' + esc(pedido.obs) + '</span></div>';
-    h += '<div class="bloco"><h3>Detalhes</h3>' + det + '<p class="nota">O pagamento é feito na ' + (entrega ? 'entrega' : 'retirada') + '.</p></div>';
+    h += '<div class="bloco"><h3>Detalhes</h3>' + det + '<p class="nota">' + (pedido.mesa ? 'Este pedido foi somado à conta da sua mesa. Você paga tudo de uma vez no caixa, quando for embora.' : 'O pagamento é feito na ' + (entrega ? 'entrega' : 'retirada') + '.') + '</p></div>';
     var fl = foneLoja();
     if (fl) h += '<a class="btn-sec" target="_blank" rel="noopener" href="https://wa.me/' + fl + '?text=' + encodeURIComponent('Olá! Sobre o meu pedido ' + (pedido.codigo || '')) + '">💬 Falar com a loja</a>';
     h += '<button class="btn-sec" id="tr-copiar">🔗 Copiar link deste acompanhamento</button>';
-    h += '<button class="btn-sec" id="tr-novo">🍽 Fazer um novo pedido</button><div style="height:calc(30px + var(--safe-b))"></div>';
+    h += '<button class="btn-sec" id="tr-novo">' + (pedido.mesa ? '➕ Pedir mais alguma coisa' : '🍽 Fazer um novo pedido') + '</button><div style="height:calc(30px + var(--safe-b))"></div>';
     var tinhaFoco = !!(chatEl && document.activeElement === chatEl.querySelector('#chat-txt'));
     corpo.innerHTML = h;
     montarChat();
@@ -1682,7 +1690,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
   function voltarMenu() {
     if (refPedido) { refPedido.off(); refPedido = null; }
     PED_ID = '';
-    try { history.replaceState(null, '', '?loja=' + encodeURIComponent(LOJA)); } catch (e) {}
+    try { history.replaceState(null, '', '?loja=' + encodeURIComponent(LOJA) + (MESA ? '&mesa=' + encodeURIComponent(MESA) : '')); } catch (e) {}
     desenharCabecalho(); desenharMenu(); desenharBarra(); verPedidoEmAndamento();
     mostrar('v-menu');
   }
