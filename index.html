@@ -4827,6 +4827,19 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
         <button id="cmd-tab-cardapio"  onclick="showSection('cardapio', document.getElementById('nav-cardapio'))">Cardápio ↗</button>
       </div>
 
+      <details class="card" id="qr-mesas-card" ontoggle="qrMesasIniciar()" style="margin:0 0 14px;padding:14px 16px">
+        <summary style="cursor:pointer;font-weight:800;font-size:15px">📱 QR Code das Mesas</summary>
+        <p style="margin:10px 0 4px;font-size:13px;opacity:.8">O cliente escaneia o QR da mesa, faz o pedido pelo celular e ele chega em <b>Pedidos online</b> marcado como <b>Mesa N</b>.</p>
+        <p style="margin:0 0 10px;font-size:12px;opacity:.7;overflow-wrap:anywhere">🔗 Link usado: <span id="qr-mesas-link"></span></p>
+        <label style="display:flex;align-items:center;gap:8px;font-weight:700;font-size:13px">🪑 Número de mesas
+          <input type="number" id="qr-mesas-n" class="input-sm" min="1" max="100" value="5" style="width:90px"></label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+          <button class="btn btn-primary btn-md" onclick="qrMesasGerar()">🔄 Gerar QR Codes</button>
+          <button class="btn btn-secondary btn-md" onclick="qrMesasImprimir()">🖨 Imprimir todos</button>
+        </div>
+        <div id="qr-mesas-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-top:14px"></div>
+      </details>
+
       <div id="cmd-conteudo"></div>
     </div>
 
@@ -18504,7 +18517,7 @@ function _pedMiniHtml(p) {
       <span class="pv-cod">#${escapeHtml(p.codigo || '')}</span><span class="pv-nome">${nome}</span>
       <span class="pv-mais">${aberto ? 'Fechar ⌃' : 'Detalhes ⌄'}</span>
     </div>
-    <div class="pv-mini-meta">${ent ? '🛵 Entrega' : '🏪 Retirada'} · ${_pedHora(p.ts)} · ${fmt(t.total)}</div>
+    <div class="pv-mini-meta">${ent ? '🛵 Entrega' : (p.mesa ? '🍽 Mesa ' + escapeHtml(String(p.mesa)) : '🏪 Retirada')} · ${_pedHora(p.ts)} · ${fmt(t.total)}</div>
     ${rodape}
     ${aberto ? _pedCardHtml(p) : ''}
   </div>`;
@@ -18646,7 +18659,7 @@ function _pedCardHtml(p) {
     <div class="ped-head">
       <span class="ped-cod">#${escapeHtml(p.codigo || '')}</span><span class="ped-nome" style="font-weight:700;font-size:15px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.cliente && p.cliente.nome ? '· ' + escapeHtml(p.cliente.nome) : ''}</span>
       <span class="ped-chip" style="background:${st.cor}">${st.lbl}</span>
-      <span class="ped-tipo">${ent ? '🛵 Entrega' : '🏪 Retirada'}</span>
+      <span class="ped-tipo">${ent ? '🛵 Entrega' : (p.mesa ? '🍽 Mesa ' + escapeHtml(String(p.mesa)) : '🏪 Retirada')}</span>
       <span class="ped-hora">${_pedHora(p.ts)} · ${_pedHa(p.ts)}</span>
     </div>
     <div class="ped-cli"><strong>${escapeHtml(cli.nome || '')}</strong> · <a href="tel:${escapeHtml(String(cli.telefone || '').replace(/[^\d+]/g, ''))}">${escapeHtml(cli.telefone || '')}</a></div>
@@ -18659,7 +18672,7 @@ function _pedCardHtml(p) {
       <span>Subtotal ${fmt(t.sub)}${ent ? ' · Entrega ' + (t.taxa > 0 ? fmt(t.taxa) : 'grátis') : ''}</span>
       <strong>Total ${fmt(t.total)}${t.confirmado ? '' : ' <small>(estimado)</small>'}</strong>
     </div>
-    <div class="ped-pag">${PED_PAG[p.pagamento] || ''}${escapeHtml(trocoTxt)} · paga na ${ent ? 'entrega' : 'retirada'}</div>
+    <div class="ped-pag">${PED_PAG[p.pagamento] || ''}${escapeHtml(trocoTxt)} · paga ${p.mesa ? 'na mesa' : 'na ' + (ent ? 'entrega' : 'retirada')}</div>
     <div class="ped-acoes">${acoes}</div>
   </div>`;
 }
@@ -18951,7 +18964,7 @@ function pedWhats(id) {
   const msgs = {
     novo:      'Olá ' + nome + '! Recebemos o seu pedido ' + cod + '.',
     preparo:   'Olá ' + nome + '! Seu pedido ' + cod + ' foi aceito e já está em preparo.' + prev,
-    pronto:    ent ? 'Olá ' + nome + '! Seu pedido ' + cod + ' está pronto e já vai sair para entrega.' : 'Olá ' + nome + '! Seu pedido ' + cod + ' está pronto para retirada.',
+    pronto:    ent ? 'Olá ' + nome + '! Seu pedido ' + cod + ' está pronto e já vai sair para entrega.' : 'Olá ' + nome + '! Seu pedido ' + cod + ' está pronto ' + (p.mesa ? 'e já vai para a sua mesa.' : 'para retirada.'),
     saiu:      'Olá ' + nome + '! Seu pedido ' + cod + ' saiu para entrega 🛵',
     entregue:  'Olá ' + nome + '! Obrigado pela preferência. Bom apetite! 😋',
     cancelado: 'Olá ' + nome + '. Infelizmente precisamos cancelar o seu pedido ' + cod + '.' + (p.motivo ? ' Motivo: ' + p.motivo + '.' : ''),
@@ -19874,6 +19887,59 @@ function _cmdSemLoja() {
 function cmdSetTab(tab) {
   _cmdTab = tab;
   renderComandas();
+}
+
+/* ── QR Code das mesas: cada QR abre pedido.html?loja=…&mesa=N e o pedido chega em "Pedidos online" como "Mesa N" ── */
+function _qrMesaLink(n) { return _pedLinkCliente() + '&mesa=' + encodeURIComponent(n); }
+function _qrCarregarLib() {
+  return new Promise((res, rej) => {
+    if (window.QRCode) return res();
+    const sc = document.createElement('script');
+    sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
+    sc.onload = () => res(); sc.onerror = () => rej(new Error('qr'));
+    document.head.appendChild(sc);
+  });
+}
+function qrMesasIniciar() {
+  const inp = document.getElementById('qr-mesas-n'); if (!inp) return;
+  document.getElementById('qr-mesas-link').textContent = _pedLinkCliente() + '&mesa=1';
+  if (inp.dataset.ok) return; inp.dataset.ok = '1';
+  try { inp.value = localStorage.getItem('qrMesasN') || '5'; } catch (e) {}
+}
+async function qrMesasGerar() {
+  const n = parseInt(document.getElementById('qr-mesas-n').value, 10);
+  if (!(n >= 1 && n <= 100)) { showToast('Informe de 1 a 100 mesas', false); return false; }
+  try { localStorage.setItem('qrMesasN', String(n)); } catch (e) {}
+  try { await _qrCarregarLib(); } catch (e) { showToast('Não consegui carregar o gerador de QR. Verifique a internet.', false); return false; }
+  const grid = document.getElementById('qr-mesas-grid'); grid.innerHTML = '';
+  for (let i = 1; i <= n; i++) {
+    const box = document.createElement('div');
+    box.style.cssText = 'text-align:center;background:#fff;border:1px solid #e5e5e5;border-radius:12px;padding:10px';
+    const qr = document.createElement('div'); qr.style.cssText = 'display:flex;justify-content:center';
+    box.appendChild(qr);
+    const lb = document.createElement('div'); lb.style.cssText = 'font-weight:800;margin-top:6px;color:#222'; lb.textContent = 'Mesa ' + i;
+    box.appendChild(lb);
+    grid.appendChild(box);
+    new QRCode(qr, { text: _qrMesaLink(i), width: 130, height: 130, correctLevel: QRCode.CorrectLevel.M });
+  }
+  return true;
+}
+async function qrMesasImprimir() {
+  if (!(await qrMesasGerar())) return;
+  const n = parseInt(document.getElementById('qr-mesas-n').value, 10), cards = [];
+  document.querySelectorAll('#qr-mesas-grid > div').forEach((box, idx) => {
+    const cv = box.querySelector('canvas'), im = box.querySelector('img');
+    const src = cv ? cv.toDataURL('image/png') : (im ? im.src : '');
+    cards.push('<div class="c"><div class="t">Mesa ' + (idx + 1) + '</div><img src="' + src + '" alt=""><div class="d">Escaneie e faça seu pedido</div></div>');
+  });
+  const w = window.open('', '_blank');
+  if (!w) { showToast('O navegador bloqueou a janela de impressão. Permita pop-ups.', false); return; }
+  w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>QR Code das Mesas</title><style>' +
+    'body{font-family:Arial,sans-serif;margin:0;padding:12px}.g{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}' +
+    '.c{border:2px dashed #999;border-radius:14px;padding:16px;text-align:center;page-break-inside:avoid}' +
+    '.t{font-size:28px;font-weight:900;margin-bottom:8px}.c img{width:230px;height:230px}.d{font-size:14px;margin-top:8px;color:#333}' +
+    '</style></head><body><div class="g">' + cards.join('') + '</div></body></html>');
+  w.document.close(); w.focus(); setTimeout(() => { try { w.print(); } catch (e) {} }, 500);
 }
 
 function renderComandas() {

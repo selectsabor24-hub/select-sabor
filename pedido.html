@@ -676,6 +676,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
   /* ---------- Estado ---------- */
   var params = new URLSearchParams(location.search);
   var LOJA = (params.get('loja') || '').trim();
+  var MESA = (params.get('mesa') || '').trim().replace(/[^A-Za-z0-9 _-]/g, '').slice(0, 20); // QR da mesa: pedido vai como "Mesa N"
   var PED_ID = (params.get('p') || '').trim();
   /* App instalado abre sem ?loja: usa a última loja visitada */
   if (!LOJA) { var ultima = lsGet('ultimaLoja'); if (typeof ultima === 'string') LOJA = ultima.trim(); }
@@ -1320,8 +1321,11 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     }).join('') : '<div class="vazio" style="padding:14px">Sua sacola está vazia.</div>';
     // modo
     var op = [];
+    if (MESA) { modo = 'retirada'; op.push('<button type="button" class="on" disabled>🍽 Mesa ' + esc(MESA) + '</button>'); }
+    else {
     if (aceitaEntrega()) op.push('<button type="button" data-modo="entrega" class="' + (modo === 'entrega' ? 'on' : '') + '">🛵 Entrega' + (porKmAtivo() ? '<br><small>a partir de ' + brl(menorTaxa()) + '</small>' : (cfg && Number(cfg.taxaEntrega) > 0 ? '<br><small>+ ' + brl(cfg.taxaEntrega) + '</small>' : '')) + '</button>');
     if (aceitaRetirada()) op.push('<button type="button" data-modo="retirada" class="' + (modo === 'retirada' ? 'on' : '') + '">🏪 Retirar na loja</button>');
+    }
     $('#op-modo').innerHTML = op.join('');
     $('#bl-end').classList.toggle('hide', modo !== 'entrega');
     $('#r-taxa-l').classList.toggle('hide', modo !== 'entrega');
@@ -1337,8 +1341,11 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
   function abrirCheckout() {
     if (!qtdTotal()) return;
     if (!aberta()) { toast(msgFechada()); return; }
+    if (MESA) modo = 'retirada';
+    else {
     if (modo === 'entrega' && !aceitaEntrega()) modo = 'retirada';
     if (modo === 'retirada' && !aceitaRetirada()) modo = 'entrega';
+    }
     var salvo = lsGet('cliente') || {};
     if (!$('#f-nome').value) $('#f-nome').value = salvo.nome || '';
     if (!$('#f-tel').value) $('#f-tel').value = salvo.tel || '';
@@ -1428,6 +1435,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
       if ($('#f-ref').value.trim()) p.endereco.referencia = $('#f-ref').value.trim();
       if (usaFaixas() && dist.km != null) { p.endereco.distanciaKm = dist.km; if (dist.aprox) p.endereco.distAprox = true; }
     }
+    if (MESA) p.mesa = MESA;
     if (pag === 'dinheiro' && $('#f-troco').value.trim()) p.troco = parseFloat($('#f-troco').value.replace(/\./g, '').replace(',', '.'));
     if ($('#f-obs').value.trim()) p.obs = $('#f-obs').value.trim().slice(0, 300);
     return p;
