@@ -4793,6 +4793,11 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
         <div style="font-size:17px;font-weight:700">Configurar pedidos online</div>
         <button class="btn btn-secondary btn-md" type="button" onclick="pedConfigFechar()">✕ Fechar</button>
       </div>
+      <div class="cmd-tabs" id="ped-cfg-tabs" style="margin-bottom:14px">
+        <button type="button" id="ped-cfg-tab-geral" onclick="pedConfigAba('geral')">⚙ Configurações</button>
+        <button type="button" id="ped-cfg-tab-links" onclick="pedConfigAba('links')">🔗 Links</button>
+      </div>
+      <div id="ped-cfg-aba-geral">
       <div class="card mb-5">
         <div class="card-title">🏪 Dados do restaurante</div>
         <div class="form-grid">
@@ -4879,6 +4884,19 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
           <button class="btn btn-secondary btn-md" type="button" onclick="pedPushTestar()">▶ Enviar aviso de teste</button>
         </div>
         <small id="pc-push-msg" style="display:block;margin-bottom:10px;font-size:13px"></small>
+      </div>
+      </div>
+      <div id="ped-cfg-aba-links" style="display:none">
+        <div class="card mb-5">
+          <div class="card-title">🔗 Link do cardápio</div>
+          <p style="font-size:13px;color:var(--text-muted,#6b7280);margin:4px 0 0">Divulgue este link para os clientes fazerem pedidos.</p>
+          <div class="ped-link">
+            <input class="input-base" id="ped-link-input" readonly value="" onclick="this.select()">
+            <button class="btn btn-secondary btn-md" type="button" onclick="pedCopiarLink()">📋 Copiar link</button>
+            <button class="btn btn-secondary btn-md" type="button" onclick="pedAbrirLink()">↗ Abrir</button>
+            <button class="btn btn-secondary btn-md" type="button" onclick="pedCompartilharLink()">💬 Enviar no WhatsApp</button>
+          </div>
+        </div>
       </div>
       </div>
 
@@ -18385,7 +18403,6 @@ function renderPedidos() {
   }
   document.getElementById('ped-tabs').style.display = '';
   const aberto = cfg.aberto === true;
-  const link = _pedLinkCliente();
   topo.innerHTML = `<div class="card ped-topo">
     <div class="ped-topo-linha">
       <div>
@@ -18394,12 +18411,7 @@ function renderPedidos() {
       </div>
       <button class="btn ${aberto ? 'btn-secondary' : 'btn-primary'} btn-md" onclick="pedToggleAberto()">${aberto ? '⏸ Pausar pedidos' : '▶ Abrir para pedidos'}</button>
     </div>
-    <div class="ped-link">
-      <input class="input-base" id="ped-link-input" readonly value="${escapeHtml(link)}" onclick="this.select()">
-      <button class="btn btn-secondary btn-md" onclick="pedCopiarLink()">📋 Copiar link</button>
-      <button class="btn btn-secondary btn-md" onclick="pedAbrirLink()">↗ Abrir</button>
-      <button class="btn btn-secondary btn-md" onclick="pedCompartilharLink()">💬 Enviar no WhatsApp</button>
-    </div></div>`;
+    </div>`;
 
   const todos = _pedLista();
   const novos = todos.filter(p => p.status === 'novo');
@@ -18836,6 +18848,17 @@ function pedToggleAberto() {
     .then(() => showToast(novo ? 'Pedidos abertos para os clientes' : 'Pedidos pausados'))
     .catch(e => { console.error(e); showToast('Sem permissão para alterar. Publique as regras do Firebase.', false); });
 }
+/* Abas do painel de configuração: 'geral' | 'links' */
+function pedConfigAba(aba) {
+  const links = aba === 'links';
+  const g = document.getElementById('ped-cfg-aba-geral'), l = document.getElementById('ped-cfg-aba-links');
+  if (g) g.style.display = links ? 'none' : '';
+  if (l) l.style.display = links ? '' : 'none';
+  const tg = document.getElementById('ped-cfg-tab-geral'), tl = document.getElementById('ped-cfg-tab-links');
+  if (tg) tg.classList.toggle('active', !links);
+  if (tl) tl.classList.toggle('active', links);
+  const inp = document.getElementById('ped-link-input'); if (inp) inp.value = _pedLinkCliente();
+}
 function pedConfigAbrir() {
   if (!_lojaAtiva) { showToast('Aguarde o carregamento do restaurante', false); return; }
   const c = _pedCfg() || {};
@@ -18862,6 +18885,7 @@ function pedConfigAbrir() {
   document.getElementById('pc-aberto').checked   = _pedCfg() ? c.aberto === true : true;
   document.getElementById('pc-horario-on').checked = c.horarioOn === true;
   set('pc-abre', _pedMinHM(c.abreMin)); set('pc-fecha', _pedMinHM(c.fechaMin));
+  pedConfigAba('geral');
   const box = document.getElementById('ped-config');
   box.style.display = '';
   box.scrollIntoView({ behavior: 'smooth', block: 'start' });
