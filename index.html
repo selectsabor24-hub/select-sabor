@@ -20050,14 +20050,14 @@ function _cdpOpcHtml(i) {
       h += `<div class="cdp-o${o.ativo ? '' : ' off'}">
         ${_cdpOFotoHtml(i.id, g.id, o)}<input class="cdp-in cdp-o-nome" type="text" maxlength="60" value="${escapeAttr(o.nome)}" onchange="cdpOpcaoCampo('${i.id}','${g.id}','${o.id}','nome',this.value)">
         <span class="cdp-o-mais">+ R$</span>
-        <input class="cdp-in cdp-preco" type="number" step="0.01" min="0" value="${o.preco > 0 ? o.preco.toFixed(2) : ''}" placeholder="${(parseFloat(i.preco) || 0).toFixed(2)}" title="Valor extra desta opção. Em branco = cobra só o preço do item (${(parseFloat(i.preco) || 0).toFixed(2)})" onchange="cdpOpcaoCampo('${i.id}','${g.id}','${o.id}','preco',this.value)">
+        <input class="cdp-in cdp-preco" type="number" step="0.01" min="0" value="${o.preco.toFixed(2)}" placeholder="0,00" title="Valor EXTRA (soma ao preço do item). 0 = sem extra" onchange="cdpOpcaoCampo('${i.id}','${g.id}','${o.id}','preco',this.value)">
         <button type="button" class="cdp-status${o.ativo ? '' : ' off'}" onclick="cdpOpcaoAtivo('${i.id}','${g.id}','${o.id}')">${o.ativo ? 'Disponível' : 'Indisponível'}</button>
         <button type="button" class="cmd-x" title="Remover opção" onclick="cdpOpcaoDel('${i.id}','${g.id}','${o.id}')">×</button></div>`;
     });
     h += `<div class="cdp-o novo">
         <input id="cdp-on-${g.id}" class="cdp-in cdp-o-nome" type="text" maxlength="60" placeholder="Nova opção (ex.: Coca-Cola)" onkeydown="if(event.key==='Enter')cdpOpcaoAdd('${i.id}','${g.id}')">
         <span class="cdp-o-mais">+ R$</span>
-        <input id="cdp-op-${g.id}" class="cdp-in cdp-preco" type="number" step="0.01" min="0" placeholder="${(parseFloat(i.preco) || 0).toFixed(2)}" title="Valor extra desta opção. Em branco = cobra só o preço do item" onkeydown="if(event.key==='Enter')cdpOpcaoAdd('${i.id}','${g.id}')">
+        <input id="cdp-op-${g.id}" class="cdp-in cdp-preco" type="number" step="0.01" min="0" placeholder="0,00" title="Valor EXTRA (soma ao preço do item). 0 = sem extra" onkeydown="if(event.key==='Enter')cdpOpcaoAdd('${i.id}','${g.id}')">
         <button type="button" class="btn btn-secondary" onclick="cdpOpcaoAdd('${i.id}','${g.id}')">+ Opção</button></div></div>`;
   });
   h += `<button type="button" class="btn btn-secondary" style="margin-top:4px" onclick="cdpGrupoAdd('${i.id}')">+ Novo grupo de complementos</button>${barra}`;
