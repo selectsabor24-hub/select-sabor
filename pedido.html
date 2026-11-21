@@ -242,7 +242,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
 .top-cart b { position: absolute; top: -2px; right: -2px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 99px; background: #D62828; color: #fff; font-size: 12px; display: flex; align-items: center; justify-content: center; }
 .top-cart b:empty { display: none; }
 .cats button { background: #fff; border-color: #E9DDC2; }
-#menu-lista { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-content: start; }
+#menu-lista { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr)); gap: 12px; align-content: start; }
 #menu-lista .cat-titulo { grid-column: 1 / -1; margin: 18px 0 0; color: var(--verde); }
 .item { position: relative; flex-direction: column; align-items: stretch; gap: 0; padding: 0 0 12px; margin: 0; overflow: hidden; border-color: #EADFC6; box-shadow: 0 3px 10px rgba(80,60,20,.08); }
 .item .ft { flex: none; width: 100%; height: auto; aspect-ratio: 4 / 3; border-radius: 0; }
@@ -273,6 +273,21 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
 #conta-modal .bs { display: flex; gap: 8px; margin-top: 14px; }
 #conta-modal .bs button { flex: 1; min-height: 48px; border-radius: 12px; border: 1.5px solid var(--borda); background: #fff; font-weight: 700; }
 #conta-modal .bs button.p { background: var(--verde); border-color: var(--verde); color: #fff; }
+/* ===== Adaptação a qualquer tamanho de tela (celular, tablet, notebook, monitor grande) ===== */
+:root { --w-menu: 640px; }
+@media (min-width: 700px)  { :root { --w-menu: 860px; } #menu-lista { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 16px; } }
+@media (min-width: 1024px) { :root { --w-menu: 1080px; } #menu-lista { grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); } }
+@media (min-width: 1440px) { :root { --w-menu: 1240px; } #menu-lista { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 20px; } .item .nome { font-size: 15px; } }
+#v-menu .wrap { max-width: var(--w-menu); }
+.cats .scroll { max-width: var(--w-menu); margin: 0 auto; }
+#install, #banner-andamento { max-width: 640px; margin-left: auto; margin-right: auto; }
+#v-menu .barra button { max-width: min(var(--w-menu), 100%); }
+@media (min-width: 900px) {
+  .navbar { left: 50%; right: auto; transform: translateX(-50%); width: 460px; max-width: calc(100% - 24px); bottom: 12px; border: 1px solid #E9DDC2; border-radius: 20px; padding-bottom: 6px; box-shadow: 0 8px 24px rgba(80,60,20,.18); }
+  #v-menu .barra { bottom: 86px; }
+  #v-menu .espaco-barra { height: 170px; }
+}
+@media (max-height: 480px) and (orientation: landscape) { .navbar button { min-height: 40px; } .navbar button span { font-size: 18px; } }
 </style>
 </head>
 <body>
