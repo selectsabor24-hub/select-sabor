@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <script>try{var t=localStorage.getItem("caixa-theme");if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Controle de Caixa v1.1</title>
+<title>Controle de Caixa v1.2</title>
 
 <!-- ============================================================
      PWA — Progressive Web App
@@ -45,6 +45,7 @@
   ║         · Melhoria: renderContas usa cache; seção 3.22 documentada   ║
   ║  v3.3 — Seções novas: Planilhas já lançadas (3.23), calendário       ║
   ║         visual de lançamentos com marcação de cartão                 ║
+  ║  v1.2  — Comanda: cardápio em cartões (foto, descrição, preço, promoção e botão +)║
   ║  v1.1  — Comanda aberta em tela cheia (cardápio à esquerda, conta à direita)      ║
   ║  v1.0  — Primeira versão do Select Sabor (numeração reiniciada; as versões       ║
   ║          abaixo são do histórico anterior do sistema)                             ║
@@ -3366,7 +3367,23 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
 #modal-cmd-box.cmd-full .cmd-col { min-height: 0; overflow-y: auto; padding-right: 4px; }
 #modal-cmd-box.cmd-full .cmd-col-conta { border-left: 1px solid var(--border); padding-left: 24px; }
 #modal-cmd-box.cmd-full .cmd-col-menu #cmd-chips { max-height: none !important; overflow: visible !important; }
-#modal-cmd-box.cmd-full .cmd-chip { padding: 11px 16px; font-size: 15px; }
+#modal-cmd-box.cmd-full .cmd-col-menu .cmd-chips { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 14px; }
+#modal-cmd-box .cmd-chip.cmd-ci { position: relative; display: flex; flex-direction: column; align-items: stretch; gap: 0; text-align: left; padding: 0 0 14px; border-radius: 16px; overflow: hidden; background: var(--surface); border: 1px solid var(--border); box-shadow: 0 3px 10px rgba(80,60,20,.08); font-size: 14px; }
+#modal-cmd-box .cmd-chip.cmd-ci:hover:not(.off) { border-color: var(--accent); transform: translateY(-1px); }
+#modal-cmd-box .cmd-chip.cmd-ci:active:not(.off) { transform: scale(.98); }
+#modal-cmd-box .cmd-chip.cmd-ci.off { opacity: .55; cursor: not-allowed; }
+.cmd-ci-foto { display: block; aspect-ratio: 4 / 3; background: #f3efe4; overflow: hidden; margin-bottom: 10px; }
+.cmd-ci-foto img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cmd-ci-sem { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; font-size: 38px; opacity: .45; }
+.cmd-ci-nome { display: block; padding: 0 14px; font-weight: 800; font-size: 15px; text-transform: uppercase; letter-spacing: .2px; line-height: 1.25; }
+.cmd-ci-desc { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; padding: 3px 14px 0; font-size: 13px; color: var(--text3); line-height: 1.3; }
+.cmd-ci-preco { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; padding: 8px 56px 0 14px; min-height: 26px; }
+.cmd-ci-por { font-weight: 800; font-size: 18px; color: var(--accent); }
+.cmd-ci-de { font-size: 13px; color: var(--text3); text-decoration: line-through; }
+.cmd-ci-tag { background: #e8f5ea; color: #1f7a35; border: 1px solid #b9dfc0; border-radius: 999px; padding: 1px 9px; font-size: 11px; font-weight: 800; }
+.cmd-ci-esg { font-size: 13px; font-weight: 700; color: var(--red-mid); }
+.cmd-ci-mais { position: absolute; right: 12px; bottom: 12px; width: 40px; height: 40px; border-radius: 50%; background: #aab8a7; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: 400; line-height: 1; }
+.cmd-ci:hover .cmd-ci-mais { background: var(--accent); }
 #modal-cmd-box.cmd-full .cmd-col-menu .cmd-sec-titulo:first-child { margin-top: 0; }
 @media (max-width: 900px) {
   #modal-cmd-box.cmd-full .cmd-split { display: block; overflow-y: auto; }
@@ -3697,7 +3714,7 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
           <img src="img/logo.png" alt="Select Sabor" style="width:44px;height:44px;border-radius:50%;flex-shrink:0;background:#fff;box-shadow:0 0 0 2px rgba(255,255,255,0.18)">
           <div>
             <div class="logo-title">Controle de Caixa</div>
-            <div class="logo-sub">v1.1</div>
+            <div class="logo-sub">v1.2</div>
           </div>
         </div>
         <span id="status-dot" style="display:none;width:8px;height:8px;border-radius:50%;background:#4ADE80;flex-shrink:0;box-shadow:0 0 0 2px rgba(74,222,128,0.2)" title="Conectado"></span>
@@ -20979,6 +20996,7 @@ function _cdpFotosCarregar() {
   _dbRef('cardapioFotos/' + loja).once('value').then(s => {
     if (_lojaAtiva !== loja) return;
     _cdpFotos = s.val() || {}; _cdpRenderLista(); if (_opcAdm) _opcAdmDesenhar();
+    if (_cmdModal) _cmdAtualizarModal(false); // comanda aberta: mostra as fotos assim que chegam
   }).catch(e => { console.warn('[fotos] sem acesso (publique as regras novas do Firebase):', e && e.message); });
 }
 function _cdpFotoBtn(i) {
@@ -21047,6 +21065,7 @@ function cdpFotoRemover(id) {
 function _cmdAbrirModal(estado) {
   _cmdModal = estado;
   const ov = document.getElementById('modal-cmd-overlay');
+  _cdpFotosCarregar(); // fotos do cardápio (cartões da comanda)
   _cmdAtualizarModal(true);
   ov.classList.add('open');
 }
@@ -21069,7 +21088,16 @@ function _cmdAtualizarModal(forcar) {
   const c = _cmdGet(_cmdModal.id);
   if (!c) { cmdFecharModal(); return; }
   tela(_cmdModal.modo === 'comanda' && c.status === 'aberta'); // comanda aberta: tela cheia para ver o cardápio
+  // Redesenhar não pode "pular" a tela: guarda rolagem e busca quando é a mesma comanda
+  const chave = _cmdModal.modo + ':' + c.id, igual = box.dataset.cmdKey === chave;
+  const sels = ['.cmd-col-menu', '.cmd-col-conta'], rol = {};
+  if (igual) sels.forEach(q => { const e = box.querySelector(q); if (e) rol[q] = e.scrollTop; });
+  const busca = igual ? ((box.querySelector('#cmd-busca') || {}).value || '') : '';
   box.innerHTML = _cmdModal.modo === 'pagar' ? _cmdHtmlModalPagar(c) : _cmdHtmlModalComanda(c);
+  box.dataset.cmdKey = chave;
+  const nb = box.querySelector('#cmd-busca');
+  if (nb && busca) { nb.value = busca; cmdFiltrar(busca); }
+  sels.forEach(q => { const e = box.querySelector(q); if (e && rol[q]) e.scrollTop = rol[q]; });
 }
 
 function cmdNova() {
@@ -21134,7 +21162,18 @@ function _cmdHtmlModalComanda(c) {
     if (_cmdCatFiltro && !catsUsadas.includes(_cmdCatFiltro)) _cmdCatFiltro = '';
     const chipHtml = i => {
       const off = i.ativo === false;
-      return `<button class="cmd-chip" data-nome="${escapeAttr(String(i.nome).toLowerCase())}"${off ? ' disabled title="Indisponível no momento" style="opacity:.45;cursor:not-allowed;text-decoration:line-through"' : ''} ${(!off && i.desc) ? ' title="' + escapeAttr(i.desc) + '"' : ''} onclick="cmdAddItem('${i.id}')">${escapeHtml(i.nome)}<small>${off ? 'esgotado' : fmt(parseFloat(i.preco) || 0)}</small></button>`;
+      const f = _cdpFotos[i.id];
+      const foto = (f && String(f).indexOf('data:image/') === 0) ? `<img src="${f}" alt="">` : `<span class="cmd-ci-sem">🍽</span>`;
+      const preco = _cdpEmPromo(i)
+        ? `<span class="cmd-ci-de">${fmt(parseFloat(i.preco) || 0)}</span><span class="cmd-ci-por">${fmt(parseFloat(i.promo) || 0)}</span><span class="cmd-ci-tag">Promoção</span>`
+        : `<span class="cmd-ci-por">${fmt(parseFloat(i.preco) || 0)}</span>`;
+      return `<button type="button" class="cmd-chip cmd-ci${off ? ' off' : ''}" data-nome="${escapeAttr(String(i.nome).toLowerCase())}"${off ? ' disabled title="Indisponível no momento"' : ''} onclick="cmdAddItem('${i.id}')">
+        <span class="cmd-ci-foto">${foto}</span>
+        <span class="cmd-ci-nome">${escapeHtml(i.nome)}</span>
+        ${i.desc ? `<span class="cmd-ci-desc">${escapeHtml(i.desc)}</span>` : ''}
+        <span class="cmd-ci-preco">${off ? '<span class="cmd-ci-esg">Esgotado</span>' : preco}</span>
+        ${off ? '' : '<span class="cmd-ci-mais">+</span>'}
+      </button>`;
     };
     const chips = cardapio.length ? catsUsadas.map(cat => {
       const doCat = cardapio.filter(i => (i.cat || 'Outros') === cat);
