@@ -2911,9 +2911,17 @@ body {
 }
 .page-sub { color: var(--text2) !important; font-weight: 500; }
 #dash-loja-nome {
-  font-size: clamp(18px, 1.55vw, 24px) !important;
-  color: var(--text2) !important;
+  /* Nome da loja com a escrita do logo (script, marrom-dourado) */
+  font-family: 'Great Vibes', 'Brush Script MT', 'Segoe Script', cursive !important;
+  font-size: clamp(30px, 2.6vw, 40px) !important;
+  font-weight: 400 !important;
+  line-height: 1;
+  letter-spacing: .5px;
+  color: #A8691E !important;
+  margin-left: 10px !important;
+  vertical-align: -3px;
 }
+:root[data-theme="dark"] #dash-loja-nome { color: #E0B068 !important; }
 
 #sec-dashboard .page-header > div:nth-child(2) {
   background: var(--surface2) !important;
@@ -12939,7 +12947,7 @@ function _dashRenderMetas(t, labelPeriodo, mes, ano, modo) {
 function renderDashboard() {
   const lojaAtiva = getLojaAtiva();
   const nomeEl = document.getElementById('dash-loja-nome');
-  if (nomeEl) nomeEl.textContent = lojaAtiva ? '— ' + lojaAtiva.nome : '';
+  if (nomeEl) nomeEl.textContent = lojaAtiva ? lojaAtiva.nome : '';
 
   const selMes = document.getElementById('dash-mes');
   const selAno = document.getElementById('dash-ano');
