@@ -237,6 +237,11 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
 .top h1 { color: var(--marrom); }
 .top .slogan { color: var(--verde); }
 .top .sub { color: #5B4A2F; }
+.top .sub span { white-space: nowrap; }
+.top .st-row { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px 10px; margin-top: 8px; }
+.top .st-row .chip-st { margin-top: 0; }
+.top .st-row .hoje { font-size: 12.5px; font-weight: 700; color: #5B4A2F; white-space: nowrap; background: rgba(255,255,255,.55); border-radius: 99px; padding: 3px 10px; }
+.top .st-row .hoje:empty { display: none; }
 .top .wrap { position: relative; }
 .top-cart { position: absolute; right: 14px; top: 0; border: 0; background: transparent; font-size: 26px; line-height: 1; padding: 6px; }
 .top-cart b { position: absolute; top: -2px; right: -2px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 99px; background: #D62828; color: #fff; font-size: 12px; display: flex; align-items: center; justify-content: center; }
@@ -264,6 +269,9 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
 .navbar button { flex: 1; border: 0; background: transparent; display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 12px; font-weight: 600; color: var(--mut); padding: 4px 0; min-height: 48px; }
 .navbar button span { font-size: 22px; line-height: 1; }
 .navbar button.on { color: var(--verde); }
+.navbar button span { position: relative; }
+.navbar button span b { position: absolute; top: -6px; right: -12px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 99px; background: #D62828; color: #fff; font-size: 11px; font-weight: 800; line-height: 1; display: flex; align-items: center; justify-content: center; box-sizing: border-box; }
+.navbar button span b:empty { display: none; }
 #v-menu .barra { bottom: calc(60px + var(--safe-b)); padding-bottom: 10px; }
 #v-menu .espaco-barra { height: calc(150px + var(--safe-b)); }
 #conta-modal { position: fixed; inset: 0; z-index: 60; background: rgba(0,0,0,.5); display: flex; align-items: flex-end; justify-content: center; padding: 14px; }
@@ -383,9 +391,8 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
         <h1 id="loja-nome">Cardápio</h1>
         <div class="slogan">Restaurante e Lanchonete</div>
         <div class="sub" id="loja-info"></div>
-        <span class="chip-st" id="loja-chip"></span>
+        <div class="st-row"><span class="chip-st" id="loja-chip"></span><span class="hoje" id="loja-hoje"></span></div>
       </div>
-      <button type="button" class="top-cart" id="top-cart" aria-label="Ver sacola">🛒<b id="top-cart-n"></b></button>
     </div>
   </header>
   <div class="wrap">
@@ -405,6 +412,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
   <nav class="navbar" id="navbar" aria-label="Menu principal">
     <button type="button" class="on" data-nav="inicio"><span>🏠</span>Início</button>
     <button type="button" data-nav="pedidos"><span>🧾</span>Pedidos</button>
+    <button type="button" data-nav="sacola" id="nav-sacola" aria-label="Ver sacola"><span>🛒<b id="nav-sacola-n"></b></span>Sacola</button>
     <button type="button" data-nav="conta"><span>👤</span>Minha conta</button>
     <button type="button" id="nav-install" class="hide"><span>📲</span>Instalar</button>
   </nav>
@@ -1211,7 +1219,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     document.title = ((cfg && cfg.nome) ? cfg.nome + ' · ' : '') + 'Faça seu pedido';
     var info = [];
     if (cfg && cfg.tempoEstimado) info.push('⏱ ' + esc(rotuloPreparo(cfg.tempoEstimado)));
-    var hh = horarioHoje(); if (hh) info.push('🕒 ' + esc(hh));
+    var hh = horarioHoje(); $('#loja-hoje').textContent = hh ? '🕒 ' + hh : '';
     if (aceitaEntrega() && porKmAtivo()) info.push('🛵 Entrega a partir de ' + brl(menorTaxa()));
     else if (aceitaEntrega() && cfg && Number(cfg.taxaEntrega) > 0) info.push('🛵 Entrega ' + brl(cfg.taxaEntrega));
     else if (aceitaEntrega() && cfg) info.push('🛵 Entrega grátis');
@@ -1255,7 +1263,6 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     wrap.innerHTML = h;
     _assinHr = assinaturaHorarios();
   }
-  document.addEventListener('click', function (e) { if (e.target.closest && e.target.closest('#top-cart')) { var b = document.getElementById('btn-sacola'); if (b && !$('#barra').classList.contains('hide')) b.click(); } });
   /* ---------- Barra inferior ---------- */
   function contaAbrir() {
     var c = lsGet('cliente') || {}, m = $('#conta-modal');
@@ -1321,7 +1328,13 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
   function navMarcar(q) { Array.prototype.forEach.call(document.querySelectorAll('#navbar button'), function (b) { b.classList.toggle('on', b.dataset.nav === q); }); }
   $('#navbar').addEventListener('click', function (ev) {
     var b = ev.target.closest('button[data-nav]'); if (!b) return;
-    var q = b.dataset.nav; navMarcar(q);
+    var q = b.dataset.nav;
+    if (q === 'sacola') {
+      var bs = document.getElementById('btn-sacola');
+      if (qtdTotal() > 0 && bs) bs.click(); else toast('Sua sacola está vazia');
+      return;
+    }
+    navMarcar(q);
     if (q === 'inicio') { window.scrollTo({ top: 0, behavior: 'smooth' }); }
     else if (q === 'pedidos') {
       histAbrir();
@@ -1330,7 +1343,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
   function desenharBarra() {
     var n = qtdTotal(), b = $('#barra');
     b.classList.toggle('hide', n === 0);
-    $('#top-cart-n').textContent = n || '';
+    $('#nav-sacola-n').textContent = n ? (n > 99 ? '99+' : n) : '';
     $('#btn-sacola').innerHTML = '<span>🛒 Ver sacola · ' + n + (n === 1 ? ' item' : ' itens') + '</span><span>' + brl(subtotal()) + '</span>';
   }
 
