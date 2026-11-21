@@ -216,6 +216,7 @@
       },
       "pedidos": {
         "$lojaId": {
+          ".read": "auth != null && root.child('caixa/motoqueirosUid/' + auth.uid + '/ativo').val() === true && root.child('caixa/motoqueirosUid/' + auth.uid + '/lojaId').val() === $lojaId && query.limitToLast <= 100 && ((query.orderByChild === 'status' && (query.equalTo === 'pronto' || query.equalTo === 'preparo')) || (query.orderByChild === 'motoqueiro' && query.equalTo === root.child('caixa/motoqueirosUid/' + auth.uid + '/nome').val()))",
           ".indexOn": [
             "ts",
             "status",
