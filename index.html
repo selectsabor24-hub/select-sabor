@@ -18974,7 +18974,7 @@ async function _pedMesaGarantirComanda(mesa) {
   for (let k = 0; k < 8; k++, n++) {
     const cid = base + '_' + n;
     const nova = { id: cid, mesa: String(mesa), pessoas: '', garcom: '', status: 'aberta',
-      abertaEm: new Date().toISOString(), servicoPct: 10, desconto: 0, origem: 'qr_mesa' };
+      abertaEm: new Date().toISOString(), servicoPct: 0, desconto: 0, origem: 'qr_mesa' };
     const r = await _cmdRef(cid).transaction(cur => cur ? undefined : nova);
     const v = r && r.snapshot && r.snapshot.val();
     if (v && v.status === 'aberta') return cid; // criada agora (ou já criada por outro computador)
@@ -21040,7 +21040,7 @@ function cmdCriar() {
   if (dup) { showToast('A mesa ' + mesa + ' já tem uma comanda aberta', false); cmdAbrir(dup.id); return; }
   if (!_cmdGarantirCaixaAberto(_cmdHoje())) return; // caixa fechado → reabre (admin) ou avisa
   const id = 'cmd_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
-  const c = { id, mesa, pessoas, garcom, status: 'aberta', abertaEm: new Date().toISOString(), servicoPct: 10, desconto: 0 };
+  const c = { id, mesa, pessoas, garcom, status: 'aberta', abertaEm: new Date().toISOString(), servicoPct: 0, desconto: 0 };
   // Põe no cache antes de gravar para o modal abrir já com a comanda (o listener do Firebase sobrescreve depois)
   _cache.comandas = (_cache.comandas || []).concat([c]);
   _cmdRef(id).set(c).catch(e => { console.error(e); showToast('Erro ao abrir a comanda', false); });

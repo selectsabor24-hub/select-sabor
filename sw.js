@@ -16,7 +16,7 @@
 // isso não é mais um problema para ele. Ainda assim, a cada atualização
 // grande, é boa prática mudar o número abaixo (ex.: v1 → v2) para
 // forçar a limpeza dos caches antigos no 'activate'.
-const CACHE_NAME = 'caixa-v28'; // v6.13: pedidos de mesa (QR) somam na comanda → limpa os caches antigos
+const CACHE_NAME = 'caixa-v29'; // v6.13: mesa (QR) na comanda, excluir conta fechada, serviço 0% → limpa os caches antigos
 
 // Recursos do shell que devem ser cacheados na instalação
 const SHELL_URLS = [
