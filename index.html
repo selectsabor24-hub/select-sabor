@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <script>try{var t=localStorage.getItem("caixa-theme");if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Controle de Caixa v6.5</title>
+<title>Controle de Caixa v6.8</title>
 
 <!-- ============================================================
      PWA — Progressive Web App
@@ -45,6 +45,10 @@
   ║         · Melhoria: renderContas usa cache; seção 3.22 documentada   ║
   ║  v3.3 — Seções novas: Planilhas já lançadas (3.23), calendário       ║
   ║         visual de lançamentos com marcação de cartão                 ║
+  ║  v6.8 — Pedidos online: item com complementos sem repetir o valor   ║
+  ║  v6.7 — Pedidos online: valor do item com complementos embaixo      ║
+  ║  v6.6 — Pedidos online: itens com complementos organizados          ║
+  ║         (um complemento por linha, com o preço alinhado)            ║
   ║  v6.5 — Pedidos online: visões Quadros / Expedição / Monitor de     ║
   ║         entregadores; "Vendido online hoje" sem a taxa de entrega   ║
   ║  v6.4 — Complementos: quantidade por opção (2 Coca + 1 Fanta...)    ║
@@ -3383,6 +3387,13 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
 .ped-itens li { display: flex; justify-content: space-between; gap: 10px; padding: 3px 0; }
 .ped-itens li span:first-child { min-width: 0; overflow-wrap: anywhere; }
 .ped-warn { color: var(--red-mid, #DC2626); font-size: 12px; }
+.ped-itens li { align-items: flex-start; }
+.ped-it-p { flex: none; white-space: nowrap; font-weight: 700; }
+.ped-itens li.ped-it-comext { flex-direction: column; align-items: stretch; gap: 2px; }
+.ped-itens li.ped-it-comext .ped-it-p { align-self: flex-end; }
+.ped-itens .ped-ext { list-style: none; margin: 3px 0 2px; padding: 0 0 0 4px; border: 0; }
+.ped-itens .ped-ext li { display: block; padding: 1px 0 1px 14px; position: relative; font-size: 13px; color: var(--text2); }
+.ped-itens .ped-ext li::before { content: "•"; position: absolute; left: 3px; color: var(--text3); }
 .ped-obs { margin-top: 8px; padding: 8px 10px; background: #FEF3C7; color: #78350F; border-radius: 8px; font-size: 14px; overflow-wrap: anywhere; }
 .ped-tot { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--border); }
 .ped-pag { margin-top: 4px; font-size: 13px; color: var(--text2); }
@@ -3630,7 +3641,7 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
           <img src="img/logo.png" alt="Select Sabor" style="width:44px;height:44px;border-radius:50%;flex-shrink:0;background:#fff;box-shadow:0 0 0 2px rgba(255,255,255,0.18)">
           <div>
             <div class="logo-title">Controle de Caixa</div>
-            <div class="logo-sub">v6.5</div>
+            <div class="logo-sub">v6.8</div>
           </div>
         </div>
         <span id="status-dot" style="display:none;width:8px;height:8px;border-radius:50%;background:#4ADE80;flex-shrink:0;box-shadow:0 0 0 2px rgba(74,222,128,0.2)" title="Conectado"></span>
@@ -18230,7 +18241,7 @@ function _pedItens(p) {
       _cdpLista(it.sel).forEach(sl => { const g = gs.find(x => x.id === sl.g); const o = g && g.opcoes.find(x => x.id === sl.o); if (o) { extra += o.preco; if (_gMax(g) > 1 && g.rep) un++; } });
     }
     const preco = fixo ? it.p : _cmdRound((card ? (parseFloat(card.preco) || 0) : 0) * Math.max(1, un) + extra);
-    return { id: k, q: parseInt(it.q) || 0, n: it.n || (card && card.nome) || 'Item', preco, fixo, noCardapio: !!card };
+    return { id: k, q: parseInt(it.q) || 0, n: it.n || (card && card.nome) || 'Item', preco, fixo, noCardapio: !!card, temSel: !!(it.sel && _cdpLista(it.sel).length) };
   });
 }
 /* ---------- Taxa por distância (km) ---------- */
@@ -18561,6 +18572,16 @@ function renderPedidos() {
   }
 }
 
+/* Item com complementos vem salvo como "NOME (2× A, B, 3× C)": separa o nome e os complementos para exibir um por linha. */
+function _pedSepNome(i) {
+  const n = String(i.n || '');
+  if (i.temSel) {
+    const m = n.match(/^(.*) \((.*)\)$/);
+    if (m && m[2]) return { nome: m[1], extras: m[2].split(', ').map(x => x.trim()).filter(Boolean) };
+  }
+  return { nome: n, extras: [] };
+}
+
 function _pedCardHtml(p) {
   const st = PED_ST[p.status] || PED_ST.novo;
   const t = _pedTotais(p);
@@ -18581,8 +18602,12 @@ function _pedCardHtml(p) {
   acoes += btn('chat', '💬 Chat' + (nChat ? ' (' + nChat + ' nova' + (nChat > 1 ? 's' : '') + ')' : (totChat ? ' (' + totChat + ')' : '')), nChat ? 'btn-primary' : 'btn-secondary');
   acoes += btn('whats', '💬 WhatsApp') + btn('imprimir', '🖨 Imprimir');
   acoes += `<button class="btn btn-secondary btn-md" style="color:var(--red)" data-ped="${id}" onclick="pedAcao('excluir', this.dataset.ped)">🗑 Excluir</button>`;
-  const itens = t.itens.map(i =>
-    `<li><span>${i.q}× ${escapeHtml(i.n)}${(!i.noCardapio && !i.fixo) ? ' <em class="ped-warn">(fora do cardápio)</em>' : ''}</span><span>${fmt(i.preco * i.q)}</span></li>`).join('');
+  const itens = t.itens.map(i => {
+    const sp = _pedSepNome(i);
+    const aviso = (!i.noCardapio && !i.fixo) ? ' <em class="ped-warn">(fora do cardápio)</em>' : '';
+    const ext = sp.extras.length ? `<ul class="ped-ext">${sp.extras.map(x => `<li>${escapeHtml(x)}</li>`).join('')}</ul>` : '';
+    return `<li${sp.extras.length ? ' class="ped-it-comext"' : ''}><span class="ped-it-n"><strong>${i.q}× ${escapeHtml(sp.nome)}</strong>${aviso}${ext}</span>${sp.extras.length ? '' : `<span class="ped-it-p">${fmt(i.preco * i.q)}</span>`}</li>`;
+  }).join('');
   return `<div class="card ped-card" style="--ped-cor:${st.cor}">
     <div class="ped-head">
       <span class="ped-cod">#${escapeHtml(p.codigo || '')}</span><span class="ped-nome" style="font-weight:700;font-size:15px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.cliente && p.cliente.nome ? '· ' + escapeHtml(p.cliente.nome) : ''}</span>
