@@ -16,7 +16,7 @@
 // isso não é mais um problema para ele. Ainda assim, a cada atualização
 // grande, é boa prática mudar o número abaixo (ex.: v1 → v2) para
 // forçar a limpeza dos caches antigos no 'activate'.
-const CACHE_NAME = 'caixa-v22'; // painel Pedidos online com visões Quadros/Expedição/Monitor → limpa os caches antigos
+const CACHE_NAME = 'caixa-v23'; // promoção no cardápio (v6.11) → limpa os caches antigos
 
 // Recursos do shell que devem ser cacheados na instalação
 const SHELL_URLS = [

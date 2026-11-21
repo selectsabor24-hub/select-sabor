@@ -206,6 +206,13 @@ button { cursor: pointer; }
   #lista .card.vazio { grid-column: 1 / -1; }
 }
 .btn-atualizar { width: min(100%, 520px); margin-left: auto; margin-right: auto; }
+.hist-bar { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; background: #fff; border: 1px solid var(--borda); border-radius: 14px; padding: 10px 12px; margin-bottom: 10px; font-weight: 700; font-size: 14px; }
+.hist-bar select { flex: 1 1 120px; min-width: 0; padding: 10px 8px; border-radius: 10px; border: 1.5px solid var(--borda); background: #fff; font-size: 15px; font-weight: 600; color: var(--txt); }
+.hist-sum { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+.hist-sum > div { background: #fff; border: 1px solid var(--borda); border-radius: 14px; padding: 10px 14px; }
+.hist-sum small { display: block; color: var(--mut); font-size: 12px; font-weight: 600; }
+.hist-sum b { font-size: 22px; }
+.hist-tit { grid-column: 1 / -1; margin: 2px 2px 8px; font-size: 14px; font-weight: 700; color: var(--mut); }
 </style>
 </head>
 <body>
@@ -256,6 +263,7 @@ button { cursor: pointer; }
       <button data-t="sair">Para sair</button>
       <button data-t="rua">Na rua</button>
       <button data-t="hoje">Entregues</button>
+      <button data-t="hist">Histórico</button>
     </div>
     <div id="lista"></div>
     <button type="button" class="btn-atualizar" id="bt-atualizar">✓ Atualizar status</button>
@@ -306,6 +314,7 @@ button { cursor: pointer; }
   var eu = null;            // { uid, lojaId, nome, ativo }
   var cfg = null, cardapio = {}, pedidos = [];
   var tab = 'sair';
+  var histSel = null, hist = { mes: '', lista: [], carregando: false, erro: false };
   var escutas = [];         // referências com .on() para desligar ao sair
   var prontosVistos = null; // 1ª carga não dispara aviso
   var preparoVistos = null; // idem, para pedidos aceitos (em preparo)
@@ -494,6 +503,57 @@ button { cursor: pointer; }
     return round(soma);
   }
 
+  /* ---------- Histórico por mês ----------
+     Busca (uma vez) as entregas deste motoqueiro e filtra pelo mês escolhido. */
+  var MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+  function chaveMes(ts) { var d = new Date(ts); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); }
+  function dataBR(ts) { var d = new Date(ts); return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0'); }
+  function histBuscar() {
+    if (!eu || !histSel) return;
+    var m = histSel;
+    hist.carregando = true; hist.erro = false; render();
+    ref('pedidos/' + eu.lojaId).orderByChild('motoqueiro').equalTo(eu.nome).limitToLast(2000).once('value').then(function (s) {
+      if (histSel !== m) return;
+      var tudo = s.val() || {};
+      hist.lista = Object.keys(tudo).filter(function (k) { return ID_OK.test(k); })
+        .map(function (k) { return Object.assign({ id: k }, tudo[k]); })
+        .filter(function (p) { return p.tipo === 'entrega' && p.status === 'entregue' && p.motoqueiro === eu.nome && chaveMes(tsEntrega(p)) === m; })
+        .sort(function (a, b) { return tsEntrega(b) - tsEntrega(a); });
+      hist.mes = m; hist.carregando = false; render();
+    }).catch(function (e) {
+      if (histSel !== m) return;
+      console.warn('[historico]', e && e.message); hist.carregando = false; hist.erro = true; render();
+    });
+  }
+  function histRender() {
+    var el = $('#lista');
+    if (!el.firstChild || el.firstChild.id !== 'hist-bar') {
+      var agora = new Date(), anoAtual = agora.getFullYear();
+      var optM = MESES.map(function (n, k) { return '<option value="' + String(k + 1).padStart(2, '0') + '">' + n + '</option>'; }).join('');
+      var optA = ''; for (var a = anoAtual; a >= anoAtual - 3; a--) optA += '<option value="' + a + '">' + a + '</option>';
+      el.innerHTML = '<div class="hist-bar" id="hist-bar"><span>📅 Mês</span><select id="f-hmes" aria-label="Mês">' + optM + '</select><select id="f-hano" aria-label="Ano">' + optA + '</select></div>';
+      var trocar = function () { histSel = $('#f-hano').value + '-' + $('#f-hmes').value; histBuscar(); };
+      $('#f-hmes').addEventListener('change', trocar);
+      $('#f-hano').addEventListener('change', trocar);
+    }
+    var sm = $('#f-hmes'), sa = $('#f-hano'), p = (histSel || '').split('-');
+    if (p.length === 2) { sa.value = p[0]; sm.value = p[1]; }
+    while (el.children.length > 1) el.removeChild(el.lastChild);
+    var ocultar = lsGet('motGanhosOculto', '0') === '1', v = function (t) { return ocultar ? 'R$ ••••' : t; };
+    var nomeMes = p.length === 2 ? MESES[(+p[1]) - 1] + ' de ' + p[0] : '';
+    var h;
+    if (hist.carregando) h = '<div class="card vazio">Buscando o histórico…</div>';
+    else if (hist.erro) h = '<div class="card vazio">Não foi possível carregar o histórico.<br>Verifique a internet e toque em “Atualizar status”.</div>';
+    else if (hist.mes !== histSel) h = '';
+    else if (!hist.lista.length) h = '<div class="card vazio">Nenhuma entrega em ' + esc(nomeMes) + '.</div>';
+    else {
+      var soma = 0; hist.lista.forEach(function (x) { soma += totais(x).taxa; });
+      h = '<div class="hist-sum"><div><small>Entregas em ' + esc(nomeMes) + '</small><b>' + hist.lista.length + '</b></div><div><small>Ganhos (taxas)</small><b>' + v(brl(round(soma))) + '</b></div></div>' +
+        '<div class="hist-tit">Mais recentes primeiro</div>' + hist.lista.map(cartao).join('');
+    }
+    el.insertAdjacentHTML('beforeend', h);
+  }
+
   /* ---------- Render ---------- */
   function render() {
     if (!eu) return;
@@ -532,7 +592,7 @@ button { cursor: pointer; }
     if (bp) bp.textContent = 'Em preparo' + (L.preparo.length ? ' (' + L.preparo.length + ')' : '');
     var arr = L[tab] || [];
     var html = (arr.length ? arr.map(cartao).join('') : '<div class="card vazio">' + vazio + '</div>');
-    $('#lista').innerHTML = html;
+    if (tab === 'hist') histRender(); else $('#lista').innerHTML = html;
     $('#rodape').textContent = 'Atualizado às ' + hora(Date.now());
     chamadaAtualizar();
   }
@@ -558,7 +618,7 @@ button { cursor: pointer; }
     }
     if (p.status === 'preparo') cobrar = '<div class="prep">🍳 Em preparo — vá para a loja' + (p.previsao ? ' · previsão ' + esc(p.previsao) : '') + '<small>Você será avisado quando o pedido ficar pronto.</small></div>' + cobrar;
     if (p.comCodigo && p.status === 'saiu') cobrar += '<div class="cobrar" style="background:#EDE9FE;color:#4C1D95">🔐 Peça o código de 4 números ao cliente<small>Sem ele não dá para confirmar a entrega</small></div>';
-    var quando = fin ? '✓ Entregue às ' + hora(tsEntrega(p))
+    var quando = fin ? '✓ Entregue ' + (hoje(tsEntrega(p)) ? '' : 'em ' + dataBR(tsEntrega(p)) + ' ') + 'às ' + hora(tsEntrega(p))
       : (p.status === 'saiu' && p.hist && p.hist.saiu ? 'Saiu às ' + hora(p.hist.saiu) : hora(p.ts) + ' · ' + ha(p.ts));
 
     var acoes = '';
@@ -577,8 +637,8 @@ button { cursor: pointer; }
   }
 
   /* ---------- Ações ---------- */
-  $('#bt-atualizar').addEventListener('click', function () { render(); toast('Lista atualizada ✅'); });
-  $('#tabs').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (b && b.dataset.t) { tab = b.dataset.t; render(); } });
+  $('#bt-atualizar').addEventListener('click', function () { if (tab === 'hist' && histSel) histBuscar(); else render(); toast('Lista atualizada ✅'); });
+  $('#tabs').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (b && b.dataset.t) { tab = b.dataset.t; if (tab === 'hist' && !histSel) { histSel = chaveMes(Date.now()); histBuscar(); } else render(); } });
   $('#lista').addEventListener('click', function (ev) {
     var b = ev.target.closest('button[data-a]'); if (!b) return;
     var id = b.dataset.id; if (!ID_OK.test(String(id))) return;
