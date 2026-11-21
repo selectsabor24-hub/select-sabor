@@ -49,6 +49,10 @@
   ║         ativo marrom/âmbar; igual nos temas claro e escuro.         ║
   ║         Perfil "Atendimento" não vê o resumo do dia (Vendas/        ║
   ║         Despesas/Lucro) nem a busca de lançamentos.                 ║
+  ║         Correção: trocar Admin ↔ Atendimento no mesmo aparelho      ║
+  ║         travava (estado do perfil anterior); agora o logout         ║
+  ║         recarrega a página e limpa tudo (cache do app incluso;      ║
+  ║         localStorage com pendências/backups é preservado).          ║
   ║  v5.8 — Perfil de acesso "Atendimento" por usuário (Configurações): ║
   ║         só vê Pedidos online, Motoqueiro, Comandas/Mesas e Cardápio.║
   ║         Regras do Firebase também bloqueiam as demais áreas.        ║
@@ -20606,6 +20610,7 @@ setInterval(() => {
         }
 
         // Logado: mostrar app
+        window._sessaoAutorizada = true; // v5.9: marca que houve sessão (ver reload no logout)
         document.getElementById('login-screen').style.display    = 'none';
         document.getElementById('app-shell').style.display       = 'grid';
         document.getElementById('firebase-setup').style.display  = 'none';
@@ -20641,6 +20646,14 @@ setInterval(() => {
       });
 
     } else {
+      // v5.9: ao sair de uma sessão, recarrega a página para zerar TUDO (menu escondido pelo perfil
+      // Atendimento, dados em memória e listeners do usuário anterior). Sem isso, trocar de
+      // Atendimento ↔ Admin no mesmo aparelho deixava a tela com o menu/dados do perfil anterior.
+      if (window._sessaoAutorizada) {
+        window._sessaoAutorizada = false;
+        _limparCacheApp().then(() => location.reload());
+        return;
+      }
       // Não logado: mostrar tela de login
       document.getElementById('app-shell').style.display      = 'none';
       document.getElementById('status-bar').style.display     = 'none';
@@ -21183,6 +21196,23 @@ function cadastrar() {
     erroEl.style.display = 'block';
   }
   return false;
+}
+
+/** v5.9 — Força a limpeza do cache do app (arquivos do service worker + sessionStorage).
+ *  NÃO mexe no localStorage: ele guarda lançamentos pendentes, backups locais e configurações.
+ *  Nunca trava: tem limite de 1,5 s e ignora erros. */
+function _limparCacheApp() {
+  const limpar = (async () => {
+    try { if (window.caches) { const ks = await caches.keys(); await Promise.all(ks.map(k => caches.delete(k))); } } catch (e) {}
+    try { sessionStorage.clear(); } catch (e) {}
+    try {
+      if (navigator.serviceWorker) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map(r => r.update().catch(() => {})));
+      }
+    } catch (e) {}
+  })();
+  return Promise.race([limpar, new Promise(res => setTimeout(res, 1500))]);
 }
 
 function sair() {
