@@ -16,7 +16,7 @@
 // isso não é mais um problema para ele. Ainda assim, a cada atualização
 // grande, é boa prática mudar o número abaixo (ex.: v1 → v2) para
 // forçar a limpeza dos caches antigos no 'activate'.
-const CACHE_NAME = 'caixa-v6'; // v5.9: nova versão do app → limpa os caches antigos
+const CACHE_NAME = 'caixa-v7'; // v6.0: complementos do cardápio → limpa os caches antigos
 
 // Recursos do shell que devem ser cacheados na instalação
 const SHELL_URLS = [

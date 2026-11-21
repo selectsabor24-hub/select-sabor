@@ -292,7 +292,28 @@
             "itens": {
               ".validate": "newData.hasChildren()",
               "$itemId": {
-                ".validate": "newData.hasChildren(['q','n']) && (data.exists() || root.child('caixa/cardapio').child($lojaId).child($itemId).exists())",
+                ".validate": "$itemId.matches(/^[-A-Za-z0-9_~:,]{1,300}$/) && newData.hasChildren(['q','n']) && (data.exists() || root.child('caixa/cardapio').child($lojaId).child(newData.child('ref').exists() ? newData.child('ref').val() : $itemId).exists())",
+                "ref": {
+                  ".validate": "newData.isString() && newData.val().matches(/^[-A-Za-z0-9_]{1,60}$/)"
+                },
+                "sel": {
+                  ".validate": "newData.hasChildren()",
+                  "$i": {
+                    ".validate": "$i.matches(/^[0-9]{1,2}$/) && newData.hasChildren(['g','o','n'])",
+                    "g": {
+                      ".validate": "newData.isString() && newData.val().matches(/^[-A-Za-z0-9_]{1,40}$/)"
+                    },
+                    "o": {
+                      ".validate": "newData.isString() && newData.val().matches(/^[-A-Za-z0-9_]{1,40}$/)"
+                    },
+                    "n": {
+                      ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 80"
+                    },
+                    "$outro": {
+                      ".validate": "false"
+                    }
+                  }
+                },
                 "q": {
                   ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 99"
                 },
