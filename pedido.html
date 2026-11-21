@@ -701,6 +701,11 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
   function precoDe(key) { var f = linhaInfo(key); return f.item ? round2((Number(f.item.preco) || 0) * unidadesCobradas(f.extras.filter(function (e) { return e.q; }).length) + f.extras.reduce(function (s, e) { return s + e.preco; }, 0)) : 0; }
   function qtdItem(id) { return Object.keys(cart).reduce(function (s, k) { return s + (baseId(k) === id ? cart[k] : 0); }, 0); }
   /* "2× Coca-Cola, Fanta Laranja" (agrupa opções repetidas) */
+  function resumoExtrasLinhas(ex) {
+    var ord = [], cont = {};
+    ex.forEach(function (e) { if (!cont[e.o]) { cont[e.o] = 0; ord.push(e); } cont[e.o]++; });
+    return ord.map(function (e) { return (cont[e.o] > 1 ? cont[e.o] + '× ' : '') + e.on; });
+  }
   function resumoExtras(ex) {
     var ord = [], cont = {};
     ex.forEach(function (e) { if (!cont[e.o]) { cont[e.o] = 0; ord.push(e); } cont[e.o]++; });
@@ -1140,8 +1145,12 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     var ids = Object.keys(cart);
     $('#ck-itens').innerHTML = ids.length ? ids.map(function (id) {
       var f = linhaInfo(id), i = f.item || {};
-      return '<div class="linha"><div class="n"><strong>' + esc(i.nome || 'Item') + '</strong>' + (f.extras.length ? '<small class="ex">' + esc(resumoExtras(f.extras)) + '</small>' : '') + '<small style="color:var(--mut)">' + brl(precoDe(id)) + ' cada</small></div>' +
-        '<div class="stepper"><button type="button" data-m="-1" data-id="' + esc(id) + '" aria-label="Diminuir">−</button><span>' + cart[id] + '</span><button type="button" data-m="1" data-id="' + esc(id) + '" aria-label="Aumentar">+</button></div></div>';
+      // Linha cuja quantidade já foi escolhida nos complementos (ex.: 2× Coca + 3× Fanta): sem o − 1 +, só "Remover"
+      var semQtd = cart[id] === 1 && f.extras.some(function (e) { return e.q; });
+      return '<div class="linha"><div class="n"><strong>' + esc(i.nome || 'Item') + '</strong>' + (f.extras.length ? '<small class="ex">' + resumoExtrasLinhas(f.extras).map(esc).join('<br>') + '</small>' : '') + '<small style="color:var(--mut)">' + brl(precoDe(id)) + (semQtd ? '' : ' cada') + '</small></div>' +
+        (semQtd
+          ? '<button type="button" data-m="-1" data-id="' + esc(id) + '" aria-label="Remover" style="background:none;border:0;color:var(--mut);font:inherit;font-size:13px;font-weight:700;text-decoration:underline;padding:8px">Remover</button></div>'
+          : '<div class="stepper"><button type="button" data-m="-1" data-id="' + esc(id) + '" aria-label="Diminuir">−</button><span>' + cart[id] + '</span><button type="button" data-m="1" data-id="' + esc(id) + '" aria-label="Aumentar">+</button></div></div>');
     }).join('') : '<div class="vazio" style="padding:14px">Sua sacola está vazia.</div>';
     // modo
     var op = [];
