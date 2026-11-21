@@ -526,7 +526,6 @@ button { cursor: pointer; }
       '<div class="end">📍 ' + esc(endTxt) + (extra ? '<small>' + esc(extra) + '</small>' : '') + '</div>' +
       '<div class="cli"><strong>' + esc(cli.nome || '') + '</strong>' + (cli.telefone ? ' · ' + esc(cli.telefone) : '') + '</div>' +
       links + cobrar +
-      '<div class="itens">' + t.its.map(function (i) { return i.q + '× ' + esc(i.n); }).join(' · ') + '</div>' +
       (p.obs ? '<div class="obs">📝 ' + esc(p.obs) + '</div>' : '') +
       (acoes ? '<div class="acoes">' + acoes + '</div>' : '') + '</div>';
   }
