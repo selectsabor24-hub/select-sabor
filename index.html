@@ -45,6 +45,8 @@
   ║         · Melhoria: renderContas usa cache; seção 3.22 documentada   ║
   ║  v3.3 — Seções novas: Planilhas já lançadas (3.23), calendário       ║
   ║         visual de lançamentos com marcação de cartão                 ║
+  ║  v6.1 — Complementos: foto em cada opção (cadastro, pedido online e ║
+  ║         escolha na comanda)                                         ║
   ║  v6.0 — Cardápio: COMPLEMENTOS por item (ex.: Sabor do Refrigerante)║
   ║         grupos obrigatórios/opcionais, máx. de escolhas, opções com ║
   ║         valor extra e pausa. Cliente escolhe no pedido online; na   ║
@@ -3243,7 +3245,12 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
 .cdp-g-head label { display:flex; align-items:center; gap:6px; font-size:12px; font-weight:700; color:var(--text2); white-space:nowrap; }
 .cdp-g-head label input[type=number] { width:64px; }
 .cdp-o { display:flex; gap:8px; align-items:center; padding:5px 0; border-top:1px solid var(--border); }
-.cdp-o > input:first-child { flex:1 1 180px; min-width:0; }
+.cdp-o > input.cdp-o-nome { flex:1 1 180px; min-width:0; }
+.cdp-ofoto-w { display:flex; flex-direction:column; align-items:center; gap:2px; flex:0 0 auto; width:48px; }
+.cdp-ofoto { width:44px; height:44px; border:1.5px dashed var(--border2); border-radius:8px; background:var(--surface); cursor:pointer; padding:0; overflow:hidden; font-size:18px; line-height:1; }
+.cdp-ofoto img { width:100%; height:100%; object-fit:cover; display:block; }
+.cdp-ofoto-x { border:0; background:transparent; color:var(--red-mid); font-size:10px; font-weight:700; cursor:pointer; padding:0; font-family:'DM Sans',sans-serif; }
+.opc-adm-o .of { width:44px; height:44px; border-radius:8px; object-fit:cover; flex-shrink:0; }
 .cdp-o .cdp-preco { width:100px; flex:0 0 auto; }
 .cdp-o .cdp-status { width:auto; flex:0 0 auto; }
 .cdp-o .cdp-o-mais { font-size:12px; color:var(--text3); white-space:nowrap; }
@@ -19891,7 +19898,7 @@ function _cdpNovoId(pref) { return pref + Math.random().toString(36).slice(2, 7)
 function _cdpGrupos(i) {
   return _cdpLista(i && i.grupos).filter(g => g && g.id).map(g => ({
     id: String(g.id), nome: String(g.nome || ''), obrig: g.obrig === true, max: Math.max(1, parseInt(g.max) || 1),
-    opcoes: _cdpLista(g.opcoes).filter(o => o && o.id).map(o => ({ id: String(o.id), nome: String(o.nome || ''), preco: parseFloat(o.preco) || 0, ativo: o.ativo !== false }))
+    opcoes: _cdpLista(g.opcoes).filter(o => o && o.id).map(o => ({ id: String(o.id), nome: String(o.nome || ''), preco: parseFloat(o.preco) || 0, ativo: o.ativo !== false, fotoV: Number(o.fotoV) || null }))
   }));
 }
 function _cdpGrupoEdit(id, fn, rerender) {
@@ -19920,7 +19927,7 @@ function cdpGrupoCampo(id, gid, campo, v) {
 function cdpGrupoDel(id, gid) {
   const it = _cmdCardapio().find(i => i.id === id); const g = it && _cdpGrupos(it).find(x => x.id === gid); if (!g) return;
   showModal('Remover grupo', `Remover o grupo <strong>${escapeHtml(g.nome)}</strong> e suas ${g.opcoes.length} opção(ões)? Pedidos já feitos não são alterados.`, [
-    { label: 'Remover', style: 'danger', action: () => _cdpGrupoEdit(id, gs => { const ix = gs.findIndex(x => x.id === gid); if (ix >= 0) gs.splice(ix, 1); }, true) },
+    { label: 'Remover', style: 'danger', action: () => _cdpGrupoEdit(id, gs => { const ix = gs.findIndex(x => x.id === gid); if (ix >= 0) { _cdpFotoOpcLimpar(id, gs[ix].opcoes.map(o => o.id)); gs.splice(ix, 1); } }, true) },
     { label: 'Cancelar', style: 'secondary' }]);
 }
 function cdpOpcaoAdd(id, gid) {
@@ -19951,7 +19958,45 @@ function cdpOpcaoAtivo(id, gid, oid) {
   _cdpGrupoEdit(id, gs => { const g = gs.find(x => x.id === gid), o = g && g.opcoes.find(x => x.id === oid); if (!o) return false; o.ativo = !o.ativo; }, true);
 }
 function cdpOpcaoDel(id, gid, oid) {
-  _cdpGrupoEdit(id, gs => { const g = gs.find(x => x.id === gid); if (!g) return false; const ix = g.opcoes.findIndex(x => x.id === oid); if (ix < 0) return false; g.opcoes.splice(ix, 1); }, true);
+  _cdpGrupoEdit(id, gs => { const g = gs.find(x => x.id === gid); if (!g) return false; const ix = g.opcoes.findIndex(x => x.id === oid); if (ix < 0) return false; g.opcoes.splice(ix, 1); _cdpFotoOpcLimpar(id, [oid]); }, true);
+}
+/* Foto de cada opção do complemento: guardada em cardapioFotos/<loja>/<item>_<opção> (miniatura leve, ~200 px). */
+function _cdpOFotoHtml(iid, gid, o) {
+  const f = _cdpFotos[iid + '_' + o.id];
+  if (f && String(f).indexOf('data:image/') === 0)
+    return `<span class="cdp-ofoto-w"><button type="button" class="cdp-ofoto" title="Trocar foto" onclick="cdpOpcFotoEscolher('${iid}','${gid}','${o.id}')"><img src="${f}" alt=""></button><button type="button" class="cdp-ofoto-x" onclick="cdpOpcFotoRemover('${iid}','${gid}','${o.id}')">remover</button></span>`;
+  return `<span class="cdp-ofoto-w"><button type="button" class="cdp-ofoto" title="Adicionar foto" onclick="cdpOpcFotoEscolher('${iid}','${gid}','${o.id}')">📷</button></span>`;
+}
+function _cdpFotoOpcLimpar(iid, oids) {
+  (oids || []).forEach(oid => { delete _cdpFotos[iid + '_' + oid]; _dbRef('cardapioFotos/' + _lojaAtiva + '/' + iid + '_' + oid).remove().catch(() => {}); });
+}
+function cdpOpcFotoEscolher(iid, gid, oid) {
+  let inp = document.getElementById('cdp-foto-input-o');
+  if (!inp) { inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*'; inp.id = 'cdp-foto-input-o'; inp.style.display = 'none'; document.body.appendChild(inp); }
+  inp.value = '';
+  inp.onchange = () => { const f = inp.files && inp.files[0]; if (f) _cdpOpcFotoSalvar(iid, gid, oid, f); };
+  inp.click();
+}
+function _cdpOpcFotoSalvar(iid, gid, oid, file) {
+  if (_cmdSemLoja()) return;
+  const loja = _lojaAtiva, chave = iid + '_' + oid;
+  showToast('Enviando foto…');
+  _cdpFotoRedimensionar(file, 220, 22000).then(d =>
+    _dbRef('cardapioFotos/' + loja + '/' + chave).set(d).then(() => {
+      if (_cdpFotosLoja === loja) _cdpFotos[chave] = d;
+      _cdpGrupoEdit(iid, gs => { const g = gs.find(x => x.id === gid), o = g && g.opcoes.find(x => x.id === oid); if (!o) return false; o.fotoV = Date.now(); }, true);
+      showToast('Foto salva ✔');
+    })
+  ).catch(e => {
+    console.error(e);
+    showToast(e && e.message === 'grande' ? 'Foto muito detalhada. Tente outra.' :
+      (e && /permission/i.test(e.message || e.code || '') ? 'Sem permissão. Publique as regras atualizadas do Firebase.' : 'Não foi possível enviar a foto'), false);
+  });
+}
+function cdpOpcFotoRemover(iid, gid, oid) {
+  _cdpFotoOpcLimpar(iid, [oid]);
+  _cdpGrupoEdit(iid, gs => { const g = gs.find(x => x.id === gid), o = g && g.opcoes.find(x => x.id === oid); if (!o) return false; o.fotoV = null; }, true);
+  showToast('Foto removida');
 }
 function _cdpOpcHtml(i) {
   const gs = _cdpGrupos(i), aberto = !!_cdpAbertos[i.id];
@@ -19967,14 +20012,14 @@ function _cdpOpcHtml(i) {
       <button type="button" class="cmd-x" title="Remover grupo" onclick="cdpGrupoDel('${i.id}','${g.id}')">×</button></div>`;
     g.opcoes.forEach(o => {
       h += `<div class="cdp-o${o.ativo ? '' : ' off'}">
-        <input class="cdp-in" type="text" maxlength="60" value="${escapeAttr(o.nome)}" onchange="cdpOpcaoCampo('${i.id}','${g.id}','${o.id}','nome',this.value)">
+        ${_cdpOFotoHtml(i.id, g.id, o)}<input class="cdp-in cdp-o-nome" type="text" maxlength="60" value="${escapeAttr(o.nome)}" onchange="cdpOpcaoCampo('${i.id}','${g.id}','${o.id}','nome',this.value)">
         <span class="cdp-o-mais">+ R$</span>
         <input class="cdp-in cdp-preco" type="number" step="0.01" min="0" value="${o.preco.toFixed(2)}" onchange="cdpOpcaoCampo('${i.id}','${g.id}','${o.id}','preco',this.value)">
         <button type="button" class="cdp-status${o.ativo ? '' : ' off'}" onclick="cdpOpcaoAtivo('${i.id}','${g.id}','${o.id}')">${o.ativo ? 'Disponível' : 'Indisponível'}</button>
         <button type="button" class="cmd-x" title="Remover opção" onclick="cdpOpcaoDel('${i.id}','${g.id}','${o.id}')">×</button></div>`;
     });
     h += `<div class="cdp-o novo">
-        <input id="cdp-on-${g.id}" class="cdp-in" type="text" maxlength="60" placeholder="Nova opção (ex.: Coca-Cola)" onkeydown="if(event.key==='Enter')cdpOpcaoAdd('${i.id}','${g.id}')">
+        <input id="cdp-on-${g.id}" class="cdp-in cdp-o-nome" type="text" maxlength="60" placeholder="Nova opção (ex.: Coca-Cola)" onkeydown="if(event.key==='Enter')cdpOpcaoAdd('${i.id}','${g.id}')">
         <span class="cdp-o-mais">+ R$</span>
         <input id="cdp-op-${g.id}" class="cdp-in cdp-preco" type="number" step="0.01" min="0" placeholder="0,00" onkeydown="if(event.key==='Enter')cdpOpcaoAdd('${i.id}','${g.id}')">
         <button type="button" class="btn btn-secondary" onclick="cdpOpcaoAdd('${i.id}','${g.id}')">+ Opção</button></div></div>`;
@@ -19998,7 +20043,8 @@ function _opcAdmDesenhar(erroId) {
     const sel = _opcAdm.sel[g.id] || [], quad = g.max > 1;
     h += `<div class="opc-adm-g${erroId === g.id ? ' erro' : ''}" id="opc-adm-g-${g.id}"><div class="opc-adm-gt">${escapeHtml(g.nome)}<small>${g.obrig ? 'Obrigatório' : 'Opcional'} · ${quad ? 'até ' + g.max + ' (' + sel.length + '/' + g.max + ')' : (g.obrig ? 'escolha 1' : 'até 1')}</small></div>`;
     g.opcoes.forEach(o => {
-      h += `<button type="button" class="opc-adm-o${quad ? ' quad' : ''}${sel.includes(o.id) ? ' on' : ''}" ${o.ativo ? '' : 'disabled'} onclick="_opcAdmClique('${g.id}','${o.id}')"><span class="ck">✓</span><span class="nm">${escapeHtml(o.nome)}</span><span class="pr">${o.ativo ? (o.preco > 0 ? '+ ' + fmt(o.preco) : '') : 'Indisponível'}</span></button>`;
+      const ft = _cdpFotos[_opcAdm.it.id + '_' + o.id];
+      h += `<button type="button" class="opc-adm-o${quad ? ' quad' : ''}${sel.includes(o.id) ? ' on' : ''}" ${o.ativo ? '' : 'disabled'} onclick="_opcAdmClique('${g.id}','${o.id}')"><span class="ck">✓</span><span class="nm">${escapeHtml(o.nome)}</span><span class="pr">${o.ativo ? (o.preco > 0 ? '+ ' + fmt(o.preco) : '') : 'Indisponível'}</span>${ft && String(ft).indexOf('data:image/') === 0 ? `<img class="of" src="${ft}" alt="">` : ''}</button>`;
     });
     h += `</div>`;
   });
@@ -20008,6 +20054,7 @@ function _opcAdmDesenhar(erroId) {
 }
 function _opcAdmAbrir(it, gs, aoConfirmar) {
   _opcAdm = { it, gs, sel: {}, ok: aoConfirmar };
+  _cdpFotosCarregar();
   let box = document.getElementById('opc-adm');
   if (!box) { box = document.createElement('div'); box.id = 'opc-adm'; box.className = 'opc-adm-fundo'; box.onclick = e => { if (e.target === box) _opcAdmFechar(); }; document.body.appendChild(box); }
   box.style.display = 'flex';
@@ -20269,7 +20316,7 @@ function cmdCardapioDel(id) {
   showModal('Remover do cardápio', `Remover <strong>${escapeHtml(it ? it.nome : 'item')}</strong> do cardápio? Comandas já lançadas não são alteradas.`, [
     { label: 'Remover', style: 'danger', action: () => {
         _dbRef('cardapio/' + _lojaAtiva + '/' + id).remove()
-          .then(() => { delete _cdpFotos[id]; return _dbRef('cardapioFotos/' + _lojaAtiva + '/' + id).remove().catch(() => {}); })
+          .then(() => { _cdpFotoOpcLimpar(id, it ? _cdpGrupos(it).reduce((a, g) => a.concat(g.opcoes.map(o => o.id)), []) : []); delete _cdpFotos[id]; return _dbRef('cardapioFotos/' + _lojaAtiva + '/' + id).remove().catch(() => {}); })
           .catch(e => { console.error(e); showToast('Erro ao remover', false); });
     }},
     { label: 'Cancelar', style: 'secondary' }
@@ -20286,7 +20333,7 @@ function _cdpFotosCarregar() {
   const loja = _lojaAtiva; _cdpFotosLoja = loja; _cdpFotos = {};
   _dbRef('cardapioFotos/' + loja).once('value').then(s => {
     if (_lojaAtiva !== loja) return;
-    _cdpFotos = s.val() || {}; _cdpRenderLista();
+    _cdpFotos = s.val() || {}; _cdpRenderLista(); if (_opcAdm) _opcAdmDesenhar();
   }).catch(e => { console.warn('[fotos] sem acesso (publique as regras novas do Firebase):', e && e.message); });
 }
 function _cdpFotoBtn(i) {
@@ -20296,7 +20343,8 @@ function _cdpFotoBtn(i) {
   }
   return `<button type="button" class="cdp-foto-btn" title="Adicionar foto" onclick="cdpFotoEscolher('${i.id}')"><span style="font-size:20px">📷</span>Foto</button>`;
 }
-function _cdpFotoRedimensionar(file) {
+function _cdpFotoRedimensionar(file, maxLado, limite) {
+  maxLado = maxLado || 520; limite = limite || 60000;
   return new Promise((resolve, reject) => {
     if (!file || !/^image\//.test(file.type || '')) { reject(new Error('tipo')); return; }
     const url = URL.createObjectURL(file), img = new Image();
@@ -20304,7 +20352,7 @@ function _cdpFotoRedimensionar(file) {
       try {
         // Mantém a proporção original (não corta): o maior lado fica com no máx. 520 px.
         // As miniaturas da lista e do cardápio se ajustam sozinhas (object-fit); o destaque mostra a foto inteira.
-        const M = 520, w = img.naturalWidth, h = img.naturalHeight, esc = Math.min(1, M / Math.max(w, h));
+        const M = maxLado, w = img.naturalWidth, h = img.naturalHeight, esc = Math.min(1, M / Math.max(w, h));
         const cw = Math.max(1, Math.round(w * esc)), ch = Math.max(1, Math.round(h * esc));
         const c = document.createElement('canvas'); c.width = cw; c.height = ch;
         const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, cw, ch);
@@ -20312,8 +20360,8 @@ function _cdpFotoRedimensionar(file) {
         URL.revokeObjectURL(url);
         let tipo = 'image/webp', q = 0.78, d = c.toDataURL(tipo, q);
         if (d.indexOf('data:image/webp') !== 0) { tipo = 'image/jpeg'; d = c.toDataURL(tipo, q); }
-        while (d.length > 60000 && q > 0.4) { q -= 0.1; d = c.toDataURL(tipo, q); }
-        if (d.length > 65000) { reject(new Error('grande')); return; }
+        while (d.length > limite && q > 0.4) { q -= 0.1; d = c.toDataURL(tipo, q); }
+        if (d.length > limite + 5000) { reject(new Error('grande')); return; }
         resolve(d);
       } catch (e) { reject(e); }
     };
