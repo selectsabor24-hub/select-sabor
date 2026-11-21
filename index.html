@@ -18519,7 +18519,7 @@ function renderPedidos() {
   const and   = todos.filter(p => ['preparo', 'pronto', 'saiu'].indexOf(p.status) >= 0);
   const fim   = todos.filter(p => (p.status === 'entregue' || p.status === 'cancelado') && _pedEhHoje(p.ts));
   const entregues = fim.filter(p => p.status === 'entregue');
-  const vendido = entregues.reduce((s, p) => s + _pedTotais(p).total, 0);
+  const vendido = entregues.reduce((s, p) => s + _pedTotais(p).sub, 0); // só os itens: a taxa de entrega não entra em "Vendido online hoje"
   met.innerHTML = `
     <div class="metric-card"><div class="metric-label">Novos</div><div class="metric-value">${novos.length}</div></div>
     <div class="metric-card"><div class="metric-label">Em andamento</div><div class="metric-value">${and.length}</div></div>
