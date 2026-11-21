@@ -456,7 +456,7 @@ button { cursor: pointer; }
   function totais(p) {
     var its = Object.keys(p.itens || {}).map(function (k) {
       var it = p.itens[k] || {}, c = cardapio[k];
-      var preco = typeof it.p === 'number' ? it.p : (c ? (parseFloat(c.preco) || 0) : 0);
+      var preco = typeof it.p === 'number' ? it.p : (c ? ((parseFloat(c.promo) > 0 && parseFloat(c.promo) < parseFloat(c.preco)) ? parseFloat(c.promo) : (parseFloat(c.preco) || 0)) : 0);
       return { q: parseInt(it.q) || 0, n: it.n || (c && c.nome) || 'Item', preco: preco };
     });
     var sub = round(its.reduce(function (s, i) { return s + i.preco * i.q; }, 0));

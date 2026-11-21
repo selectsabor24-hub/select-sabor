@@ -341,6 +341,11 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
 .opc-st button { width: 34px; height: 34px; border: 1px solid var(--borda); border-radius: 50%; background: #fff; font-size: 19px; line-height: 1; padding: 0; }
 .opc-st button[disabled] { opacity: .35; }
 .opc-st span { min-width: 22px; text-align: center; font-weight: 800; }
+/* ===== Promoção (preço riscado + preço novo + selo) ===== */
+.item .preco .de, .dest-preco .de { color: #8a8478; font-weight: 600; font-size: .78em; text-decoration: line-through; margin-right: 6px; }
+.item .preco .por, .dest-preco .por { color: #1f8a3b; font-weight: 800; }
+.promo-tag { display: inline-block; margin-left: 8px; background: #e8f5ea; color: #1f7a35; border: 1px solid #b9dfc0; border-radius: 999px; padding: 1px 8px; font-size: 11px; font-weight: 800; letter-spacing: .2px; white-space: nowrap; }
+.item .preco { flex-wrap: wrap; row-gap: 2px; }
 </style>
 </head>
 <body>
@@ -562,6 +567,14 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
   var brl = function (v) { return (Number(v) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); };
   var round2 = function (v) { return Math.round((Number(v) + Number.EPSILON) * 100) / 100; };
+  /* Promoção: o item tem "promo" (preço promocional) menor que o "preco" normal */
+  var emPromo = function (i) { var pr = Number(i && i.promo), b = Number(i && i.preco); return pr > 0 && b > 0 && pr < b; };
+  var precoVenda = function (i) { return emPromo(i) ? Number(i.promo) : (Number(i && i.preco) || 0); };
+  var precoHtml = function (i) {
+    return emPromo(i)
+      ? '<span class="de">' + brl(i.preco) + '</span><span class="por">' + brl(i.promo) + '</span><span class="promo-tag">Promoção</span>'
+      : brl(i && i.preco);
+  };
   var lsGet = function (k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
   var lsSet = function (k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
   var hora = function (ts) { if (!ts) return ''; var d = new Date(ts); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
@@ -700,7 +713,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
   }
   /* Grupos com quantidade (máx. > 1 e "pode repetir"): cada escolha conta como uma unidade e cobra o valor do item. */
   function unidadesCobradas(qtdEscolhas) { return Math.max(1, qtdEscolhas); }
-  function precoDe(key) { var f = linhaInfo(key); return f.item ? round2((Number(f.item.preco) || 0) * unidadesCobradas(f.extras.filter(function (e) { return e.q; }).length) + f.extras.reduce(function (s, e) { return s + e.preco; }, 0)) : 0; }
+  function precoDe(key) { var f = linhaInfo(key); return f.item ? round2(precoVenda(f.item) * unidadesCobradas(f.extras.filter(function (e) { return e.q; }).length) + f.extras.reduce(function (s, e) { return s + e.preco; }, 0)) : 0; }
   function qtdItem(id) { return Object.keys(cart).reduce(function (s, k) { return s + (baseId(k) === id ? cart[k] : 0); }, 0); }
   /* "2× Coca-Cola, Fanta Laranja" (agrupa opções repetidas) */
   /* Lista das opções da linha, uma por linha; nas de quantidade (q) tem ✕ para remover só aquela opção */
@@ -925,12 +938,12 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
   function opcTotal() {
     var ex = 0, un = 0;
     opc.gs.forEach(function (g) { (opc.sel[g.id] || []).forEach(function (oid) { var o = g.opcoes.find(function (x) { return x.id === oid; }); if (o) { ex += Number(o.preco) || 0; if (g.max > 1 && g.rep) un++; } }); });
-    return round2(((Number(opc.it.preco) || 0) * unidadesCobradas(un) + ex) * opc.q);
+    return round2((precoVenda(opc.it) * unidadesCobradas(un) + ex) * opc.q);
   }
   function opcDesenhar(erroId) {
     var box = $('#opc'); if (!box) return;
     var corpo = box.querySelector('.opc-corpo'), topo = corpo ? corpo.scrollTop : 0;
-    var h = '<div class="opc-box"><div class="opc-head"><div class="t"><b>' + esc(opc.it.nome) + '</b><small>' + brl(opc.it.preco) + (opc.it.desc ? ' · ' + esc(opc.it.desc) : '') + '</small></div><button type="button" class="opc-x" data-opc="x" aria-label="Fechar">×</button></div><div class="opc-corpo">';
+    var h = '<div class="opc-box"><div class="opc-head"><div class="t"><b>' + esc(opc.it.nome) + '</b><small>' + (emPromo(opc.it) ? '<s style="opacity:.6">' + brl(opc.it.preco) + '</s> ' : '') + brl(precoVenda(opc.it)) + (opc.it.desc ? ' · ' + esc(opc.it.desc) : '') + '</small></div><button type="button" class="opc-x" data-opc="x" aria-label="Fechar">×</button></div><div class="opc-corpo">';
     opc.gs.forEach(function (g) {
       var sel = opc.sel[g.id] || [], quad = g.max > 1, rp = quad && g.rep;
       h += '<div class="opc-g' + (erroId === g.id ? ' erro' : '') + '" id="opc-g-' + esc(g.id) + '"><div class="opc-gt">' + esc(g.nome) + (g.obrig ? '<span class="opc-tag ob">Obrigatório</span>' : '<span class="opc-tag">Opcional</span>') +
@@ -1071,7 +1084,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     if (dest) {
       var q = qtdItem(dest.id), id = esc(dest.id);
       var lin = document.createElement('div'); lin.className = 'dest-linha';
-      lin.innerHTML = '<div class="dest-info"><div class="dest-nome">' + esc(dest.nome) + '</div>' + (dest.desc ? '<div class="dest-desc">' + esc(dest.desc) + '</div>' : '') + '<div class="dest-preco">' + brl(dest.preco) + '</div></div>' +
+      lin.innerHTML = '<div class="dest-info"><div class="dest-nome">' + esc(dest.nome) + '</div>' + (dest.desc ? '<div class="dest-desc">' + esc(dest.desc) + '</div>' : '') + '<div class="dest-preco">' + precoHtml(dest) + '</div></div>' +
         (q > 0
           ? '<div class="dest-step"><button type="button" data-m="-1" data-id="' + id + '" aria-label="Diminuir">−</button><span>' + q + '</span><button type="button" data-m="1" data-id="' + id + '" aria-label="Aumentar">+</button></div>'
           : '<button type="button" class="dest-btn" data-m="1" data-id="' + id + '">Adicionar</button>');
@@ -1120,7 +1133,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
       porCat[c].sort(function (a, b) { return String(a.nome).localeCompare(String(b.nome), 'pt-BR'); }).forEach(function (i) {
         var q = qtdItem(i.id);
         var ft = i.fotoV ? '<div class="ft' + (FOTOS[i.id] ? '' : ' sk') + '" data-f="' + esc(i.id) + '">' + (FOTOS[i.id] ? '<img src="' + FOTOS[i.id] + '" alt="" width="84" height="84" decoding="async">' : '') + '</div>' : '';
-        h += '<div class="item">' + ft + '<div class="info"><div class="nome">' + esc(i.nome) + '</div>' + (i.desc ? '<div class="desc">' + esc(i.desc) + '</div>' : '') + '<div class="preco">' + brl(i.preco) + '</div>' + (temHorario(i) ? '<div class="hr-dentro">🕒 Disponível ' + esc(rotuloHorario(i)) + '</div>' : '') + '</div>' +
+        h += '<div class="item">' + ft + '<div class="info"><div class="nome">' + esc(i.nome) + '</div>' + (i.desc ? '<div class="desc">' + esc(i.desc) + '</div>' : '') + '<div class="preco">' + precoHtml(i) + '</div>' + (temHorario(i) ? '<div class="hr-dentro">🕒 Disponível ' + esc(rotuloHorario(i)) + '</div>' : '') + '</div>' +
           (q > 0
             ? '<div class="stepper"><button type="button" data-m="-1" data-id="' + esc(i.id) + '" aria-label="Diminuir">−</button><span>' + q + '</span><button type="button" data-m="1" data-id="' + esc(i.id) + '" aria-label="Aumentar">+</button></div>'
             : '<button type="button" class="add" data-m="1" data-id="' + esc(i.id) + '"' + (aberta() ? '' : ' disabled') + ' aria-label="Adicionar ' + esc(i.nome) + '">+</button>') +

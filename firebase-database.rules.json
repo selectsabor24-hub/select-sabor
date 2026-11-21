@@ -42,6 +42,9 @@
             ".validate": "newData.val() == null || newData.hasChildren(['id','nome'])",
             "fotoV": {
               ".validate": "newData.isNumber()"
+            },
+            "promo": {
+              ".validate": "newData.isNumber() && newData.val() > 0"
             }
           },
           ".read": true

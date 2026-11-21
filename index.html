@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <script>try{var t=localStorage.getItem("caixa-theme");if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Controle de Caixa v6.10</title>
+<title>Controle de Caixa v6.11</title>
 
 <!-- ============================================================
      PWA — Progressive Web App
@@ -45,6 +45,7 @@
   ║         · Melhoria: renderContas usa cache; seção 3.22 documentada   ║
   ║  v3.3 — Seções novas: Planilhas já lançadas (3.23), calendário       ║
   ║         visual de lançamentos com marcação de cartão                 ║
+  ║  v6.11 — Cardápio: promoção (preço de/por) no admin e no pedido do cliente        ║
   ║  v6.10 — Pedidos online: complementos separados por grupo, cada um com a sua soma║
   ║  v6.9 — Pedidos online: mostra a quantidade total de unidades       ║
   ║  v6.8 — Pedidos online: item com complementos sem repetir o valor   ║
@@ -1131,6 +1132,9 @@ body.is-offline #login-screen {
 .cdp-hr-dica { font-size: var(--text-xs); color: var(--text3); margin-top: 4px; }
 .cdp-item .cdp-c-hr { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding-left: 82px; font-size: 12px; font-weight: 600; color: var(--text2); }
 .cdp-item .cdp-c-hr input.cdp-hr-in { width: 130px; flex: 0 0 auto; }
+.cdp-item .cdp-c-promo { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding-left: 82px; font-size: 12px; font-weight: 600; color: var(--text2); }
+.cdp-item .cdp-c-promo input.cdp-hr-in { width: 110px; flex: 0 0 auto; }
+.cdp-promo-tag { background: #DCFCE7; color: #166534; border-radius: 999px; padding: 2px 9px; font-size: 11px; font-weight: 700; }
 .cdp-hr-x { background: none; border: 0; color: #B91C1C; font-size: 12px; font-weight: 600; cursor: pointer; padding: 0 4px; }
 .cdp-hr-tag { background: #FEF3C7; color: #92400E; border-radius: 999px; padding: 2px 9px; font-size: 11px; font-weight: 700; }
 .cdp-foto-x { display: block; margin: 4px auto 0; background: none; border: 0; color: #B91C1C; font-size: 11px; font-weight: 600; cursor: pointer; padding: 0; }
@@ -3646,7 +3650,7 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
           <img src="img/logo.png" alt="Select Sabor" style="width:44px;height:44px;border-radius:50%;flex-shrink:0;background:#fff;box-shadow:0 0 0 2px rgba(255,255,255,0.18)">
           <div>
             <div class="logo-title">Controle de Caixa</div>
-            <div class="logo-sub">v6.10</div>
+            <div class="logo-sub">v6.11</div>
           </div>
         </div>
         <span id="status-dot" style="display:none;width:8px;height:8px;border-radius:50%;background:#4ADE80;flex-shrink:0;box-shadow:0 0 0 2px rgba(74,222,128,0.2)" title="Conectado"></span>
@@ -18245,7 +18249,7 @@ function _pedItens(p) {
       const gs = _cdpGrupos(card);
       _cdpLista(it.sel).forEach(sl => { const g = gs.find(x => x.id === sl.g); const o = g && g.opcoes.find(x => x.id === sl.o); if (o) { extra += o.preco; if (_gMax(g) > 1 && g.rep) un++; } });
     }
-    const preco = fixo ? it.p : _cmdRound((card ? (parseFloat(card.preco) || 0) : 0) * Math.max(1, un) + extra);
+    const preco = fixo ? it.p : _cmdRound((card ? _cdpPrecoVenda(card) : 0) * Math.max(1, un) + extra);
     // complementos agrupados por grupo (ex.: "Sabor do Refrigerante · 11 un"), cada grupo com a sua soma
     let grupos = [];
     if (card && it.sel) {
@@ -19783,6 +19787,9 @@ let _cmdTab = 'abertas';
 let _cmdModal = null; // { modo: 'nova' | 'comanda' | 'pagar', id }
 
 function _cmdRound(v) { return Math.round((v + Number.EPSILON) * 100) / 100; }
+/* Promoção do cardápio: "promo" (preço promocional) só vale se for maior que 0 e menor que o preço normal */
+function _cdpEmPromo(it) { const pr = parseFloat(it && it.promo), b = parseFloat(it && it.preco); return pr > 0 && b > 0 && pr < b; }
+function _cdpPrecoVenda(it) { return _cdpEmPromo(it) ? parseFloat(it.promo) : (parseFloat(it && it.preco) || 0); }
 function _cmdHoje() {
   const d = new Date();
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
@@ -20273,12 +20280,12 @@ let _opcAdm = null;
 function _opcAdmTotal() {
   let ex = 0, un = 0;
   _opcAdm.gs.forEach(g => (_opcAdm.sel[g.id] || []).forEach(oid => { const o = g.opcoes.find(x => x.id === oid); if (o) { ex += o.preco; if (_gMax(g) > 1 && g.rep) un++; } }));
-  return _cmdRound((parseFloat(_opcAdm.it.preco) || 0) * Math.max(1, un) + ex);
+  return _cmdRound(_cdpPrecoVenda(_opcAdm.it) * Math.max(1, un) + ex);
 }
 function _opcAdmDesenhar(erroId) {
   let box = document.getElementById('opc-adm'); if (!box) return;
   const corpo = box.querySelector('.opc-adm-b'), topo = corpo ? corpo.scrollTop : 0;
-  let h = `<div class="opc-adm"><div class="opc-adm-h"><span>${escapeHtml(_opcAdm.it.nome)}</span><span style="color:var(--text3);font-weight:600">${fmt(_opcAdm.it.preco)}</span></div><div class="opc-adm-b">`;
+  let h = `<div class="opc-adm"><div class="opc-adm-h"><span>${escapeHtml(_opcAdm.it.nome)}</span><span style="color:var(--text3);font-weight:600">${fmt(_cdpPrecoVenda(_opcAdm.it))}</span></div><div class="opc-adm-b">`;
   _opcAdm.gs.forEach(g => {
     const sel = _opcAdm.sel[g.id] || [], quad = _gMax(g) > 1, rp = quad && g.rep;
     h += `<div class="opc-adm-g${erroId === g.id ? ' erro' : ''}" id="opc-adm-g-${g.id}"><div class="opc-adm-gt">${escapeHtml(g.nome)}<small>${g.obrig ? 'Obrigatório' : 'Opcional'} · ${quad ? (g.max === 0 ? 'quantos quiser' : 'até ' + g.max) + (rp ? ', pode repetir' : '') + ' (' + (g.max === 0 ? sel.length : sel.length + '/' + g.max) + ')' : (g.obrig ? 'escolha 1' : 'até 1')}</small></div>`;
@@ -20475,6 +20482,7 @@ function _cdpRenderLista() {
         <div class="cdp-c-del" style="text-align:right"><button class="cmd-x" title="Remover" onclick="cmdCardapioDel('${i.id}')">×</button></div>
         <div class="cdp-c-desc"><div class="cdp-foto">${_cdpFotoBtn(i)}</div><textarea class="cdp-in" rows="2" maxlength="300" placeholder="O que vem neste item (Ex: arroz, feijão, bife, salada…)" onchange="cmdCardapioDesc('${i.id}', this.value)">${escapeHtml(i.desc || '')}</textarea></div>
         <div class="cdp-c-hr">🕒 Vende das <input class="cdp-in cdp-hr-in" data-k="ini" type="time" value="${escapeAttr(i.hrIni || '')}" onchange="cmdCardapioHorario('${i.id}', this)"> até <input class="cdp-in cdp-hr-in" data-k="fim" type="time" value="${escapeAttr(i.hrFim || '')}" onchange="cmdCardapioHorario('${i.id}', this)">${(i.hrIni && i.hrFim) ? ` <span class="cdp-hr-tag">só ${escapeHtml(i.hrIni)}–${escapeHtml(i.hrFim)}</span> <button type="button" class="cdp-hr-x" onclick="cmdCardapioHorarioLimpar('${i.id}', this)">dia todo</button>` : ' <span style="font-weight:400;color:var(--text3)">(vazio = o dia todo)</span>'}</div>
+        <div class="cdp-c-promo">🏷️ Promoção: por R$ <input class="cdp-in cdp-hr-in" type="number" step="0.01" min="0" placeholder="0,00" value="${_cdpEmPromo(i) ? parseFloat(i.promo).toFixed(2) : ''}" onchange="cmdCardapioPromo('${i.id}', this)">${_cdpEmPromo(i) ? ` <span class="cdp-promo-tag">de ${fmt(parseFloat(i.preco) || 0)} por ${fmt(parseFloat(i.promo))} · −${Math.round((1 - parseFloat(i.promo) / parseFloat(i.preco)) * 100)}%</span> <button type="button" class="cdp-hr-x" onclick="cmdCardapioPromoLimpar('${i.id}', this)">remover promoção</button>` : ' <span style="font-weight:400;color:var(--text3)">(vazio = sem promoção; o cliente vê o preço normal riscado)</span>'}</div>
         <div class="cdp-c-opc">${_cdpOpcHtml(i)}</div>
       </div>`).join('') + `</div>`;
   });
@@ -20572,6 +20580,27 @@ function cmdCardapioPreco(id, v) {
   if (isNaN(preco) || preco < 0) { showToast('Preço inválido', false); renderCardapio(); return; }
   _dbRef('cardapio/' + _lojaAtiva + '/' + id + '/preco').set(_cmdRound(preco))
     .catch(e => { console.error(e); showToast('Erro ao atualizar o preço', false); });
+}
+function cmdCardapioPromo(id, el) {
+  const it = _cmdCardapio().find(i => i.id === id); if (!it) return;
+  const txt = String(el && el.value != null ? el.value : '').trim().replace(',', '.');
+  const ref = _dbRef('cardapio/' + _lojaAtiva + '/' + id + '/promo');
+  if (txt === '') {
+    ref.remove().then(() => showToast('Promoção removida')).catch(e => { console.error(e); showToast('Erro ao remover a promoção', false); });
+    return;
+  }
+  const v = parseFloat(txt), base = parseFloat(it.preco) || 0;
+  if (isNaN(v) || v <= 0) { showToast('Informe um preço promocional válido', false); renderCardapio(); return; }
+  if (v >= base) { showToast('O preço promocional precisa ser menor que o preço normal (' + fmt(base) + ')', false); renderCardapio(); return; }
+  ref.set(_cmdRound(v)).then(() => showToast('Promoção salva ✔ — de ' + fmt(base) + ' por ' + fmt(_cmdRound(v))))
+    .catch(e => { console.error(e); showToast('Erro ao salvar a promoção', false); });
+}
+function cmdCardapioPromoLimpar(id, el) {
+  const box = el && el.closest ? el.closest('.cdp-c-promo') : null;
+  if (box) box.querySelectorAll('input').forEach(x => { x.value = ''; });
+  _dbRef('cardapio/' + _lojaAtiva + '/' + id + '/promo').remove()
+    .then(() => showToast('Promoção removida'))
+    .catch(e => { console.error(e); showToast('Erro ao remover a promoção', false); });
 }
 function cmdCardapioAtivo(id) {
   const it = _cmdCardapio().find(i => i.id === id); if (!it) return;
@@ -20853,7 +20882,7 @@ function cmdAddItem(cardId) {
       const pares = extras.map(x => x.g + ':' + x.o).sort();
       const key = pares.length ? cardId + '~' + pares.join(',') : cardId;
       const nomeSel = _opcResumo(extras);
-      const preco = _cmdRound((parseFloat(it.preco) || 0) * Math.max(1, extras.filter(x => x.q).length) + extras.reduce((t, x) => t + x.preco, 0));
+      const preco = _cmdRound(_cdpPrecoVenda(it) * Math.max(1, extras.filter(x => x.q).length) + extras.reduce((t, x) => t + x.preco, 0));
       const at = (c2.itens && c2.itens[key]) ? (parseInt(c2.itens[key].qtd) || 0) : 0;
       _cmdRef(c2.id).child('itens/' + key).set({ id: key, nome: nomeSel ? it.nome + ' (' + nomeSel + ')' : it.nome, preco, qtd: at + 1 })
         .catch(e => { console.error(e); showToast('Erro ao lançar o item', false); });
@@ -20861,7 +20890,7 @@ function cmdAddItem(cardId) {
     return;
   }
   const atual = (c.itens && c.itens[cardId]) ? (parseInt(c.itens[cardId].qtd) || 0) : 0;
-  _cmdRef(c.id).child('itens/' + cardId).set({ id: cardId, nome: it.nome, preco: parseFloat(it.preco) || 0, qtd: atual + 1 })
+  _cmdRef(c.id).child('itens/' + cardId).set({ id: cardId, nome: it.nome, preco: _cdpPrecoVenda(it), qtd: atual + 1 })
     .catch(e => { console.error(e); showToast('Erro ao lançar o item', false); });
 }
 function cmdAddLivre() {
