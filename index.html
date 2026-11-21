@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <script>try{var t=localStorage.getItem("caixa-theme");if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Controle de Caixa v1.0</title>
+<title>Controle de Caixa v1.1</title>
 
 <!-- ============================================================
      PWA — Progressive Web App
@@ -45,6 +45,7 @@
   ║         · Melhoria: renderContas usa cache; seção 3.22 documentada   ║
   ║  v3.3 — Seções novas: Planilhas já lançadas (3.23), calendário       ║
   ║         visual de lançamentos com marcação de cartão                 ║
+  ║  v1.1  — Comanda aberta em tela cheia (cardápio à esquerda, conta à direita)      ║
   ║  v1.0  — Primeira versão do Select Sabor (numeração reiniciada; as versões       ║
   ║          abaixo são do histórico anterior do sistema)                             ║
   ║         · QR Code das mesas: pedido soma na comanda aberta da mesa e só é        ║
@@ -3357,6 +3358,21 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
 .cmd-totais input { min-height: 32px; padding: 4px 8px; }
 .cmd-avulso { display:grid; grid-template-columns: 1fr 110px 70px auto; gap: 8px; align-items:center; }
 .cmd-avulso input { min-width: 0; width: 100%; }
+/* Comanda aberta em TELA CHEIA: cardápio à esquerda, conta à direita */
+#modal-cmd-overlay.cmd-full-ov { padding: 0 !important; }
+#modal-cmd-box.cmd-full { max-width: none !important; width: 100vw !important; height: 100vh; max-height: 100vh !important; border-radius: 0 !important; overflow: hidden !important; display: flex; flex-direction: column; }
+#modal-cmd-box.cmd-full .cmd-modal-head, #modal-cmd-box.cmd-full .cmd-modal-foot { flex: none; }
+#modal-cmd-box.cmd-full .cmd-split { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(340px, 1fr); gap: 24px; overflow: hidden; }
+#modal-cmd-box.cmd-full .cmd-col { min-height: 0; overflow-y: auto; padding-right: 4px; }
+#modal-cmd-box.cmd-full .cmd-col-conta { border-left: 1px solid var(--border); padding-left: 24px; }
+#modal-cmd-box.cmd-full .cmd-col-menu #cmd-chips { max-height: none !important; overflow: visible !important; }
+#modal-cmd-box.cmd-full .cmd-chip { padding: 11px 16px; font-size: 15px; }
+#modal-cmd-box.cmd-full .cmd-col-menu .cmd-sec-titulo:first-child { margin-top: 0; }
+@media (max-width: 900px) {
+  #modal-cmd-box.cmd-full .cmd-split { display: block; overflow-y: auto; }
+  #modal-cmd-box.cmd-full .cmd-col { overflow: visible; }
+  #modal-cmd-box.cmd-full .cmd-col-conta { border-left: 0; padding-left: 0; }
+}
 .cmd-sec-titulo { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--text3); margin: 16px 0 6px; }
 @media (max-width: 640px) {
   .cmd-modal-head, .cmd-modal-body, .cmd-modal-foot { padding-left: 14px; padding-right: 14px; }
@@ -3681,7 +3697,7 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
           <img src="img/logo.png" alt="Select Sabor" style="width:44px;height:44px;border-radius:50%;flex-shrink:0;background:#fff;box-shadow:0 0 0 2px rgba(255,255,255,0.18)">
           <div>
             <div class="logo-title">Controle de Caixa</div>
-            <div class="logo-sub">v1.0</div>
+            <div class="logo-sub">v1.1</div>
           </div>
         </div>
         <span id="status-dot" style="display:none;width:8px;height:8px;border-radius:50%;background:#4ADE80;flex-shrink:0;box-shadow:0 0 0 2px rgba(74,222,128,0.2)" title="Conectado"></span>
@@ -21047,9 +21063,12 @@ function _cmdAtualizarModal(forcar) {
   if (!box) return;
   const ae = document.activeElement;
   if (!forcar && ae && box.contains(ae) && (ae.tagName === 'INPUT' || ae.tagName === 'SELECT')) return;
-  if (_cmdModal.modo === 'nova') { box.innerHTML = _cmdHtmlModalNova(); return; }
+  const ovl = document.getElementById('modal-cmd-overlay');
+  const tela = (cheia) => { box.classList.toggle('cmd-full', !!cheia); if (ovl) ovl.classList.toggle('cmd-full-ov', !!cheia); };
+  if (_cmdModal.modo === 'nova') { tela(false); box.innerHTML = _cmdHtmlModalNova(); return; }
   const c = _cmdGet(_cmdModal.id);
   if (!c) { cmdFecharModal(); return; }
+  tela(_cmdModal.modo === 'comanda' && c.status === 'aberta'); // comanda aberta: tela cheia para ver o cardápio
   box.innerHTML = _cmdModal.modo === 'pagar' ? _cmdHtmlModalPagar(c) : _cmdHtmlModalComanda(c);
 }
 
@@ -21108,7 +21127,7 @@ function _cmdHtmlModalComanda(c) {
       <td style="width:34px;text-align:right">${aberta ? `<button class="cmd-x" title="Remover" onclick="cmdRemoverItem('${i.key || i.id}')">×</button>` : ''}</td>
     </tr>`).join('') : `<tr><td colspan="5" style="color:var(--text3);text-align:center;padding:18px">Nenhum item lançado ainda.</td></tr>`;
 
-  let addHtml = '';
+  let addHtml = '', menuHtml = '', avulsoHtml = '';
   if (aberta) {
     const cardapio = _cmdCardapio().slice().sort((a, b) => String(a.nome).localeCompare(String(b.nome)));
     const catsUsadas = _cdpCats().filter(cat => cardapio.some(i => (i.cat || 'Outros') === cat));
@@ -21124,17 +21143,18 @@ function _cmdHtmlModalComanda(c) {
     }).join('') : `<span style="font-size:13px;color:var(--text3)">Cardápio vazio — cadastre em Cadastros › Cardápio ou lance um item avulso abaixo.</span>`;
     const pills = cardapio.length ? `<div class="cmd-tabs" id="cmd-cat-pills" style="margin:8px 0 0">
         <button class="${_cmdCatFiltro ? '' : 'active'}" onclick="cmdCatFiltrar('')">Todas</button>${catsUsadas.map(cat => `<button class="${_cmdCatFiltro === cat ? 'active' : ''}" onclick="cmdCatFiltrar(this.getAttribute('data-cat'))" data-cat="${escapeAttr(cat)}">${escapeHtml(cat)}</button>`).join('')}</div>` : '';
-    addHtml = `<div class="cmd-sec-titulo">Adicionar item</div>
+    menuHtml = `<div class="cmd-sec-titulo">Adicionar item</div>
       ${cardapio.length ? `<input type="text" id="cmd-busca" placeholder="Buscar no cardápio…" oninput="cmdFiltrar(this.value)" style="width:100%">` : ''}
       ${pills}
-      <div id="cmd-chips" style="max-height:280px;overflow-y:auto">${chips}</div>
-      <div class="cmd-sec-titulo">Item avulso</div>
+      <div id="cmd-chips" style="max-height:280px;overflow-y:auto">${chips}</div>`;
+    avulsoHtml = `<div class="cmd-sec-titulo">Item avulso</div>
       <div class="cmd-avulso">
         <input type="text" id="cmd-l-nome" placeholder="Descrição" maxlength="60">
         <input type="number" id="cmd-l-preco" placeholder="Preço" step="0.01" min="0">
         <input type="number" id="cmd-l-qtd" placeholder="Qtd" value="1" min="1">
         <button class="btn btn-secondary" onclick="cmdAddLivre()">Adicionar</button>
       </div>`;
+    addHtml = menuHtml + avulsoHtml;
   }
 
   const totais = aberta ? `
@@ -21162,11 +21182,19 @@ function _cmdHtmlModalComanda(c) {
         <div>${_cmdIdentHtml(c)}</div>
         <div style="font-size:12px;color:var(--text3);margin-top:3px">${c.pessoas ? escapeHtml(c.pessoas) + ' pessoa(s) · ' : ''}${c.garcom ? escapeHtml(c.garcom) + ' · ' : ''}aberta às ${_cmdHora(c.abertaEm)}</div></div>
       <button class="cmd-x" onclick="cmdFecharModal()" title="Fechar">×</button></div>
-    <div class="cmd-modal-body">
+    ${aberta ? `<div class="cmd-modal-body cmd-split">
+      <div class="cmd-col cmd-col-menu">${menuHtml}</div>
+      <div class="cmd-col cmd-col-conta">
+        <div class="cmd-sec-titulo" style="margin-top:0">Itens da comanda</div>
+        <table class="cmd-itens"><thead><tr><th>Item</th><th>Qtd</th><th class="num">Unit.</th><th class="num">Subtotal</th><th></th></tr></thead><tbody>${linhas}</tbody></table>
+        ${avulsoHtml}
+        <div class="cmd-totais">${totais}</div>
+      </div>
+    </div>` : `<div class="cmd-modal-body">
       <table class="cmd-itens"><thead><tr><th>Item</th><th>Qtd</th><th class="num">Unit.</th><th class="num">Subtotal</th><th></th></tr></thead><tbody>${linhas}</tbody></table>
       ${addHtml}
       <div class="cmd-totais">${totais}</div>
-    </div>
+    </div>`}
     <div class="cmd-modal-foot">${foot}</div>`;
 }
 
