@@ -170,6 +170,24 @@ button { cursor: pointer; }
 .end { font-size: 17px; }
 .links button { flex: 1 1 100%; min-height: 48px; background: var(--verde); border-color: var(--verde); color: #fff; font-weight: 800; font-size: 16px; }
 .btn-atualizar { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 56px; margin-top: 4px; border: 0; border-radius: 16px; background: linear-gradient(160deg, var(--verde), var(--verde2)); color: #fff; font-weight: 800; font-size: 18px; box-shadow: 0 6px 16px rgba(47,82,51,.3); }
+/* ===== Adaptação a telas maiores (o uso principal continua sendo o celular) ===== */
+:root { --w-mot: 560px; }
+.wrap { max-width: var(--w-mot); }
+@media (min-width: 700px) { :root { --w-mot: 720px; } }
+@media (min-width: 1100px) {
+  :root { --w-mot: 1000px; }
+  #lista { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; align-items: start; }
+  #lista .card.vazio { grid-column: 1 / -1; }
+}
+#alerta { left: max(12px, calc(50% - 280px)); right: max(12px, calc(50% - 280px)); }
+@media (max-height: 480px) {
+  #chamada { overflow-y: auto; }
+  #chamada .ic { font-size: 44px; }
+  #chamada h2 { font-size: 22px; }
+  #chamada .cd { font-size: 26px; }
+  #chamada .bs { margin-top: 16px; }
+  #chamada .bs button { min-height: 56px; }
+}
 </style>
 </head>
 <body>
