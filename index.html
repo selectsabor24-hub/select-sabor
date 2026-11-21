@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <script>try{var t=localStorage.getItem("caixa-theme");if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Controle de Caixa v6.13</title>
+<title>Controle de Caixa v1.0</title>
 
 <!-- ============================================================
      PWA — Progressive Web App
@@ -45,8 +45,14 @@
   ║         · Melhoria: renderContas usa cache; seção 3.22 documentada   ║
   ║  v3.3 — Seções novas: Planilhas já lançadas (3.23), calendário       ║
   ║         visual de lançamentos com marcação de cartão                 ║
-  ║  v6.13 — QR Code das mesas: o pedido soma na comanda da mesa (conta aberta) e   ║
-  ║          só é paga/fechada no caixa; cliente pode pedir mais quantas vezes quiser ║
+  ║  v1.0  — Primeira versão do Select Sabor (numeração reiniciada; as versões       ║
+  ║          abaixo são do histórico anterior do sistema)                             ║
+  ║         · QR Code das mesas: pedido soma na comanda aberta da mesa e só é        ║
+  ║           pago/fechado no caixa; cliente pode pedir mais vezes                    ║
+  ║         · Contas fechadas: mostra pedido e mesa + botão Excluir                   ║
+  ║         · Serviço (%) das comandas começa em 0                                    ║
+  ║         · Histórico de alterações: botão Limpar histórico (administrador)         ║
+  ║         · Nome da loja no Dashboard com a escrita do logo                         ║
   ║  v6.12 — Cardápio: campo da promoção na mesma linha do preço normal              ║
   ║  v6.11 — Cardápio: promoção (preço de/por) no admin e no pedido do cliente        ║
   ║  v6.10 — Pedidos online: complementos separados por grupo, cada um com a sua soma║
@@ -3675,7 +3681,7 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
           <img src="img/logo.png" alt="Select Sabor" style="width:44px;height:44px;border-radius:50%;flex-shrink:0;background:#fff;box-shadow:0 0 0 2px rgba(255,255,255,0.18)">
           <div>
             <div class="logo-title">Controle de Caixa</div>
-            <div class="logo-sub">v6.13</div>
+            <div class="logo-sub">v1.0</div>
           </div>
         </div>
         <span id="status-dot" style="display:none;width:8px;height:8px;border-radius:50%;background:#4ADE80;flex-shrink:0;box-shadow:0 0 0 2px rgba(74,222,128,0.2)" title="Conectado"></span>
