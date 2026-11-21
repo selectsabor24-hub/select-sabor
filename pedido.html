@@ -544,6 +544,8 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
 <script>
 (function () {
   'use strict';
+  /* Vibração ao mudar o status / chegar mensagem */
+  function vibrar(padrao) { try { if (navigator.vibrate) navigator.vibrate(padrao); } catch (x) {} }
 
   /* ---------- Configuração (mesmo projeto Firebase do Controle de Caixa) ---------- */
   var FIREBASE_CONFIG = {
