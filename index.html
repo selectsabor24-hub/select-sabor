@@ -3391,6 +3391,42 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
   .ped-hora { margin-left: 0; width: 100%; }
 }
 
+/* ---- Pedidos online: visões Quadros / Expedição / Monitor de entregadores ---- */
+.pv-toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 0 0 14px; }
+.pv-toolbar input { flex: 1 1 200px; min-width: 0; }
+.pv-toolbar select { flex: 0 1 auto; width: auto; min-width: 200px; font-weight: 700; cursor: pointer; }
+.pv-novos { border: 2px solid #2563EB; border-radius: 18px; padding: 12px 14px 4px; margin-bottom: 14px; background: var(--surface); }
+.pv-novos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 0 14px; align-items: start; }
+.pv-quadros { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; align-items: start; }
+.pv-exp { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 12px; align-items: start; }
+.pv-exp-dir { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.pv-monitor { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: start; }
+.pv-sec { background: var(--surface2); border-radius: 18px; padding: 12px; min-width: 0; min-height: 120px; }
+.pv-quadros .pv-sec { min-height: 340px; }
+.pv-exp > .pv-sec, .pv-monitor .pv-sec { min-height: 220px; }
+.pv-sec-h { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: var(--text2); padding: 2px 4px 10px; }
+.pv-sec-h.pv-click { cursor: pointer; user-select: none; }
+.pv-sec-h.pv-click .pv-chev { margin-left: auto; font-size: 16px; color: var(--text3); }
+.pv-badge { background: #555; color: #fff; border-radius: 99px; padding: 1px 8px; font-size: 11px; font-weight: 800; }
+.pv-vazio { text-align: center; color: var(--text3); font-size: 13px; padding: 34px 10px; }
+.pv-vazio-ic { font-size: 30px; opacity: .55; margin-bottom: 6px; }
+.pv-mini { background: var(--surface); border-radius: 14px; border-left: 5px solid var(--ped-cor, #2563EB); padding: 10px 12px; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+.pv-mini-top { display: flex; align-items: baseline; gap: 8px; cursor: pointer; }
+.pv-cod { font-weight: 900; font-size: 20px; letter-spacing: .5px; }
+.pv-nome { color: var(--text2); font-size: 13px; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pv-mais { margin-left: auto; color: var(--text3); font-size: 12px; flex: none; }
+.pv-mini-meta { font-size: 12px; color: var(--text3); margin-top: 4px; }
+.pv-mini-acoes { margin-top: 8px; }
+.pv-mini-acoes .btn { width: 100%; justify-content: center; }
+.pv-fim-chip { display: block; text-align: center; background: var(--surface2); border-radius: 99px; padding: 5px 8px; margin-top: 8px; font-size: 12px; font-weight: 700; }
+.pv-mini .card.ped-card { border: 0 !important; border-top: 1px dashed var(--border) !important; border-radius: 0 !important; box-shadow: none !important; background: transparent !important; padding: 10px 0 0 !important; margin: 10px 0 0 !important; animation: none !important; }
+@media (max-width: 1100px) { .pv-quadros { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 760px) {
+  .pv-quadros, .pv-exp, .pv-monitor { grid-template-columns: minmax(0, 1fr); }
+  .pv-toolbar select { flex: 1 1 100%; }
+  .pv-quadros .pv-sec { min-height: 0; }
+}
+
 /* ============================================================
    14) MOTOQUEIRO (aba de entregas)
    ============================================================ */
@@ -4902,12 +4938,16 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
 
       <div class="metrics-grid" id="ped-metricas"></div>
 
-      <div class="cmd-tabs" id="ped-tabs">
-        <button id="ped-tab-novos"       onclick="pedSetTab('novos')">Novos</button>
-        <button id="ped-tab-andamento"   onclick="pedSetTab('andamento')">Em andamento</button>
-        <button id="ped-tab-finalizados" onclick="pedSetTab('finalizados')">Finalizados hoje</button>
+      <div class="pv-toolbar" id="ped-tabs">
+        <input id="ped-busca" class="input-base" type="search" placeholder="🔍 Buscar pedido, cliente ou telefone" autocomplete="off" oninput="pedBuscar(this.value)" aria-label="Buscar pedido">
+        <select id="ped-visao" class="input-base" onchange="pedSetVisao(this.value)" aria-label="Modo de exibição dos pedidos">
+          <option value="quadros">📋 Quadros</option>
+          <option value="expedicao">📦 Expedição</option>
+          <option value="monitor">🛵 Monitor de entregadores</option>
+        </select>
       </div>
 
+      <div id="ped-novos"></div>
       <div id="ped-lista"></div>
     </div>
 
@@ -18120,7 +18160,10 @@ function _syncDrawer(id) {
    O cliente usa  pedido.html?loja={lojaId}  (sem login) e acompanha o status
    em tempo real. Aqui a equipe aceita, avança o status e lança no caixa.
    ============================================================ */
-let _pedTab = 'novos';
+let _pedVisao = (function () { try { const v = localStorage.getItem('pedVisao'); return ['quadros', 'expedicao', 'monitor'].indexOf(v) >= 0 ? v : 'quadros'; } catch (e) { return 'quadros'; } })();
+let _pedBusca = '';
+const _pedExp = new Set();         // pedidos com detalhes abertos
+const _pedSecFechada = new Set();  // seções recolhidas (Expedição / Monitor)
 let _pedVistos = null;
 let _pedAudio = null;
 let _pedTituloOrig = null;
@@ -18380,16 +18423,73 @@ function _pedAtualizarBadge() {
 }
 
 /* ---------- Tela ---------- */
-function pedSetTab(t) { _pedTab = t; renderPedidos(); }
+function pedSetVisao(v) {
+  if (['quadros', 'expedicao', 'monitor'].indexOf(v) < 0) return;
+  _pedVisao = v;
+  try { localStorage.setItem('pedVisao', v); } catch (e) {}
+  renderPedidos();
+}
+function pedBuscar(v) { _pedBusca = String(v || '').trim().toLowerCase(); renderPedidos(); }
+function pedToggleCard(id) {
+  if (!/^[-A-Za-z0-9_]{8,40}$/.test(String(id))) return;
+  if (_pedExp.has(id)) _pedExp.delete(id); else _pedExp.add(id);
+  renderPedidos();
+}
+function pedToggleSecao(k) {
+  if (['preparo', 'pronto', 'saiu', 'fim'].indexOf(k) < 0) return;
+  if (_pedSecFechada.has(k)) _pedSecFechada.delete(k); else _pedSecFechada.add(k);
+  renderPedidos();
+}
+
+/* Cartão compacto do quadro: código, cliente, tipo/hora/total e o botão do próximo passo.
+   Tocar no cartão abre/fecha os detalhes completos (os mesmos botões do cartão antigo). */
+function _pedMiniHtml(p) {
+  const st = PED_ST[p.status] || PED_ST.novo;
+  const t = _pedTotais(p);
+  const ent = p.tipo === 'entrega';
+  const id = escapeHtml(p.id);
+  const aberto = _pedExp.has(p.id);
+  const nome = p.cliente && p.cliente.nome ? escapeHtml(p.cliente.nome) : '';
+  let prox = null;
+  if (p.status === 'preparo') prox = ['pronto', '✅ Pedido pronto'];
+  else if (p.status === 'pronto') prox = ent ? ['saiu', '🛵 Saiu para entrega'] : ['entregue', '✅ Cliente retirou'];
+  else if (p.status === 'saiu') prox = ['entregue', '✅ Entregue'];
+  else if (p.status === 'entregue' && !p.lancado) prox = ['caixa', '💰 Lançar no caixa'];
+  let rodape = '';
+  if (prox) rodape = `<div class="pv-mini-acoes"><button class="btn btn-primary btn-md" data-ped="${id}" onclick="pedAcao('${prox[0]}', this.dataset.ped)">${prox[1]}</button></div>`;
+  else if (p.status === 'entregue') rodape = '<span class="pv-fim-chip" style="color:#15803d">✓ Concluído · lançado no caixa</span>';
+  else if (p.status === 'cancelado') rodape = '<span class="pv-fim-chip" style="color:#b91c1c">✖ Cancelado</span>';
+  return `<div class="pv-mini" style="--ped-cor:${st.cor}">
+    <div class="pv-mini-top" data-ped="${id}" onclick="pedToggleCard(this.dataset.ped)">
+      <span class="pv-cod">#${escapeHtml(p.codigo || '')}</span><span class="pv-nome">${nome}</span>
+      <span class="pv-mais">${aberto ? 'Fechar ⌃' : 'Detalhes ⌄'}</span>
+    </div>
+    <div class="pv-mini-meta">${ent ? '🛵 Entrega' : '🏪 Retirada'} · ${_pedHora(p.ts)} · ${fmt(t.total)}</div>
+    ${rodape}
+    ${aberto ? _pedCardHtml(p) : ''}
+  </div>`;
+}
+
+function _pedSecHtml(k, titulo, arr, icone, vazio, colapsavel) {
+  const fechada = colapsavel && _pedSecFechada.has(k);
+  const cab = colapsavel
+    ? `<div class="pv-sec-h pv-click" data-sec="${k}" onclick="pedToggleSecao(this.dataset.sec)"><span>${titulo}</span><span class="pv-badge">${arr.length}</span><span class="pv-chev">${fechada ? '⌄' : '⌃'}</span></div>`
+    : `<div class="pv-sec-h"><span>${titulo}</span><span class="pv-badge">${arr.length}</span></div>`;
+  const corpo = fechada ? '' : (arr.length
+    ? arr.map(_pedMiniHtml).join('')
+    : `<div class="pv-vazio"><div class="pv-vazio-ic">${icone}</div>${vazio}</div>`);
+  return `<section class="pv-sec pv-sec-${k}">${cab}${corpo}</section>`;
+}
 
 function renderPedidos() {
   const lista = document.getElementById('ped-lista'); if (!lista) return;
   _pedAtualizarSomBtn();
   const topo = document.getElementById('ped-topo');
   const met = document.getElementById('ped-metricas');
+  const nov = document.getElementById('ped-novos');
   if (!_lojaAtiva) {
     topo.innerHTML = '<div class="card" style="text-align:center;color:var(--text3)">Aguarde o carregamento do restaurante.</div>';
-    met.innerHTML = ''; lista.innerHTML = ''; return;
+    met.innerHTML = ''; lista.innerHTML = ''; if (nov) nov.innerHTML = ''; return;
   }
   const cfg = _pedCfg();
   if (!cfg) {
@@ -18397,11 +18497,12 @@ function renderPedidos() {
       <div style="font-weight:800;margin:6px 0">Pedidos online ainda não configurados</div>
       <div style="color:var(--text3);margin-bottom:12px">Configure a taxa de entrega e o tempo estimado, depois divulgue o link do cardápio para os clientes.</div>
       <button class="btn btn-primary btn-md" onclick="pedConfigAbrir()">Configurar e ativar</button></div>`;
-    met.innerHTML = ''; lista.innerHTML = '';
+    met.innerHTML = ''; lista.innerHTML = ''; if (nov) nov.innerHTML = '';
     document.getElementById('ped-tabs').style.display = 'none';
     return;
   }
   document.getElementById('ped-tabs').style.display = '';
+  const selV = document.getElementById('ped-visao'); if (selV && selV.value !== _pedVisao) selV.value = _pedVisao;
   const aberto = cfg.aberto === true;
   topo.innerHTML = `<div class="card ped-topo">
     <div class="ped-topo-linha">
@@ -18425,20 +18526,37 @@ function renderPedidos() {
     <div class="metric-card"><div class="metric-label">Entregues hoje</div><div class="metric-value">${entregues.length}</div></div>
     <div class="metric-card"><div class="metric-label">Vendido online hoje</div><div class="metric-value">${fmt(vendido)}</div></div>`;
 
-  const cont = { novos: novos.length, andamento: and.length, finalizados: fim.length };
-  ['novos', 'andamento', 'finalizados'].forEach(t => {
-    const b = document.getElementById('ped-tab-' + t); if (!b) return;
-    b.classList.toggle('active', t === _pedTab);
-    const nome = { novos: 'Novos', andamento: 'Em andamento', finalizados: 'Finalizados hoje' }[t];
-    b.textContent = nome + (cont[t] ? ' (' + cont[t] + ')' : '');
-  });
+  // Pedidos novos (ainda não aceitos): sempre em destaque no topo, com o cartão completo (Aceitar / Recusar)
+  if (nov) {
+    const arrN = novos.slice().sort((a, b) => (a.ts || 0) - (b.ts || 0));
+    nov.innerHTML = arrN.length
+      ? `<div class="pv-novos"><div class="pv-sec-h" style="font-size:14px;color:var(--text)"><span>🔔 Novos pedidos</span><span class="pv-badge" style="background:#2563EB">${arrN.length}</span></div><div class="pv-novos-grid">${arrN.map(_pedCardHtml).join('')}</div></div>`
+      : '';
+  }
 
-  let arr;
-  if (_pedTab === 'novos')        arr = novos.slice().sort((a, b) => (a.ts || 0) - (b.ts || 0));
-  else if (_pedTab === 'andamento') arr = and.slice().sort((a, b) => (a.ts || 0) - (b.ts || 0));
-  else                             arr = fim.slice().sort((a, b) => (b.ts || 0) - (a.ts || 0));
-  const vazio = { novos: 'Nenhum pedido novo no momento.', andamento: 'Nenhum pedido em andamento.', finalizados: 'Nenhum pedido finalizado hoje.' }[_pedTab];
-  lista.innerHTML = arr.length ? arr.map(_pedCardHtml).join('') : `<div class="card" style="text-align:center;color:var(--text3);padding:28px 12px">${vazio}</div>`;
+  const f = p => {
+    if (!_pedBusca) return true;
+    const c = p.cliente || {};
+    return [p.codigo, c.nome, c.telefone].join(' ').toLowerCase().indexOf(_pedBusca) >= 0;
+  };
+  const asc = (a, b) => (a.ts || 0) - (b.ts || 0);
+  const cPrep = todos.filter(p => p.status === 'preparo').filter(f).sort(asc);
+  const cPronto = todos.filter(p => p.status === 'pronto').filter(f).sort(asc);
+  const cRota = todos.filter(p => p.status === 'saiu').filter(f).sort(asc);
+  const cFim = fim.filter(f).sort((a, b) => (b.ts || 0) - (a.ts || 0));
+
+  const sPrep = col => _pedSecHtml('preparo', 'Em preparo', cPrep, '🍳', 'Aqui ficam os pedidos que estão sendo preparados', col);
+  const sPronto = col => _pedSecHtml('pronto', 'Pronto', cPronto, '🛍️', 'Aqui ficam os pedidos prontos para coleta', col);
+  const sRota = col => _pedSecHtml('saiu', 'Em rota', cRota, '🛵', 'Aqui ficam os pedidos que estão indo para o cliente', col);
+  const sFim = col => _pedSecHtml('fim', 'Finalizados', cFim, '✅', 'Nenhum pedido finalizado hoje.', col);
+
+  if (_pedVisao === 'expedicao') {
+    lista.innerHTML = `<div class="pv-exp">${sPrep(true)}<div class="pv-exp-dir">${sPronto(true)}${sRota(true)}${sFim(true)}</div></div>`;
+  } else if (_pedVisao === 'monitor') {
+    lista.innerHTML = `<div class="pv-monitor">${sPrep(true)}${sPronto(true)}</div>`;
+  } else {
+    lista.innerHTML = `<div class="pv-quadros">${sPrep(false)}${sPronto(false)}${sRota(false)}${sFim(false)}</div>`;
+  }
 }
 
 function _pedCardHtml(p) {
