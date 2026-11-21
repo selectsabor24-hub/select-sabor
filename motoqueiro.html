@@ -314,7 +314,7 @@ button { cursor: pointer; }
   var eu = null;            // { uid, lojaId, nome, ativo }
   var cfg = null, cardapio = {}, pedidos = [];
   var tab = 'sair';
-  var histSel = null, hist = { mes: '', lista: [], carregando: false, erro: false };
+  var histSel = null, hist = { mes: '', lista: [], carregando: false, erro: false, parcial: false };
   var escutas = [];         // referências com .on() para desligar ao sair
   var prontosVistos = null; // 1ª carga não dispara aviso
   var preparoVistos = null; // idem, para pedidos aceitos (em preparo)
@@ -511,19 +511,25 @@ button { cursor: pointer; }
   function histBuscar() {
     if (!eu || !histSel) return;
     var m = histSel;
-    hist.carregando = true; hist.erro = false; render();
-    ref('pedidos/' + eu.lojaId).orderByChild('motoqueiro').equalTo(eu.nome).limitToLast(2000).once('value').then(function (s) {
-      if (histSel !== m) return;
-      var tudo = s.val() || {};
-      hist.lista = Object.keys(tudo).filter(function (k) { return ID_OK.test(k); })
-        .map(function (k) { return Object.assign({ id: k }, tudo[k]); })
-        .filter(function (p) { return p.tipo === 'entrega' && p.status === 'entregue' && p.motoqueiro === eu.nome && chaveMes(tsEntrega(p)) === m; })
-        .sort(function (a, b) { return tsEntrega(b) - tsEntrega(a); });
-      hist.mes = m; hist.carregando = false; render();
-    }).catch(function (e) {
-      if (histSel !== m) return;
-      console.warn('[historico]', e && e.message); hist.carregando = false; hist.erro = true; render();
-    });
+    hist.carregando = true; hist.erro = false; hist.parcial = false; render();
+    // Tenta até 1000 entregas; se as regras do Firebase ainda forem as antigas (limite de 100), usa as últimas 100.
+    function buscar(limite) {
+      ref('pedidos/' + eu.lojaId).orderByChild('motoqueiro').equalTo(eu.nome).limitToLast(limite).once('value').then(function (s) {
+        if (histSel !== m) return;
+        var tudo = s.val() || {};
+        hist.lista = Object.keys(tudo).filter(function (k) { return ID_OK.test(k); })
+          .map(function (k) { return Object.assign({ id: k }, tudo[k]); })
+          .filter(function (p) { return p.tipo === 'entrega' && p.status === 'entregue' && p.motoqueiro === eu.nome && chaveMes(tsEntrega(p)) === m; })
+          .sort(function (a, b) { return tsEntrega(b) - tsEntrega(a); });
+        hist.mes = m; hist.carregando = false; hist.parcial = limite < 1000; render();
+      }).catch(function (e) {
+        if (histSel !== m) return;
+        console.warn('[historico]', limite, e && e.message);
+        if (limite > 100) { buscar(100); return; }
+        hist.carregando = false; hist.erro = true; render();
+      });
+    }
+    buscar(1000);
   }
   function histRender() {
     var el = $('#lista');
@@ -549,7 +555,7 @@ button { cursor: pointer; }
     else {
       var soma = 0; hist.lista.forEach(function (x) { soma += totais(x).taxa; });
       h = '<div class="hist-sum"><div><small>Entregas em ' + esc(nomeMes) + '</small><b>' + hist.lista.length + '</b></div><div><small>Ganhos (taxas)</small><b>' + v(brl(round(soma))) + '</b></div></div>' +
-        '<div class="hist-tit">Mais recentes primeiro</div>' + hist.lista.map(cartao).join('');
+        '<div class="hist-tit">Mais recentes primeiro' + (hist.parcial ? ' · mostrando só as últimas 100 entregas' : '') + '</div>' + hist.lista.map(cartao).join('');
     }
     el.insertAdjacentHTML('beforeend', h);
   }
