@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <script>try{var t=localStorage.getItem("caixa-theme");if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Controle de Caixa v6.2</title>
+<title>Controle de Caixa v6.3</title>
 
 <!-- ============================================================
      PWA — Progressive Web App
@@ -45,6 +45,7 @@
   ║         · Melhoria: renderContas usa cache; seção 3.22 documentada   ║
   ║  v3.3 — Seções novas: Planilhas já lançadas (3.23), calendário       ║
   ║         visual de lançamentos com marcação de cartão                 ║
+  ║  v6.3 — Complementos: botão Salvar (edição em rascunho) / Descartar  ║
   ║  v6.2 — Destaques: vários itens em destaque, que passam sozinhos     ║
   ║         (carrossel) no topo da página de pedidos                    ║
   ║  v6.1 — Complementos: foto em cada opção (cadastro, pedido online e ║
@@ -3240,6 +3241,8 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
 .cdp-item .cdp-c-opc { grid-column: 1 / -1; padding-left: 82px; }
 .cdp-opc-btn { border:1.5px dashed var(--border2); background:var(--bg); color:var(--text2); border-radius:999px; padding:6px 14px; font-family:'DM Sans',sans-serif; font-size:12px; font-weight:700; cursor:pointer; }
 .cdp-opc-btn.tem { border-style:solid; border-color:#93C5FD; background:var(--accent-bg); color:var(--accent-text); }
+.cdp-opc-barra { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin:8px 0; }
+.cdp-opc-st { font-size:12px; font-weight:700; color:var(--red-mid); }
 .cdp-opc-dica { font-size:12px; color:var(--text3); margin:8px 0; line-height:1.4; }
 .cdp-g { border:1px solid var(--border); border-radius:var(--radius-sm); background:var(--bg); padding:10px; margin:8px 0; }
 .cdp-g-head { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:8px; }
@@ -3583,7 +3586,7 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
           <img src="logo.png" alt="Select Sabor" style="width:44px;height:44px;border-radius:50%;flex-shrink:0;background:#fff;box-shadow:0 0 0 2px rgba(255,255,255,0.18)">
           <div>
             <div class="logo-title">Controle de Caixa</div>
-            <div class="logo-sub">v6.2</div>
+            <div class="logo-sub">v6.3</div>
           </div>
         </div>
         <span id="status-dot" style="display:none;width:8px;height:8px;border-radius:50%;background:#4ADE80;flex-shrink:0;box-shadow:0 0 0 2px rgba(74,222,128,0.2)" title="Conectado"></span>
@@ -19903,13 +19906,33 @@ function _cdpGrupos(i) {
     opcoes: _cdpLista(g.opcoes).filter(o => o && o.id).map(o => ({ id: String(o.id), nome: String(o.nome || ''), preco: parseFloat(o.preco) || 0, ativo: o.ativo !== false, fotoV: Number(o.fotoV) || null }))
   }));
 }
+let _cdpRasc = {}, _cdpFotoPend = {};
+function _cdpGruposVis(i) { return _cdpRasc[i.id] || _cdpGrupos(i); }
+/* As alterações ficam em RASCUNHO até clicar em "Salvar complementos". */
 function _cdpGrupoEdit(id, fn, rerender) {
   const it = _cmdCardapio().find(i => i.id === id); if (!it) return;
-  const gs = _cdpGrupos(it);
+  const gs = _cdpRasc[id] || _cdpGrupos(it);
   if (fn(gs) === false) return;
-  _dbRef('cardapio/' + _lojaAtiva + '/' + id + '/grupos').set(gs.length ? gs : null)
-    .catch(e => { console.error(e); showToast('Erro ao salvar os complementos', false); });
-  if (rerender) _cdpRenderLista(); // o cache local já foi atualizado pelo set()
+  _cdpRasc[id] = gs;
+  if (rerender) _cdpRenderLista();
+  else { const st = document.getElementById('cdp-rasc-st-' + id); if (st) st.textContent = '● alterações não salvas'; }
+}
+function _cdpFotoPendAdd(id, oids) { (_cdpFotoPend[id] = _cdpFotoPend[id] || []).push(...(oids || [])); }
+function cdpOpcSalvar(id) {
+  const gs = _cdpRasc[id];
+  if (!gs) { showToast('Nenhuma alteração para salvar'); return; }
+  if (_cmdSemLoja()) return;
+  _dbRef('cardapio/' + _lojaAtiva + '/' + id + '/grupos').set(gs.length ? gs : null).then(() => {
+    const vivos = new Set(); gs.forEach(g => g.opcoes.forEach(o => { if (o.fotoV) vivos.add(o.id); }));
+    _cdpFotoOpcLimpar(id, (_cdpFotoPend[id] || []).filter(oid => !vivos.has(oid)));
+    delete _cdpFotoPend[id]; delete _cdpRasc[id];
+    _cdpRenderLista(); showToast('Complementos salvos ✔');
+  }).catch(e => { console.error(e); showToast('Erro ao salvar os complementos', false); });
+}
+function cdpOpcDescartar(id) {
+  if (!_cdpRasc[id]) { showToast('Nenhuma alteração para descartar'); return; }
+  delete _cdpRasc[id]; delete _cdpFotoPend[id];
+  _cdpRenderLista(); showToast('Alterações descartadas');
 }
 function cdpOpcToggle(id) { _cdpAbertos[id] = !_cdpAbertos[id]; _cdpRenderLista(); }
 function cdpGrupoAdd(id) {
@@ -19929,7 +19952,7 @@ function cdpGrupoCampo(id, gid, campo, v) {
 function cdpGrupoDel(id, gid) {
   const it = _cmdCardapio().find(i => i.id === id); const g = it && _cdpGrupos(it).find(x => x.id === gid); if (!g) return;
   showModal('Remover grupo', `Remover o grupo <strong>${escapeHtml(g.nome)}</strong> e suas ${g.opcoes.length} opção(ões)? Pedidos já feitos não são alterados.`, [
-    { label: 'Remover', style: 'danger', action: () => _cdpGrupoEdit(id, gs => { const ix = gs.findIndex(x => x.id === gid); if (ix >= 0) { _cdpFotoOpcLimpar(id, gs[ix].opcoes.map(o => o.id)); gs.splice(ix, 1); } }, true) },
+    { label: 'Remover', style: 'danger', action: () => _cdpGrupoEdit(id, gs => { const ix = gs.findIndex(x => x.id === gid); if (ix >= 0) { _cdpFotoPendAdd(id, gs[ix].opcoes.map(o => o.id)); gs.splice(ix, 1); } }, true) },
     { label: 'Cancelar', style: 'secondary' }]);
 }
 function cdpOpcaoAdd(id, gid) {
@@ -19960,11 +19983,11 @@ function cdpOpcaoAtivo(id, gid, oid) {
   _cdpGrupoEdit(id, gs => { const g = gs.find(x => x.id === gid), o = g && g.opcoes.find(x => x.id === oid); if (!o) return false; o.ativo = !o.ativo; }, true);
 }
 function cdpOpcaoDel(id, gid, oid) {
-  _cdpGrupoEdit(id, gs => { const g = gs.find(x => x.id === gid); if (!g) return false; const ix = g.opcoes.findIndex(x => x.id === oid); if (ix < 0) return false; g.opcoes.splice(ix, 1); _cdpFotoOpcLimpar(id, [oid]); }, true);
+  _cdpGrupoEdit(id, gs => { const g = gs.find(x => x.id === gid); if (!g) return false; const ix = g.opcoes.findIndex(x => x.id === oid); if (ix < 0) return false; g.opcoes.splice(ix, 1); _cdpFotoPendAdd(id, [oid]); }, true);
 }
 /* Foto de cada opção do complemento: guardada em cardapioFotos/<loja>/<item>_<opção> (miniatura leve, ~200 px). */
 function _cdpOFotoHtml(iid, gid, o) {
-  const f = _cdpFotos[iid + '_' + o.id];
+  const f = o.fotoV ? _cdpFotos[iid + '_' + o.id] : null;
   if (f && String(f).indexOf('data:image/') === 0)
     return `<span class="cdp-ofoto-w"><button type="button" class="cdp-ofoto" title="Trocar foto" onclick="cdpOpcFotoEscolher('${iid}','${gid}','${o.id}')"><img src="${f}" alt=""></button><button type="button" class="cdp-ofoto-x" onclick="cdpOpcFotoRemover('${iid}','${gid}','${o.id}')">remover</button></span>`;
   return `<span class="cdp-ofoto-w"><button type="button" class="cdp-ofoto" title="Adicionar foto" onclick="cdpOpcFotoEscolher('${iid}','${gid}','${o.id}')">📷</button></span>`;
@@ -19996,16 +20019,17 @@ function _cdpOpcFotoSalvar(iid, gid, oid, file) {
   });
 }
 function cdpOpcFotoRemover(iid, gid, oid) {
-  _cdpFotoOpcLimpar(iid, [oid]);
+  _cdpFotoPendAdd(iid, [oid]);
   _cdpGrupoEdit(iid, gs => { const g = gs.find(x => x.id === gid), o = g && g.opcoes.find(x => x.id === oid); if (!o) return false; o.fotoV = null; }, true);
-  showToast('Foto removida');
+  showToast('Foto removida (clique em Salvar complementos)');
 }
 function _cdpOpcHtml(i) {
-  const gs = _cdpGrupos(i), aberto = !!_cdpAbertos[i.id];
+  const gs = _cdpGruposVis(i), aberto = !!_cdpAbertos[i.id];
   const nOp = gs.reduce((t, g) => t + g.opcoes.length, 0);
   let h = `<button type="button" class="cdp-opc-btn${gs.length ? ' tem' : ''}" onclick="cdpOpcToggle('${i.id}')">🧩 Complementos${gs.length ? ` (${gs.length} grupo${gs.length > 1 ? 's' : ''} · ${nOp} opç${nOp === 1 ? 'ão' : 'ões'})` : ''} ${aberto ? '▴' : '▾'}</button>`;
-  if (!aberto) return h;
-  h += `<div class="cdp-opc-dica">O cliente escolhe na hora do pedido (ex.: sabor do refrigerante, ponto da carne, adicionais). Cada grupo tem opções, com valor extra opcional.</div>`;
+  if (!aberto) return h + (_cdpRasc[i.id] ? ' <span style="font-size:12px;color:var(--red-mid);font-weight:700">● não salvo</span>' : '');
+  const barra = `<div class="cdp-opc-barra"><button type="button" class="btn btn-primary" onclick="cdpOpcSalvar('${i.id}')">💾 Salvar complementos</button><button type="button" class="btn btn-secondary" onclick="cdpOpcDescartar('${i.id}')">Descartar alterações</button><span id="cdp-rasc-st-${i.id}" class="cdp-opc-st">${_cdpRasc[i.id] ? '● alterações não salvas' : ''}</span></div>`;
+  h += `<div class="cdp-opc-dica">O cliente escolhe na hora do pedido (ex.: sabor do refrigerante, ponto da carne, adicionais). Cada grupo tem opções, com valor extra opcional. <strong>Clique em Salvar complementos para gravar.</strong></div>${barra}`;
   gs.forEach(g => {
     h += `<div class="cdp-g"><div class="cdp-g-head">
       <input class="cdp-in cdp-g-nome" type="text" maxlength="40" value="${escapeAttr(g.nome)}" placeholder="Nome do grupo (ex.: Sabor do Refrigerante)" onchange="cdpGrupoCampo('${i.id}','${g.id}','nome',this.value)">
@@ -20026,7 +20050,7 @@ function _cdpOpcHtml(i) {
         <input id="cdp-op-${g.id}" class="cdp-in cdp-preco" type="number" step="0.01" min="0" placeholder="0,00" onkeydown="if(event.key==='Enter')cdpOpcaoAdd('${i.id}','${g.id}')">
         <button type="button" class="btn btn-secondary" onclick="cdpOpcaoAdd('${i.id}','${g.id}')">+ Opção</button></div></div>`;
   });
-  h += `<button type="button" class="btn btn-secondary" style="margin-top:4px" onclick="cdpGrupoAdd('${i.id}')">+ Novo grupo de complementos</button>`;
+  h += `<button type="button" class="btn btn-secondary" style="margin-top:4px" onclick="cdpGrupoAdd('${i.id}')">+ Novo grupo de complementos</button>${barra}`;
   return h;
 }
 
