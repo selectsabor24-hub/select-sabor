@@ -678,7 +678,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
   function listaDe(v) { return !v ? [] : (Array.isArray(v) ? v : Object.keys(v).map(function (k) { return v[k]; })); }
   function gruposDe(i) {
     return listaDe(i && i.grupos).filter(function (g) { return g && g.id && g.nome; }).map(function (g) {
-      return { id: String(g.id), nome: String(g.nome), obrig: g.obrig === true, max: Math.max(1, parseInt(g.max, 10) || 1), rep: g.rep !== false,
+      return { id: String(g.id), nome: String(g.nome), obrig: g.obrig === true, max: (parseInt(g.max, 10) === 0 ? 999 : Math.max(1, parseInt(g.max, 10) || 1)), sem: parseInt(g.max, 10) === 0, rep: g.rep !== false,
         opcoes: listaDe(g.opcoes).filter(function (o) { return o && o.id && o.nome; }) };
     }).filter(function (g) { return g.opcoes.length; });
   }
@@ -908,7 +908,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     opc.gs.forEach(function (g) {
       var sel = opc.sel[g.id] || [], quad = g.max > 1, rp = quad && g.rep;
       h += '<div class="opc-g' + (erroId === g.id ? ' erro' : '') + '" id="opc-g-' + esc(g.id) + '"><div class="opc-gt">' + esc(g.nome) + (g.obrig ? '<span class="opc-tag ob">Obrigatório</span>' : '<span class="opc-tag">Opcional</span>') +
-        '<small>' + (quad ? 'Escolha até ' + g.max + (rp ? ', pode repetir' : '') + ' (' + sel.length + '/' + g.max + ')' : (g.obrig ? 'Escolha 1' : 'Escolha até 1')) + '</small></div>';
+        '<small>' + (quad ? (g.sem ? 'Escolha quantos quiser' : 'Escolha até ' + g.max) + (rp ? ', pode repetir' : '') + ' (' + (g.sem ? sel.length : sel.length + '/' + g.max) + ')' : (g.obrig ? 'Escolha 1' : 'Escolha até 1')) + '</small></div>';
       g.opcoes.forEach(function (o) {
         var off = o.ativo === false, on = sel.indexOf(o.id) >= 0, pr = Number(o.preco) || 0;
         if (rp) {

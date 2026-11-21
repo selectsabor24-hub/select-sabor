@@ -18164,7 +18164,7 @@ function _pedItens(p) {
     let extra = 0, un = 0;
     if (card && it.sel) {
       const gs = _cdpGrupos(card);
-      _cdpLista(it.sel).forEach(sl => { const g = gs.find(x => x.id === sl.g); const o = g && g.opcoes.find(x => x.id === sl.o); if (o) { extra += o.preco; if (g.max > 1 && g.rep) un++; } });
+      _cdpLista(it.sel).forEach(sl => { const g = gs.find(x => x.id === sl.g); const o = g && g.opcoes.find(x => x.id === sl.o); if (o) { extra += o.preco; if (_gMax(g) > 1 && g.rep) un++; } });
     }
     const preco = fixo ? it.p : _cmdRound((card ? (parseFloat(card.preco) || 0) : 0) * Math.max(1, un) + extra);
     return { id: k, q: parseInt(it.q) || 0, n: it.n || (card && card.nome) || 'Item', preco, fixo, noCardapio: !!card };
@@ -19905,10 +19905,12 @@ function _cmdHtmlFechadas(fech) {
    Ex.: item "Refrigerante 200ml" → grupo "Sabor do Refrigerante" (obrigatório, máx. 1) → opções Coca-Cola, Fanta... */
 let _cdpAbertos = {};
 function _cdpLista(v) { return !v ? [] : (Array.isArray(v) ? v.slice() : Object.keys(v).map(k => v[k])); }
+/* Máx. escolhas do grupo: 0 = sem limite (o cliente escolhe quantas quiser) */
+const _gMax = g => g.max === 0 ? 999 : g.max;
 function _cdpNovoId(pref) { return pref + Math.random().toString(36).slice(2, 7) + Date.now().toString(36).slice(-3); }
 function _cdpGrupos(i) {
   return _cdpLista(i && i.grupos).filter(g => g && g.id).map(g => ({
-    id: String(g.id), nome: String(g.nome || ''), obrig: g.obrig === true, max: Math.max(1, parseInt(g.max) || 1), rep: g.rep !== false,
+    id: String(g.id), nome: String(g.nome || ''), obrig: g.obrig === true, max: (parseInt(g.max) === 0 ? 0 : Math.max(1, parseInt(g.max) || 1)), rep: g.rep !== false,
     opcoes: _cdpLista(g.opcoes).filter(o => o && o.id).map(o => ({ id: String(o.id), nome: String(o.nome || ''), preco: parseFloat(o.preco) || 0, ativo: o.ativo !== false, fotoV: Number(o.fotoV) || null }))
   }));
 }
@@ -19952,7 +19954,7 @@ function cdpGrupoCampo(id, gid, campo, v) {
     if (campo === 'nome') { const n = String(v || '').trim().slice(0, 40); if (!n) { showToast('O nome do grupo não pode ficar vazio', false); refazer = true; return false; } g.nome = n; }
     else if (campo === 'obrig') g.obrig = !!v;
     else if (campo === 'rep') g.rep = !!v;
-    else if (campo === 'max') g.max = Math.min(20, Math.max(1, parseInt(v) || 1));
+    else if (campo === 'max') { const n = parseInt(v); g.max = isNaN(n) ? 1 : Math.min(20, Math.max(0, n)); }
   }, false);
   if (refazer || campo === 'max') _cdpRenderLista();
 }
@@ -20041,7 +20043,7 @@ function _cdpOpcHtml(i) {
     h += `<div class="cdp-g"><div class="cdp-g-head">
       <input class="cdp-in cdp-g-nome" type="text" maxlength="40" value="${escapeAttr(g.nome)}" placeholder="Nome do grupo (ex.: Sabor do Refrigerante)" onchange="cdpGrupoCampo('${i.id}','${g.id}','nome',this.value)">
       <label><input type="checkbox" ${g.obrig ? 'checked' : ''} onchange="cdpGrupoCampo('${i.id}','${g.id}','obrig',this.checked)"> Obrigatório</label>
-      <label>Máx. escolhas <input class="cdp-in" type="number" min="1" max="20" value="${g.max}" onchange="cdpGrupoCampo('${i.id}','${g.id}','max',this.value)"></label>
+      <label title="0 = sem limite (o cliente escolhe quantas quiser)">Máx. escolhas <input class="cdp-in" type="number" min="0" max="20" value="${g.max}" placeholder="0" onchange="cdpGrupoCampo('${i.id}','${g.id}','max',this.value)"></label>
       <label title="Com máx. maior que 1: o cliente escolhe a quantidade de cada opção (ex.: 2 Coca-Cola + 1 Fanta)"><input type="checkbox" ${g.rep ? 'checked' : ''} onchange="cdpGrupoCampo('${i.id}','${g.id}','rep',this.checked)"> Permitir repetir (quantidade)</label>
       <button type="button" class="cmd-x" title="Remover grupo" onclick="cdpGrupoDel('${i.id}','${g.id}')">×</button></div>`;
     g.opcoes.forEach(o => {
@@ -20071,7 +20073,7 @@ function _opcResumo(ex) {
 let _opcAdm = null;
 function _opcAdmTotal() {
   let ex = 0, un = 0;
-  _opcAdm.gs.forEach(g => (_opcAdm.sel[g.id] || []).forEach(oid => { const o = g.opcoes.find(x => x.id === oid); if (o) { ex += o.preco; if (g.max > 1 && g.rep) un++; } }));
+  _opcAdm.gs.forEach(g => (_opcAdm.sel[g.id] || []).forEach(oid => { const o = g.opcoes.find(x => x.id === oid); if (o) { ex += o.preco; if (_gMax(g) > 1 && g.rep) un++; } }));
   return _cmdRound((parseFloat(_opcAdm.it.preco) || 0) * Math.max(1, un) + ex);
 }
 function _opcAdmDesenhar(erroId) {
@@ -20079,8 +20081,8 @@ function _opcAdmDesenhar(erroId) {
   const corpo = box.querySelector('.opc-adm-b'), topo = corpo ? corpo.scrollTop : 0;
   let h = `<div class="opc-adm"><div class="opc-adm-h"><span>${escapeHtml(_opcAdm.it.nome)}</span><span style="color:var(--text3);font-weight:600">${fmt(_opcAdm.it.preco)}</span></div><div class="opc-adm-b">`;
   _opcAdm.gs.forEach(g => {
-    const sel = _opcAdm.sel[g.id] || [], quad = g.max > 1, rp = quad && g.rep;
-    h += `<div class="opc-adm-g${erroId === g.id ? ' erro' : ''}" id="opc-adm-g-${g.id}"><div class="opc-adm-gt">${escapeHtml(g.nome)}<small>${g.obrig ? 'Obrigatório' : 'Opcional'} · ${quad ? 'até ' + g.max + (rp ? ', pode repetir' : '') + ' (' + sel.length + '/' + g.max + ')' : (g.obrig ? 'escolha 1' : 'até 1')}</small></div>`;
+    const sel = _opcAdm.sel[g.id] || [], quad = _gMax(g) > 1, rp = quad && g.rep;
+    h += `<div class="opc-adm-g${erroId === g.id ? ' erro' : ''}" id="opc-adm-g-${g.id}"><div class="opc-adm-gt">${escapeHtml(g.nome)}<small>${g.obrig ? 'Obrigatório' : 'Opcional'} · ${quad ? (g.max === 0 ? 'quantos quiser' : 'até ' + g.max) + (rp ? ', pode repetir' : '') + ' (' + (g.max === 0 ? sel.length : sel.length + '/' + g.max) + ')' : (g.obrig ? 'escolha 1' : 'até 1')}</small></div>`;
     g.opcoes.forEach(o => {
       const ft = _cdpFotos[_opcAdm.it.id + '_' + o.id];
       const img = ft && String(ft).indexOf('data:image/') === 0 ? `<img class="of" src="${ft}" alt="">` : '';
@@ -20110,7 +20112,7 @@ function _opcAdmQtd(gid, oid, d) {
   if (!_opcAdm) return;
   const g = _opcAdm.gs.find(x => x.id === gid); if (!g) return;
   const sel = (_opcAdm.sel[gid] || []).slice();
-  if (d > 0) { if (sel.length >= g.max) { showToast('Máximo de ' + g.max + ' em "' + g.nome + '"', false); return; } sel.push(oid); }
+  if (d > 0) { if (sel.length >= _gMax(g)) { showToast('Máximo de ' + g.max + ' em "' + g.nome + '"', false); return; } sel.push(oid); }
   else { const ix = sel.indexOf(oid); if (ix >= 0) sel.splice(ix, 1); }
   _opcAdm.sel[gid] = sel; _opcAdmDesenhar();
 }
@@ -20120,7 +20122,7 @@ function _opcAdmClique(gid, oid) {
   let sel = (_opcAdm.sel[gid] || []).slice(); const ix = sel.indexOf(oid);
   if (ix >= 0) { if (!(g.max === 1 && g.obrig)) sel.splice(ix, 1); }
   else if (g.max === 1) sel = [oid];
-  else if (sel.length >= g.max) { showToast('Máximo de ' + g.max + ' em "' + g.nome + '"', false); return; }
+  else if (sel.length >= _gMax(g)) { showToast('Máximo de ' + g.max + ' em "' + g.nome + '"', false); return; }
   else sel.push(oid);
   _opcAdm.sel[gid] = sel; _opcAdmDesenhar();
 }
@@ -20133,7 +20135,7 @@ function _opcAdmOk() {
     return;
   }
   const extras = [];
-  _opcAdm.gs.forEach(g => (_opcAdm.sel[g.id] || []).forEach(oid => { const o = g.opcoes.find(x => x.id === oid); if (o) extras.push({ g: g.id, o: o.id, gn: g.nome, on: o.nome, preco: o.preco, q: g.max > 1 && g.rep }); }));
+  _opcAdm.gs.forEach(g => (_opcAdm.sel[g.id] || []).forEach(oid => { const o = g.opcoes.find(x => x.id === oid); if (o) extras.push({ g: g.id, o: o.id, gn: g.nome, on: o.nome, preco: o.preco, q: _gMax(g) > 1 && g.rep }); }));
   const cb = _opcAdm.ok; _opcAdmFechar(); cb(extras);
 }
 
