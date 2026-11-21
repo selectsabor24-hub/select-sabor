@@ -346,6 +346,17 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
 .item .preco .por, .dest-preco .por { color: #1f8a3b; font-weight: 800; }
 .promo-tag { display: inline-block; margin-left: 8px; background: #e8f5ea; color: #1f7a35; border: 1px solid #b9dfc0; border-radius: 999px; padding: 1px 8px; font-size: 11px; font-weight: 800; letter-spacing: .2px; white-space: nowrap; }
 .item .preco { flex-wrap: wrap; row-gap: 2px; }
+/* ===== Histórico de pedidos (aba Pedidos) ===== */
+#conta-modal .hp-lista { max-height: 60vh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.hp-item { display: block; width: 100%; text-align: left; background: #fff; border: 1.5px solid var(--borda); border-radius: 12px; padding: 10px 12px; margin: 0 0 8px; }
+.hp-item > span { display: block; }
+.hp-top { display: flex !important; align-items: center; justify-content: space-between; gap: 8px; font-size: 16px; }
+.hp-st { background: #FEF3C7; color: #92400E; border-radius: 999px; padding: 2px 10px; font-size: 12px; font-weight: 800; }
+.hp-st.f { background: #DCFCE7; color: #166534; }
+.hp-st.c { background: var(--vermelho-bg); color: var(--vermelho); }
+.hp-dt { margin-top: 2px; font-size: 12px; color: var(--mut); }
+.hp-it { margin-top: 4px; font-size: 13px; color: var(--txt); overflow-wrap: anywhere; }
+.hp-tot { margin-top: 4px; font-size: 14px; font-weight: 800; color: var(--verde); }
 </style>
 </head>
 <body>
@@ -1200,8 +1211,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     var q = b.dataset.nav; navMarcar(q);
     if (q === 'inicio') { window.scrollTo({ top: 0, behavior: 'smooth' }); }
     else if (q === 'pedidos') {
-      var u = pedidoAtivoSalvo();
-      if (u) abrirAcompanhamento(u.id, false); else { toast('Você ainda não fez pedidos nas últimas 24h'); navMarcar('inicio'); }
+      histAbrir();
     } else contaAbrir();
   });
   function desenharBarra() {
@@ -1356,8 +1366,9 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     Promise.race([envio, temporizador]).then(function () {
       lsSet('cliente', { nome: dados.cliente.nome, tel: dados.cliente.telefone, cep: mascaraCep($('#f-cep').value), rua: $('#f-rua').value.trim(), num: $('#f-num').value.trim(), bairro: $('#f-bairro').value.trim(), comp: $('#f-comp').value.trim(), ref: $('#f-ref').value.trim(), cid: cepCidade, uf: cepUF });
       var lista = lsGet('meusPedidos') || [];
-      lista.unshift({ loja: LOJA, id: pendenteId, codigo: pendenteCodigo, ts: Date.now() });
-      lsSet('meusPedidos', lista.slice(0, 10));
+      lista.unshift({ loja: LOJA, id: pendenteId, codigo: pendenteCodigo, ts: Date.now(), st: 'novo', tp: dados.tipo,
+        it: Object.keys(dados.itens || {}).map(function (k) { return (dados.itens[k].q || 1) + '× ' + (dados.itens[k].n || 'Item'); }).join(', ').slice(0, 160) });
+      lsSet('meusPedidos', lista.slice(0, 60));
       var id = pendenteId; pendenteId = null; pendenteCodigo = null; pendenteCodEnt = null;
       cart = {}; salvarCart(); $('#f-obs').value = ''; $('#f-troco').value = '';
       enviando = false; btn.disabled = false;
@@ -1401,6 +1412,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     refPedido = base('pedidos/' + LOJA + '/' + id);
     refPedido.on('value', function (snap) {
       pedido = snap.val(); desenharAcompanhamento(novo);
+      histSalvar(id, pedido);
       novo = false;
     }, function () {
       $('#tr-corpo').innerHTML = '<div class="vazio">Não foi possível carregar o pedido agora. Verifique sua internet.</div>';
@@ -1536,6 +1548,56 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     try { history.replaceState(null, '', '?loja=' + encodeURIComponent(LOJA)); } catch (e) {}
     desenharCabecalho(); desenharMenu(); desenharBarra(); verPedidoEmAndamento();
     mostrar('v-menu');
+  }
+
+  /* ---------- Histórico de pedidos (fica salvo neste aparelho) ---------- */
+  var ROT_HIST = { novo: 'Enviado', preparo: 'Em preparo', pronto: 'Pronto', saiu: 'Saiu para entrega', entregue: 'Entregue', cancelado: 'Cancelado' };
+  function histSalvar(id, p) {
+    if (!p || !id) return;
+    var lista = lsGet('meusPedidos') || [], e = null;
+    lista.forEach(function (x) { if (x && x.id === id) e = x; });
+    if (!e) { e = { loja: LOJA, id: id, codigo: p.codigo || '', ts: (typeof p.ts === 'number' ? p.ts : Date.now()) }; lista.push(e); }
+    var its = Object.keys(p.itens || {}).map(function (k) { return ((p.itens[k] || {}).q || 1) + '× ' + ((p.itens[k] || {}).n || 'Item'); }).join(', ').slice(0, 160);
+    e.st = p.status || 'novo';
+    if (p.tipo) e.tp = p.tipo;
+    if (its) e.it = its;
+    if (typeof p.total === 'number') e.tot = p.total;
+    if (p.codigo) e.codigo = p.codigo;
+    if (typeof p.ts === 'number') e.ts = p.ts;
+    lista.sort(function (a, b) { return ((b && b.ts) || 0) - ((a && a.ts) || 0); });
+    lsSet('meusPedidos', lista.slice(0, 60));
+  }
+  function dataHoraBR(ts) { var d = new Date(ts), z = function (n) { return String(n).padStart(2, '0'); }; return z(d.getDate()) + '/' + z(d.getMonth() + 1) + ' às ' + z(d.getHours()) + ':' + z(d.getMinutes()); }
+  function histDesenhar() {
+    var m = $('#conta-modal'); if (!m || m.classList.contains('hide') || !m.querySelector('#hp-lista')) return;
+    var lista = (lsGet('meusPedidos') || []).filter(function (p) { return p && p.loja === LOJA && p.id; });
+    $('#hp-lista').innerHTML = lista.length ? lista.map(function (p) {
+      var st = p.st || 'novo', fim = STATUS_FINAIS.indexOf(st) >= 0;
+      return '<button type="button" class="hp-item" data-hp="' + esc(p.id) + '">' +
+        '<span class="hp-top"><b>#' + esc(p.codigo || '') + '</b><span class="hp-st ' + (st === 'cancelado' ? 'c' : (fim ? 'f' : '')) + '">' + esc(ROT_HIST[st] || st) + '</span></span>' +
+        '<span class="hp-dt">' + (p.ts ? dataHoraBR(p.ts) : '') + (p.tp ? ' · ' + (p.tp === 'entrega' ? 'Entrega' : 'Retirada') : '') + '</span>' +
+        (p.it ? '<span class="hp-it">' + esc(p.it) + '</span>' : '') +
+        (typeof p.tot === 'number' ? '<span class="hp-tot">' + brl(p.tot) + '</span>' : '') + '</button>';
+    }).join('') : '<p style="color:var(--mut)">Você ainda não fez pedidos neste aparelho. Depois do primeiro pedido, ele aparece aqui.</p>';
+  }
+  function histAbrir() {
+    var m = $('#conta-modal');
+    m.innerHTML = '<div class="m"><h3>Meus pedidos</h3><div id="hp-lista" class="hp-lista"></div>' +
+      '<p style="color:var(--mut);font-size:12px;margin:8px 0 0">Seu histórico fica salvo neste aparelho.</p>' +
+      '<div class="bs"><button type="button" id="hp-fechar">Fechar</button></div></div>';
+    m.classList.remove('hide');
+    var fechar = function () { m.classList.add('hide'); navMarcar('inicio'); };
+    $('#hp-fechar').onclick = fechar;
+    m.onclick = function (e) {
+      var it = e.target.closest && e.target.closest('button[data-hp]');
+      if (it) { m.classList.add('hide'); abrirAcompanhamento(it.getAttribute('data-hp'), false); return; }
+      if (e.target === m) fechar();
+    };
+    histDesenhar();
+    // atualiza o status dos pedidos ainda em andamento (os 8 mais recentes)
+    (lsGet('meusPedidos') || []).filter(function (p) { return p && p.loja === LOJA && p.id && STATUS_FINAIS.indexOf(p.st || 'novo') < 0; }).slice(0, 8).forEach(function (p) {
+      base('pedidos/' + LOJA + '/' + p.id).once('value').then(function (sn) { if (sn.val()) { histSalvar(p.id, sn.val()); histDesenhar(); } }).catch(function () {});
+    });
   }
 
   /* Último pedido deste aparelho nesta loja (últimas 24h), guardado em 'meusPedidos' */
