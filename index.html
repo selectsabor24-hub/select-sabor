@@ -7570,7 +7570,9 @@ function _atualizarResumoDia() {
     elLucro.style.color = lucro >= 0 ? '#A78BFA' : '#F87171';
   }
 
-  card.style.display = _lojaAtiva ? '' : 'none';
+  // v5.9: perfil "Atendimento" não vê o resumo financeiro do dia (só o admin/perfis completos)
+  const _mostrarResumo = _lojaAtiva && !_ehAtendimento();
+  card.style.display = _mostrarResumo ? '' : 'none';
 
   // Sincronizar com o card do drawer mobile
   const drawerCard  = document.getElementById('drawer-resumo-dia');
@@ -7579,7 +7581,7 @@ function _atualizarResumoDia() {
   const drawerDesp  = document.getElementById('drawer-resumo-desp-m');
   const drawerLucro = document.getElementById('drawer-resumo-lucro-m');
 
-  if (drawerCard)  drawerCard.style.display  = _lojaAtiva ? '' : 'none';
+  if (drawerCard)  drawerCard.style.display  = _mostrarResumo ? '' : 'none';
   if (drawerData)  drawerData.textContent    = label;
   if (drawerVend)  drawerVend.textContent    = fmtR(vendas);
   if (drawerDesp)  drawerDesp.textContent    = fmtR(desp);
@@ -21701,6 +21703,10 @@ function _aplicarPerfilAtendimento() {
   // Barra inferior: sobra só o botão "Mais" (abre o menu com as 4 telas)
   document.querySelectorAll('.bottom-nav-item').forEach(b => { if (b.id !== 'bn-mais') b.style.display = 'none'; });
   document.querySelectorAll('.logo-sub').forEach(e => { e.textContent = e.textContent.trim() + ' · Atendimento'; });
+  // v5.9: esconde o resumo do dia (Vendas/Despesas/Lucro) e a busca de lançamentos
+  ['sidebar-resumo-dia', 'drawer-resumo-dia', 'sidebar-busca-btn'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.style.setProperty('display', 'none', 'important');
+  });
   // Tela inicial: Pedidos online
   const btn = document.getElementById('nav-pedidos');
   showSection('pedidos', btn);
@@ -22869,6 +22875,8 @@ mark.busca-hl { background: #FEF9C3; color: #78350F; border-radius: 2px; padding
 
   /* ── Abrir / fechar ── */
   window.buscaAbrir = function () {
+    // v5.9: a busca global mostra lançamentos financeiros — não disponível no perfil Atendimento
+    if (typeof _ehAtendimento === 'function' && _ehAtendimento()) return;
     const overlay = document.getElementById('busca-overlay');
     if (!overlay) return;
     overlay.classList.add('open');
