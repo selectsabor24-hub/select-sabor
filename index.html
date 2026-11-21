@@ -3391,143 +3391,23 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
 .chat-rapidas button { flex: 0 0 auto; border: 1px solid var(--border); background: var(--surface); color: var(--text2); border-radius: 99px; padding: 6px 12px; font-size: 13px; cursor: pointer; }
 .chat-form { display: flex; gap: 8px; align-items: flex-end; padding: 10px; padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)); }
 .chat-form textarea { flex: 1; min-width: 0; resize: none; max-height: 110px; }
-</style>
 
-
-<style id="select-sabor-brand-premium">
-/* Select Sabor — acabamento premium mantendo a identidade original */
-:root {
-  --bg: #F7F4EF;
-  --surface: #FFFFFF;
-  --surface2: #FBF1E3;
-  --border: #E7E2D9;
-  --border2: #D8C8B5;
-  --text: #1F2A22;
-  --text2: #6B7280;
-  --text3: #92958D;
-  --accent: #8A4F12;
-  --accent-hover: #6F3E12;
-  --accent-bg: #FBF1E3;
-  --accent-text: #6F3E12;
-  --green: #2F5233;
-  --green-bg: #E8F1E9;
-  --green-mid: #3F7A47;
-  --red: #991B1B;
-  --red-bg: #FEE2E2;
-  --red-mid: #DC2626;
-  --amber: #8A4F12;
-  --amber-bg: #FBF1E3;
-  --sidebar-bg: #18351F;
-  --sidebar-border: rgba(255,255,255,0.10);
-  --sidebar-text: #F3F4EC;
-  --sidebar-text2: #C4D0C2;
-  --sidebar-active: #FFFFFF;
-  --sidebar-hover: rgba(255,255,255,0.09);
-  --sidebar-active-bg: linear-gradient(135deg, #8A4F12 0%, #B8742F 100%);
-  --sidebar-accent: #F3D5AE;
-  --radius: 18px;
-  --radius-sm: 13px;
-  --radius-xs: 9px;
-  --shadow-sm: 0 2px 8px rgba(55,42,25,0.055), 0 10px 26px rgba(55,42,25,0.045);
-  --shadow-md: 0 16px 36px rgba(55,42,25,0.12);
-  --shadow-lg: 0 24px 70px rgba(35,28,18,0.20);
+/* ===== Visual Select Sabor (verde, creme e dourado) — o tema escuro continua como estava ===== */
+:root:not([data-theme="dark"]) {
+  --bg: #F8F3E8; --surface2: #F0E8D6; --border: #E6DBC3; --border2: #D2C4A3;
+  --accent: #2F5233; --accent-hover: #244427; --accent-bg: #E8F1E9; --accent-text: #1F4D2B;
+  --sidebar-bg: #1F4D2B; --sidebar-border: rgba(255,255,255,.12); --sidebar-text: #D9E6D7; --sidebar-text2: #9DBB9F;
+  --sidebar-active: #FFFFFF; --sidebar-hover: rgba(255,255,255,.08); --sidebar-active-bg: #B8742F; --sidebar-accent: #F3C77E;
+  --radius: 16px; --shadow-sm: 0 2px 8px rgba(80,60,20,.08); --shadow-md: 0 6px 18px rgba(80,60,20,.12);
 }
-[data-theme="dark"] {
-  --bg: #121A14;
-  --surface: #1B261E;
-  --surface2: #243328;
-  --border: #354638;
-  --border2: #526653;
-  --text: #F4F2EA;
-  --text2: #C5CFC3;
-  --text3: #9AA99A;
-  --accent: #D5A36C;
-  --accent-hover: #E5B77F;
-  --accent-bg: rgba(184,116,47,0.16);
-  --accent-text: #F0C795;
-  --green: #75A77A;
-  --green-bg: rgba(63,122,71,0.20);
-  --green-mid: #69A873;
-  --amber: #D5A36C;
-  --amber-bg: rgba(184,116,47,0.18);
-  --sidebar-bg: #102117;
-  --sidebar-border: rgba(255,255,255,0.09);
-  --sidebar-hover: rgba(255,255,255,0.08);
-  --sidebar-active-bg: linear-gradient(135deg, #8A4F12 0%, #B8742F 100%);
+:root:not([data-theme="dark"]) .sidebar {
+  background: radial-gradient(circle at 20% 0%, rgba(243,199,126,.16), transparent 17rem), linear-gradient(180deg, #24572F 0%, #1F4D2B 55%, #163A20 100%) !important;
+  box-shadow: 18px 0 44px rgba(31,77,43,.18);
 }
-html { background: var(--bg) !important; }
-body {
-  background:
-    radial-gradient(circle at 88% -12%, rgba(184,116,47,.10), transparent 31rem),
-    radial-gradient(circle at 5% 12%, rgba(47,82,51,.075), transparent 28rem),
-    var(--bg) !important;
-  color: var(--text);
-}
-.sidebar {
-  background:
-    radial-gradient(circle at 20% 0%, rgba(184,116,47,.18), transparent 17rem),
-    linear-gradient(180deg, #24452B 0%, #18351F 58%, #102117 100%) !important;
-  border-right: 1px solid var(--sidebar-border) !important;
-  box-shadow: 14px 0 38px rgba(24,53,31,.15) !important;
-}
-.logo { padding: 1.25rem 1.05rem 1rem !important; }
-.logo img {
-  width: 48px !important; height: 48px !important;
-  border-radius: 50% !important; object-fit: contain !important;
-  background: #fff !important; padding: 1px !important;
-  box-shadow: 0 0 0 2px rgba(255,255,255,.22), 0 7px 18px rgba(0,0,0,.18) !important;
-}
-.logo-title { color: #FFF9F0 !important; letter-spacing: -.35px !important; }
-.logo-sub { color: rgba(243,244,236,.62) !important; }
-.nav-section-label { color: rgba(243,244,236,.48) !important; }
-.nav-item { border-radius: 13px !important; }
-.nav-item.active {
-  background: var(--sidebar-active-bg) !important;
-  box-shadow: 0 9px 22px rgba(138,79,18,.25) !important;
-}
-.main { padding-top: 26px !important; }
-.page-header, #dash-lojas-wrap {
-  background: rgba(255,255,255,.82) !important;
-  border-color: rgba(231,226,217,.95) !important;
-  border-radius: 20px !important;
-  box-shadow: var(--shadow-sm) !important;
-}
-[data-theme="dark"] .page-header,
-[data-theme="dark"] #dash-lojas-wrap {
-  background: rgba(27,38,30,.88) !important;
-  border-color: var(--border) !important;
-}
-.page-title { letter-spacing: -.85px !important; }
-.metric-card {
-  border-radius: 19px !important;
-  border-color: var(--border) !important;
-  box-shadow: var(--shadow-sm) !important;
-}
-.metric-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md) !important; }
-.card, .panel, .section-card, .chart-card, .table-card {
-  border-radius: 17px;
-}
-.btn-primary, .btn-pill, .btn-secondary, .loja-tab, .store-tab,
-#dash-lojas-btns button, #theme-toggle {
-  border-radius: 12px !important;
-}
-input, select, textarea { border-radius: 10px; }
-table { border-radius: 12px; overflow: hidden; }
-thead th { letter-spacing: .045em; }
-button, a, input, select, textarea { transition-duration: .18s; }
-button:focus-visible, a:focus-visible, input:focus-visible,
-select:focus-visible, textarea:focus-visible { outline-offset: 3px; }
-@media (max-width: 900px) {
-  .main { padding: 20px 18px 32px !important; }
-}
-@media (max-width: 600px) {
-  .main { padding: 15px 12px 28px !important; }
-  .page-header { border-radius: 16px !important; padding: 14px !important; }
-  .metric-card { border-radius: 15px !important; }
-}
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
-}
+:root:not([data-theme="dark"]) .nav-item.active { box-shadow: 0 10px 22px rgba(184,116,47,.35) !important; }
+:root:not([data-theme="dark"]) .metric-card { border-color: #EADFC6; box-shadow: 0 4px 14px rgba(80,60,20,.09); }
+:root:not([data-theme="dark"]) .card { border-color: #EADFC6; box-shadow: 0 3px 12px rgba(80,60,20,.07); }
+:root:not([data-theme="dark"]) .page-title { color: #1F4D2B; }
 </style>
 
 </head>
