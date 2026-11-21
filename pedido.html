@@ -714,9 +714,28 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     return /^preparo/i.test(t) ? t : 'Preparo: ' + t;
   }
   function fmtMin(n) { return typeof n === 'number' ? ('0' + Math.floor(n / 60)).slice(-2) + ':' + ('0' + (n % 60)).slice(-2) : ''; }
+  /* Horário por dia da semana: cfg.horarioDia === true e cfg.horarios[0..6] = { on, abre, fecha } (0 = domingo) */
+  var DIAS_N = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
+  function diaBR() { return new Date(Date.now() + HORA_OFFSET - 10800000).getUTCDay(); }
+  function horDia(d) { var h = cfg && cfg.horarios && cfg.horarios[d]; return h && h.on === true && typeof h.abre === 'number' && typeof h.fecha === 'number' && h.abre < h.fecha ? h : null; }
+  function proxAbre() {
+    if (!(cfg && cfg.horarioDia === true)) return 'Abrimos às ' + fmtMin(cfg.abreMin);
+    var d = diaBR(), n = agoraMin();
+    for (var i = 0; i <= 7; i++) {
+      var k = (d + i) % 7, h = horDia(k);
+      if (!h || (i === 0 && n >= h.abre)) continue;
+      return 'Abrimos ' + (i === 0 ? 'hoje' : i === 1 ? 'amanhã' : (k === 0 || k === 6 ? 'no ' : 'na ') + DIAS_N[k]) + ' às ' + fmtMin(h.abre);
+    }
+    return 'Sem horário de funcionamento definido';
+  }
+  function infoHorario() {
+    if (cfg && cfg.horarioDia === true) return proxAbre() + '.';
+    return 'Nosso horário de pedidos é das ' + fmtMin(cfg.abreMin) + ' às ' + fmtMin(cfg.fechaMin) + '.';
+  }
   /* Horário de funcionamento da loja (cfg.horarioOn / abreMin / fechaMin): fora dele ninguém consegue pedir. */
   function horarioLojaOk() {
     if (!cfg || cfg.horarioOn !== true) return true;
+    if (cfg.horarioDia === true) { var hj = horDia(diaBR()), nn = agoraMin(); return !!hj && nn >= hj.abre && nn < hj.fecha; }
     var a = cfg.abreMin, f = cfg.fechaMin;
     if (typeof a !== 'number' || typeof f !== 'number' || a === f) return false;
     var n = agoraMin();
@@ -725,7 +744,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
   function foraDoHorarioLoja() { return !!(cfg && cfg.aberto === true) && !horarioLojaOk(); }
   function msgFechada() {
     return foraDoHorarioLoja()
-      ? 'Já passou do nosso horário de pedidos (' + fmtMin(cfg.abreMin) + ' às ' + fmtMin(cfg.fechaMin) + '). Abrimos às ' + fmtMin(cfg.abreMin) + '.'
+      ? (cfg.horarioDia === true ? 'Estamos fora do horário de pedidos. ' + proxAbre() + '.' : 'Já passou do nosso horário de pedidos (' + fmtMin(cfg.abreMin) + ' às ' + fmtMin(cfg.fechaMin) + '). Abrimos às ' + fmtMin(cfg.abreMin) + '.')
       : 'A loja está fechada no momento.';
   }
   function hmMin(v) { var m = /^(\d{1,2}):(\d{2})$/.exec(String(v || '')); if (!m) return null; var h = +m[1], mi = +m[2]; return h > 23 || mi > 59 ? null : h * 60 + mi; }
@@ -1144,7 +1163,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
   var _fotoAnimada = null; // última foto cujo efeito de entrada já rodou
   function desenharAviso() {
     var av = $('#aviso'); if (!av) return;
-    var txt = !aberta() ? (foraDoHorarioLoja() ? 'Estamos fechados no momento. Nosso horário de pedidos é das ' + fmtMin(cfg.abreMin) + ' às ' + fmtMin(cfg.fechaMin) + '. Você pode ver o cardápio, mas só dá para enviar pedidos quando abrirmos.' : 'Estamos fechados no momento. Você pode ver o cardápio, mas só dá para enviar pedidos quando abrirmos.') : '';
+    var txt = !aberta() ? (foraDoHorarioLoja() ? 'Estamos fechados no momento. ' + infoHorario() + ' Você pode ver o cardápio, mas só dá para enviar pedidos quando abrirmos.' : 'Estamos fechados no momento. Você pode ver o cardápio, mas só dá para enviar pedidos quando abrirmos.') : '';
     var dests = aberta() ? destaqueLista() : [];
     if (destIdx >= dests.length) destIdx = 0;
     var dest = dests[destIdx] || null;
@@ -1192,7 +1211,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     $('#loja-info').innerHTML = info.map(function (t) { return '<span>' + t + '</span>'; }).join('');
     var chip = $('#loja-chip');
     chip.className = 'chip-st ' + (aberta() ? 'on' : 'off');
-    chip.textContent = aberta() ? '● Aberto para pedidos' : (foraDoHorarioLoja() ? '● Fechado · abre às ' + fmtMin(cfg.abreMin) : '● Fechado no momento');
+    chip.textContent = aberta() ? '● Aberto para pedidos' : (foraDoHorarioLoja() ? '● Fechado · ' + (cfg.horarioDia === true ? proxAbre().replace('Abrimos', 'abre') : 'abre às ' + fmtMin(cfg.abreMin)) : '● Fechado no momento');
     desenharAviso();
   }
   function desenharMenu() {

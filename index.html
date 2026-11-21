@@ -3378,6 +3378,18 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
 .ped-sub { color: var(--text3); font-size: 13px; margin-top: 2px; }
 .ped-link { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
 .ped-link input { flex: 1 1 220px; min-width: 0; }
+.pc-hd-status { display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; padding:12px 14px; border:1px solid var(--border,#e5e5e5); border-radius:12px; margin:8px 0 12px; }
+.pc-hd-status small { font-size:11px; font-weight:800; letter-spacing:.6px; opacity:.65; }
+.pc-hd-chave { display:flex; align-items:center; gap:8px; font-weight:700; font-size:14px; }
+.pc-hd-atalhos { display:flex; gap:8px; flex-wrap:wrap; margin:10px 0; }
+.pc-hd-atalhos button { border:1px solid var(--border,#ddd); background:#fff; border-radius:10px; padding:7px 11px; font-size:12px; font-weight:700; cursor:pointer; }
+.pc-hd-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(165px,1fr)); gap:10px; }
+.pc-hd { border:1px solid var(--border,#ddd); border-radius:14px; padding:10px 12px; background:#fff; }
+.pc-hd.off { opacity:.6; background:#f5f5f5; }
+.pc-hd-top { display:flex; justify-content:space-between; align-items:center; font-weight:800; margin-bottom:8px; }
+.pc-hd-top label { display:flex; align-items:center; gap:6px; font-size:12px; font-weight:700; }
+.pc-hd-t { display:flex; align-items:center; gap:6px; font-size:12px; }
+.pc-hd-t input { width:100%; min-width:0; padding:6px; border:1px solid var(--border,#ddd); border-radius:8px; font:inherit; font-size:14px; }
 .ped-checks { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 10px; }
 .ped-checks label { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; }
 .ped-vazio { text-align: center; padding: 28px 14px; }
@@ -4893,12 +4905,19 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
       </div>
       <div class="card mb-5">
         <div class="card-title">🕒 Horário de funcionamento</div>
+        <div class="pc-hd-status"><div><small>STATUS DA LOJA AGORA</small><div id="pc-hd-stat" style="font-size:18px;font-weight:800"></div></div><label class="pc-hd-chave"><input type="checkbox" id="pc-aberto-chave" onchange="pedHdChave(this.checked)"> Receber pedidos</label></div>
+        <div style="font-size:12px;opacity:.75;margin-bottom:4px">Chave geral: desligada fecha a loja na hora. Ligada, a loja ainda respeita os horários abaixo.</div>
         <div class="ped-checks"><label><input type="checkbox" id="pc-horario-on"> Usar horário de funcionamento (fora dele a loja não recebe pedidos)</label></div>
-        <div class="form-grid" style="margin-top:10px">
-          <div class="form-group"><label>Abre às</label><input id="pc-abre" class="input-base" type="time"></div>
-          <div class="form-group"><label>Fecha às</label><input id="pc-fecha" class="input-base" type="time"></div>
+        <div style="font-weight:800;font-size:12px;letter-spacing:.5px;margin-top:10px">HORÁRIO POR DIA DA SEMANA <span style="font-weight:600;opacity:.7">· Fuso: Brasília</span></div>
+        <div class="pc-hd-atalhos">
+          <button type="button" onclick="pedHdAtalho('seg')">📋 Copiar segunda para todos</button>
+          <button type="button" onclick="pedHdAtalho('semana')">📅 Abrir seg-sex</button>
+          <button type="button" onclick="pedHdAtalho('fds')">🔒 Fechar fim de semana</button>
+          <button type="button" onclick="pedHdAtalho('0818')">🕗 Todos 08–18</button>
+          <button type="button" onclick="pedHdAtalho('0722')">🕖 Todos 07–22</button>
         </div>
-        <div style="font-size:12px;color:var(--text3);margin-top:6px">Passou do horário, o cliente ainda vê o cardápio, mas não consegue enviar pedido (o bloqueio vale também no servidor). Aceita horário que passa da meia-noite (ex.: 18:00 às 02:00). O botão "Pausar pedidos" continua valendo por cima do horário. Horário de Brasília.</div>
+        <div class="pc-hd-grid" id="pc-hd-grid"></div>
+        <div style="font-size:12px;color:var(--text3);margin-top:6px">Fora do horário o cliente ainda vê o cardápio, mas não consegue enviar pedido (o bloqueio vale também no servidor). Cada dia vai da hora de abrir até a de fechar (no mesmo dia).</div>
         <div class="form-actions" style="margin-top:12px"><button class="btn btn-primary btn-md" type="button" onclick="pedConfigSalvarSecao('horario')">💾 Salvar horário de funcionamento</button></div>
       </div>
       <div class="card mb-5">
@@ -19076,12 +19095,65 @@ function pedConfigAbrir() {
   document.getElementById('pc-retirada').checked = c.aceitaRetirada !== false;
   document.getElementById('pc-aberto').checked   = _pedCfg() ? c.aberto === true : true;
   document.getElementById('pc-horario-on').checked = c.horarioOn === true;
-  set('pc-abre', _pedMinHM(c.abreMin)); set('pc-fecha', _pedMinHM(c.fechaMin));
+  pedHdMontar(c); pedHdStatus(c);
   pedConfigAba('geral');
   const box = document.getElementById('ped-config');
   box.style.display = '';
   box.scrollIntoView({ behavior: 'smooth', block: 'start' });
   if (_currentSection !== 'pedidos') showSection('pedidos', document.getElementById('nav-pedidos'));
+}
+/* ── Horário por dia da semana (horarios/0..6 = domingo..sábado: {on, abre, fecha} em minutos; horarioDia:true) ── */
+const _HD_NOMES = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+const _HD_ABR = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB'];
+function pedHdMontar(c) {
+  c = c || {};
+  const hs = c.horarios || null, leg = c.horarioOn === true;
+  let h = '';
+  for (let d = 0; d < 7; d++) {
+    const x = hs && hs[d] ? hs[d] : null;
+    const on = x ? x.on === true : (leg ? true : d !== 0);
+    const a = x ? x.abre : (typeof c.abreMin === 'number' ? c.abreMin : 480), f = x ? x.fecha : (typeof c.fechaMin === 'number' ? c.fechaMin : 1080);
+    h += '<div class="pc-hd' + (on ? '' : ' off') + '" id="pc-hd-' + d + '"><div class="pc-hd-top"><span><small style="opacity:.6">' + _HD_ABR[d] + '</small> ' + _HD_NOMES[d] + '</span>' +
+      '<label><input type="checkbox" id="pc-hd-' + d + '-on"' + (on ? ' checked' : '') + ' onchange="pedHdAtualiza()"> ' + 'Aberto' + '</label></div>' +
+      '<div class="pc-hd-t"><input type="time" id="pc-hd-' + d + '-a" value="' + _pedMinHM(a) + '"> até <input type="time" id="pc-hd-' + d + '-f" value="' + _pedMinHM(f) + '"></div></div>';
+  }
+  document.getElementById('pc-hd-grid').innerHTML = h;
+  pedHdAtualiza();
+}
+function pedHdAtualiza() {
+  for (let d = 0; d < 7; d++) {
+    const on = document.getElementById('pc-hd-' + d + '-on').checked;
+    document.getElementById('pc-hd-' + d).classList.toggle('off', !on);
+    document.getElementById('pc-hd-' + d + '-a').disabled = !on; document.getElementById('pc-hd-' + d + '-f').disabled = !on;
+  }
+}
+function pedHdAtalho(k) {
+  const g = (d, s) => document.getElementById('pc-hd-' + d + '-' + s);
+  const tempo = (d, a, f) => { g(d, 'a').value = a; g(d, 'f').value = f; };
+  if (k === 'seg') { for (let d = 0; d < 7; d++) { if (d === 1) continue; g(d, 'on').checked = g(1, 'on').checked; tempo(d, g(1, 'a').value, g(1, 'f').value); } }
+  else if (k === 'semana') { for (let d = 1; d <= 5; d++) g(d, 'on').checked = true; }
+  else if (k === 'fds') { g(0, 'on').checked = false; g(6, 'on').checked = false; }
+  else if (k === '0818' || k === '0722') { for (let d = 0; d < 7; d++) tempo(d, k === '0818' ? '08:00' : '07:00', k === '0818' ? '18:00' : '22:00'); }
+  pedHdAtualiza();
+}
+function pedHdStatus(c) {
+  c = c || _pedCfg() || {};
+  const chave = document.getElementById('pc-aberto-chave'); if (chave) chave.checked = c.aberto === true;
+  const el = document.getElementById('pc-hd-stat'); if (!el) return;
+  const br = new Date(Date.now() - 10800000), d = br.getUTCDay(), n = br.getUTCHours() * 60 + br.getUTCMinutes();
+  let dentro = true;
+  if (c.horarioOn === true) {
+    if (c.horarioDia === true) { const x = c.horarios && c.horarios[d]; dentro = !!(x && x.on === true && n >= x.abre && n < x.fecha); }
+    else if (typeof c.abreMin === 'number' && typeof c.fechaMin === 'number') dentro = c.abreMin < c.fechaMin ? (n >= c.abreMin && n < c.fechaMin) : (n >= c.abreMin || n < c.fechaMin);
+  }
+  const ab = c.aberto === true && dentro;
+  el.textContent = (ab ? '🟢 Loja aberta' : '🔴 Loja fechada') + (c.aberto === true && !dentro ? ' (fora do horário)' : '');
+}
+function pedHdChave(v) {
+  if (!_lojaAtiva) return;
+  _dbRef('pedidosConfig/' + _lojaAtiva).update({ aberto: !!v })
+    .then(() => { const p = document.getElementById('pc-aberto'); if (p) p.checked = !!v; pedHdStatus(Object.assign({}, _pedCfg() || {}, { aberto: !!v })); showToast(v ? 'Loja recebendo pedidos ✔' : 'Loja fechada ✔'); })
+    .catch(e => { console.error(e); showToast('Sem permissão para salvar. Publique as regras do Firebase.', false); });
 }
 function pedConfigFechar() { const b = document.getElementById('ped-config'); if (b) b.style.display = 'none'; }
 /** Salva UMA categoria da configuração (dados | pedidos | aviso | endereco | faixas),
@@ -19106,11 +19178,18 @@ function pedConfigSalvarSecao(secao) {
     upd.aberto = document.getElementById('pc-aberto').checked;
   } else if (secao === 'horario') {
     nome = 'Horário de funcionamento';
-    const on = document.getElementById('pc-horario-on').checked;
-    const a = _pedHMMin(v('pc-abre')), f = _pedHMMin(v('pc-fecha'));
-    if (on && (a === null || f === null)) { showToast('Informe a hora que abre e a hora que fecha', false); return; }
-    if (a !== null && a === f) { showToast('O horário de abrir e fechar não podem ser iguais', false); return; }
-    upd.horarioOn = on; upd.abreMin = a; upd.fechaMin = f;
+    const on = document.getElementById('pc-horario-on').checked, hs = {};
+    for (let d = 0; d < 7; d++) {
+      const dOn = document.getElementById('pc-hd-' + d + '-on').checked;
+      const a = _pedHMMin(document.getElementById('pc-hd-' + d + '-a').value), f = _pedHMMin(document.getElementById('pc-hd-' + d + '-f').value);
+      if (dOn) {
+        if (a === null || f === null) { showToast(_HD_NOMES[d] + ': informe a hora que abre e a que fecha', false); return; }
+        if (a >= f) { showToast(_HD_NOMES[d] + ': a hora de fechar precisa ser depois da de abrir', false); return; }
+      }
+      hs[d] = { on: dOn, abre: a === null ? 480 : a, fecha: f === null ? 1080 : f };
+    }
+    if (on && !Object.keys(hs).some(k => hs[k].on)) { showToast('Ative pelo menos um dia da semana', false); return; }
+    upd.horarioOn = on; upd.horarioDia = true; upd.horarios = hs;
   } else if (secao === 'endereco') {
     nome = 'Endereço';
     const cep = v('pc-cep'), uf = v('pc-uf');

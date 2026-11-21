@@ -220,6 +220,26 @@
           },
           "$outro": {
             ".validate": "false"
+          },
+          "horarioDia": {
+            ".validate": "newData.isBoolean()"
+          },
+          "horarios": {
+            "$d": {
+              ".validate": "$d.matches(/^[0-6]$/) && newData.hasChildren(['on','abre','fecha'])",
+              "on": {
+                ".validate": "newData.isBoolean()"
+              },
+              "abre": {
+                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() < 1440"
+              },
+              "fecha": {
+                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() < 1440"
+              },
+              "$outro": {
+                ".validate": "false"
+              }
+            }
           }
         }
       },
@@ -233,7 +253,7 @@
           "$pedidoId": {
             ".read": true,
             ".write": "(!data.exists() && newData.exists()) || (auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true))",
-            ".validate": "$pedidoId.matches(/^[-A-Za-z0-9_]{8,40}$/) && newData.hasChildren(['ts','codigo','cliente','tipo','pagamento','itens','status']) && (data.exists() || (root.child('caixa/pedidosConfig').child($lojaId).child('aberto').val() === true && (root.child('caixa/pedidosConfig').child($lojaId).child('horarioOn').val() !== true || ((root.child('caixa/pedidosConfig').child($lojaId).child('abreMin').val() < root.child('caixa/pedidosConfig').child($lojaId).child('fechaMin').val() && (((now - 10800000) % 86400000) / 60000) >= root.child('caixa/pedidosConfig').child($lojaId).child('abreMin').val() && (((now - 10800000) % 86400000) / 60000) < root.child('caixa/pedidosConfig').child($lojaId).child('fechaMin').val()) || (root.child('caixa/pedidosConfig').child($lojaId).child('abreMin').val() > root.child('caixa/pedidosConfig').child($lojaId).child('fechaMin').val() && ((((now - 10800000) % 86400000) / 60000) >= root.child('caixa/pedidosConfig').child($lojaId).child('abreMin').val() || (((now - 10800000) % 86400000) / 60000) < root.child('caixa/pedidosConfig').child($lojaId).child('fechaMin').val())))))) && (newData.child('tipo').val() !== 'entrega' || newData.child('endereco').child('rua').exists())",
+            ".validate": "$pedidoId.matches(/^[-A-Za-z0-9_]{8,40}$/) && newData.hasChildren(['ts','codigo','cliente','tipo','pagamento','itens','status']) && (data.exists() || (root.child('caixa/pedidosConfig').child($lojaId).child('aberto').val() === true && (root.child('caixa/pedidosConfig').child($lojaId).child('horarioOn').val() !== true || (root.child('caixa/pedidosConfig').child($lojaId).child('horarioDia').val() === true ? ((root.child('caixa/pedidosConfig').child($lojaId).child('horarios').child('4').child('on').val() === true && (((now - 10800000) % 604800000)) >= 0 + root.child('caixa/pedidosConfig').child($lojaId).child('horarios').child('4').child('abre').val() * 60000 && (((now - 10800000) % 604800000)) < 0 + root.child('caixa/pedidosConfig').child($lojaId).child('horarios').child('4').child('fecha').val() * 60000) || (root.child('caixa/pedidosConfig').child($lojaId).child('horarios').child('5').child('on').val() === true && (((now - 10800000) % 604800000)) >= 86400000 + root.child('caixa/pedidosConfig').child($lojaId).child('horarios').child('5').child('abre').val() * 60000 && (((now - 10800000) % 604800000)) < 86400000 + root.child('caixa/pedidosConfig').child($lojaId).child('horarios').child('5').child('fecha').val() * 60000) || (root.child('caixa/pedidosConfig').child($lojaId).child('horarios').child('6').child('on').val() === true && (((now - 10800000) % 604800000)) >= 172800000 + root.child('caixa/pedidosConfig').child($lojaId).child('horarios').child('6').child('abre').val() * 60000 && (((now - 10800000) % 604800000)) < 172800000 + root.child('caixa/pedidosConfig').child($lojaId).child('horarios').child('6').child('fecha').val() * 60000) || (root.child('caixa/pedidosConfig').child($lojaId).child('horarios').child('0').child('on').val() === true && (((now - 10800000) % 604800000)) >= 259200000 + root.child('caixa/pedidosConfig').child($lojaId).child('horarios').child('0').child('abre').val() * 60000 && (((now - 10800000) % 604800000)) < 259200000 + root.child('caixa/pedidosConfig').child($lojaId).child('horarios').child('0').child('fecha').val() * 60000) || (root.child('caixa/pedidosConfig').child($lojaId).child('horarios').child('1').child('on').val() === true && (((now - 10800000) % 604800000)) >= 345600000 + root.child('caixa/pedidosConfig').child($lojaId).child('horarios').child('1').child('abre').val() * 60000 && (((now - 10800000) % 604800000)) < 345600000 + root.child('caixa/pedidosConfig').child($lojaId).child('horarios').child('1').child('fecha').val() * 60000) || (root.child('caixa/pedidosConfig').child($lojaId).child('horarios').child('2').child('on').val() === true && (((now - 10800000) % 604800000)) >= 432000000 + root.child('caixa/pedidosConfig').child($lojaId).child('horarios').child('2').child('abre').val() * 60000 && (((now - 10800000) % 604800000)) < 432000000 + root.child('caixa/pedidosConfig').child($lojaId).child('horarios').child('2').child('fecha').val() * 60000) || (root.child('caixa/pedidosConfig').child($lojaId).child('horarios').child('3').child('on').val() === true && (((now - 10800000) % 604800000)) >= 518400000 + root.child('caixa/pedidosConfig').child($lojaId).child('horarios').child('3').child('abre').val() * 60000 && (((now - 10800000) % 604800000)) < 518400000 + root.child('caixa/pedidosConfig').child($lojaId).child('horarios').child('3').child('fecha').val() * 60000)) : ((root.child('caixa/pedidosConfig').child($lojaId).child('abreMin').val() < root.child('caixa/pedidosConfig').child($lojaId).child('fechaMin').val() && (((now - 10800000) % 86400000) / 60000) >= root.child('caixa/pedidosConfig').child($lojaId).child('abreMin').val() && (((now - 10800000) % 86400000) / 60000) < root.child('caixa/pedidosConfig').child($lojaId).child('fechaMin').val()) || (root.child('caixa/pedidosConfig').child($lojaId).child('abreMin').val() > root.child('caixa/pedidosConfig').child($lojaId).child('fechaMin').val() && ((((now - 10800000) % 86400000) / 60000) >= root.child('caixa/pedidosConfig').child($lojaId).child('abreMin').val() || (((now - 10800000) % 86400000) / 60000) < root.child('caixa/pedidosConfig').child($lojaId).child('fechaMin').val()))))))) && (newData.child('tipo').val() !== 'entrega' || newData.child('endereco').child('rua').exists())",
             "ts": {
               ".validate": "newData.isNumber() && (data.exists() ? newData.val() === data.val() : newData.val() === now)"
             },
