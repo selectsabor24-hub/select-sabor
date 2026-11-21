@@ -335,6 +335,12 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
 .aviso.destaque .dest-dot.on { width: 24px; background: #fff; }
 .aviso.destaque .aviso-foto.troca .aviso-img, .aviso.destaque .aviso-foto.troca .aviso-bg { animation: destFade .45s ease-out both; }
 @keyframes destFade { from { opacity: 0; } to { opacity: 1; } }
+.opc-o.rep { cursor: default; }
+.opc-o.rep .nm .pr2 { display: block; color: var(--mut); font-size: 13px; font-weight: 600; }
+.opc-st { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+.opc-st button { width: 34px; height: 34px; border: 1px solid var(--borda); border-radius: 50%; background: #fff; font-size: 19px; line-height: 1; padding: 0; }
+.opc-st button[disabled] { opacity: .35; }
+.opc-st span { min-width: 22px; text-align: center; font-weight: 800; }
 </style>
 </head>
 <body>
@@ -672,7 +678,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
   function listaDe(v) { return !v ? [] : (Array.isArray(v) ? v : Object.keys(v).map(function (k) { return v[k]; })); }
   function gruposDe(i) {
     return listaDe(i && i.grupos).filter(function (g) { return g && g.id && g.nome; }).map(function (g) {
-      return { id: String(g.id), nome: String(g.nome), obrig: g.obrig === true, max: Math.max(1, parseInt(g.max, 10) || 1),
+      return { id: String(g.id), nome: String(g.nome), obrig: g.obrig === true, max: Math.max(1, parseInt(g.max, 10) || 1), rep: g.rep !== false,
         opcoes: listaDe(g.opcoes).filter(function (o) { return o && o.id && o.nome; }) };
     }).filter(function (g) { return g.opcoes.length; });
   }
@@ -692,12 +698,19 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
   }
   function precoDe(key) { var f = linhaInfo(key); return f.item ? round2((Number(f.item.preco) || 0) + f.extras.reduce(function (s, e) { return s + e.preco; }, 0)) : 0; }
   function qtdItem(id) { return Object.keys(cart).reduce(function (s, k) { return s + (baseId(k) === id ? cart[k] : 0); }, 0); }
-  function nomeLinha(f) {
-    var t = f.extras.map(function (e) { return e.on; }).join(', ');
-    if (!t) return String(f.item.nome).slice(0, 80);
-    t = t.slice(0, 50);
-    return (String(f.item.nome).slice(0, 80 - t.length - 3) + ' (' + t + ')').slice(0, 80);
+  /* "2× Coca-Cola, Fanta Laranja" (agrupa opções repetidas) */
+  function resumoExtras(ex) {
+    var ord = [], cont = {};
+    ex.forEach(function (e) { if (!cont[e.o]) { cont[e.o] = 0; ord.push(e); } cont[e.o]++; });
+    return ord.map(function (e) { return (cont[e.o] > 1 ? cont[e.o] + '× ' : '') + e.on; }).join(', ');
   }
+  function nomeLinha(f) {
+    var t = resumoExtras(f.extras);
+    if (!t) return String(f.item.nome).slice(0, 200);
+    t = t.slice(0, 150);
+    return (String(f.item.nome).slice(0, 200 - t.length - 3) + ' (' + t + ')').slice(0, 200);
+  }
+
   function categorias() {
     var out = CATS_PADRAO.slice();
     var tem = function (n) { return out.some(function (c) { return c.toLowerCase() === String(n).toLowerCase(); }); };
@@ -891,11 +904,18 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     var corpo = box.querySelector('.opc-corpo'), topo = corpo ? corpo.scrollTop : 0;
     var h = '<div class="opc-box"><div class="opc-head"><div class="t"><b>' + esc(opc.it.nome) + '</b><small>' + brl(opc.it.preco) + (opc.it.desc ? ' · ' + esc(opc.it.desc) : '') + '</small></div><button type="button" class="opc-x" data-opc="x" aria-label="Fechar">×</button></div><div class="opc-corpo">';
     opc.gs.forEach(function (g) {
-      var sel = opc.sel[g.id] || [], quad = g.max > 1;
+      var sel = opc.sel[g.id] || [], quad = g.max > 1, rp = quad && g.rep;
       h += '<div class="opc-g' + (erroId === g.id ? ' erro' : '') + '" id="opc-g-' + esc(g.id) + '"><div class="opc-gt">' + esc(g.nome) + (g.obrig ? '<span class="opc-tag ob">Obrigatório</span>' : '<span class="opc-tag">Opcional</span>') +
-        '<small>' + (quad ? 'Escolha até ' + g.max + ' (' + sel.length + '/' + g.max + ')' : (g.obrig ? 'Escolha 1' : 'Escolha até 1')) + '</small></div>';
+        '<small>' + (quad ? 'Escolha até ' + g.max + (rp ? ', pode repetir' : '') + ' (' + sel.length + '/' + g.max + ')' : (g.obrig ? 'Escolha 1' : 'Escolha até 1')) + '</small></div>';
       g.opcoes.forEach(function (o) {
         var off = o.ativo === false, on = sel.indexOf(o.id) >= 0, pr = Number(o.preco) || 0;
+        if (rp) {
+          var qn = sel.filter(function (x) { return x === o.id; }).length, dd = ' data-g="' + esc(g.id) + '" data-o="' + esc(o.id) + '"';
+          h += '<div class="opc-o rep' + (qn ? ' on' : '') + '"><span class="nm">' + esc(o.nome) + (pr > 0 ? '<small class="pr2">+ ' + brl(pr) + '</small>' : '') + '</span>' +
+            (off ? '<span class="pr">Indisponível</span>' : '<span class="opc-st"><button type="button" data-opc="o-"' + dd + (qn ? '' : ' disabled') + ' aria-label="Menos">−</button><span>' + qn + '</span><button type="button" data-opc="o+"' + dd + ' aria-label="Mais">+</button></span>') +
+            fotoOpcHtml(opc.it, o) + '</div>';
+          return;
+        }
         h += '<button type="button" class="opc-o' + (quad ? ' quad' : '') + (on ? ' on' : '') + '" data-opc="o" data-g="' + esc(g.id) + '" data-o="' + esc(o.id) + '"' + (off ? ' disabled' : '') + '><span class="ck">✓</span><span class="nm">' + esc(o.nome) + '</span><span class="pr">' + (off ? 'Indisponível' : (pr > 0 ? '+ ' + brl(pr) : '')) + '</span>' + fotoOpcHtml(opc.it, o) + '</button>';
       });
       h += '</div>';
@@ -925,6 +945,13 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     if (a === 'x') { opcFechar(); return; }
     if (a === 'q+') { opc.q = Math.min(99, opc.q + 1); opcDesenhar(); return; }
     if (a === 'q-') { opc.q = Math.max(1, opc.q - 1); opcDesenhar(); return; }
+    if (a === 'o+' || a === 'o-') {
+      var gq = opc.gs.find(function (x) { return x.id === t.getAttribute('data-g'); }); if (!gq) return;
+      var oq = t.getAttribute('data-o'), sq = (opc.sel[gq.id] || []).slice();
+      if (a === 'o+') { if (sq.length >= gq.max) { toast('Você pode escolher até ' + gq.max + ' em "' + gq.nome + '".'); return; } sq.push(oq); }
+      else { var ixq = sq.indexOf(oq); if (ixq >= 0) sq.splice(ixq, 1); }
+      opc.sel[gq.id] = sq; opcDesenhar(); return;
+    }
     if (a === 'o') {
       var gid = t.getAttribute('data-g'), oid = t.getAttribute('data-o');
       var g = opc.gs.find(function (x) { return x.id === gid; }); if (!g) return;
@@ -1111,7 +1138,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     var ids = Object.keys(cart);
     $('#ck-itens').innerHTML = ids.length ? ids.map(function (id) {
       var f = linhaInfo(id), i = f.item || {};
-      return '<div class="linha"><div class="n"><strong>' + esc(i.nome || 'Item') + '</strong>' + (f.extras.length ? '<small class="ex">' + esc(f.extras.map(function (e) { return e.on; }).join(', ')) + '</small>' : '') + '<small style="color:var(--mut)">' + brl(precoDe(id)) + ' cada</small></div>' +
+      return '<div class="linha"><div class="n"><strong>' + esc(i.nome || 'Item') + '</strong>' + (f.extras.length ? '<small class="ex">' + esc(resumoExtras(f.extras)) + '</small>' : '') + '<small style="color:var(--mut)">' + brl(precoDe(id)) + ' cada</small></div>' +
         '<div class="stepper"><button type="button" data-m="-1" data-id="' + esc(id) + '" aria-label="Diminuir">−</button><span>' + cart[id] + '</span><button type="button" data-m="1" data-id="' + esc(id) + '" aria-label="Aumentar">+</button></div></div>';
     }).join('') : '<div class="vazio" style="padding:14px">Sua sacola está vazia.</div>';
     // modo

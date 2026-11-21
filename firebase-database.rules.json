@@ -324,7 +324,7 @@
                   ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 99"
                 },
                 "n": {
-                  ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 80"
+                  ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 200"
                 },
                 "p": {
                   ".validate": "(auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true)) && newData.isNumber() && newData.val() >= 0"
