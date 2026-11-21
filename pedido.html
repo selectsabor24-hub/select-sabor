@@ -288,6 +288,13 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
   #v-menu .espaco-barra { height: 170px; }
 }
 @media (max-height: 480px) and (orientation: landscape) { .navbar button { min-height: 40px; } .navbar button span { font-size: 18px; } }
+/* ===== Preenche a tela toda (o conteúdo acompanha a largura do aparelho) ===== */
+:root { --w-menu: 100%; --pad-tela: clamp(14px, 2.5vw, 56px); }
+#v-menu .wrap { max-width: none; padding-left: var(--pad-tela); padding-right: var(--pad-tela); }
+.cats .scroll { max-width: none; padding-left: var(--pad-tela); padding-right: var(--pad-tela); }
+#menu-lista { grid-template-columns: repeat(auto-fill, minmax(min(100%, clamp(150px, 13vw, 300px)), 1fr)); gap: clamp(12px, 1.4vw, 24px); }
+#v-menu .aviso.destaque .aviso-foto { height: clamp(240px, 26vw, 560px); }
+#v-menu .barra button { max-width: none; }
 </style>
 </head>
 <body>

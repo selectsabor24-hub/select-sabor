@@ -188,6 +188,14 @@ button { cursor: pointer; }
   #chamada .bs { margin-top: 16px; }
   #chamada .bs button { min-height: 56px; }
 }
+/* ===== Preenche a tela toda (o conteúdo acompanha a largura do aparelho) ===== */
+:root { --w-mot: 100%; }
+.wrap { padding-left: clamp(14px, 2.5vw, 48px); padding-right: clamp(14px, 2.5vw, 48px); }
+@media (min-width: 700px) {
+  #lista { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr)); gap: 0 16px; align-items: start; }
+  #lista .card.vazio { grid-column: 1 / -1; }
+}
+.btn-atualizar { width: min(100%, 520px); margin-left: auto; margin-right: auto; }
 </style>
 </head>
 <body>
