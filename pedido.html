@@ -382,6 +382,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     <button type="button" class="on" data-nav="inicio"><span>🏠</span>Início</button>
     <button type="button" data-nav="pedidos"><span>🧾</span>Pedidos</button>
     <button type="button" data-nav="conta"><span>👤</span>Minha conta</button>
+    <button type="button" id="nav-install" class="hide"><span>📲</span>Instalar</button>
   </nav>
   <div id="conta-modal" class="hide"></div>
 </div>
@@ -450,16 +451,12 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
 <!-- Erro geral -->
 <div id="v-erro" class="hide"><div class="wrap"><div class="vazio" id="erro-msg" style="padding-top:80px"></div></div></div>
 
-<!-- Ajuda de instalação (iPhone/iPad) -->
+<!-- Ajuda de instalação (iPhone/iPad, Android, computador) -->
 <div class="sheet-fundo hide" id="ios-help">
   <div class="sheet" role="dialog" aria-modal="true" aria-label="Como instalar">
-    <h3>Instalar no iPhone</h3>
-    <ol>
-      <li>Toque no botão <strong>Compartilhar</strong> (quadrado com uma seta para cima) na barra do Safari.</li>
-      <li>Role a lista e toque em <strong>Adicionar à Tela de Início</strong>.</li>
-      <li>Toque em <strong>Adicionar</strong>. Pronto, o ícone aparece na sua tela.</li>
-    </ol>
-    <p class="dica">Se abriu o link pelo WhatsApp ou Instagram, toque em “Abrir no Safari” primeiro.</p>
+    <h3 id="ajuda-tit">Instalar o app</h3>
+    <ol id="ajuda-passos"></ol>
+    <p class="dica" id="ajuda-dica"></p>
     <button type="button" id="ios-help-ok">Entendi</button>
   </div>
 </div>
@@ -514,25 +511,65 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     }
   };
 
-  /* Banner "Instalar" */
-  var DIAS = 3;
+  /* Instalar: banner + botão fixo no menu. Usa o instalador do navegador quando existe; senão mostra o passo a passo. */
+  var DIAS = 1;
+  var ua = navigator.userAgent || '';
+  var emApp = /FBAN|FBAV|FB_IAB|Instagram|WhatsApp|Line\/|MicroMessenger|; wv\)/i.test(ua); // navegador embutido (WhatsApp, Instagram, Facebook...)
+  var android = /android/i.test(ua);
   function dispensado() { try { var t = Number(localStorage.getItem('pwaDispensado')) || 0; return Date.now() - t < DIAS * 864e5; } catch (e) { return false; } }
   function esconder() { $('#install').classList.add('hide'); }
   function avaliar() {
-    if (standalone() || dispensado() || !LOJA) { esconder(); return; }
-    if (promptEv || ios) $('#install').classList.remove('hide');
+    var ja = standalone() || !LOJA;
+    $('#nav-install').classList.toggle('hide', ja);           // botão fixo: sempre que o app ainda não está instalado
+    if (ja || dispensado()) { esconder(); return; }
+    $('#install').classList.remove('hide');                    // banner: aparece em qualquer celular/computador
   }
-  window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); promptEv = e; avaliar(); });
-  window.addEventListener('appinstalled', function () { promptEv = null; esconder(); });
-  $('#install-x').onclick = function () { try { localStorage.setItem('pwaDispensado', String(Date.now())); } catch (e) {} esconder(); };
-  $('#install-ok').onclick = function () {
+  function passos(tit, lista, dica) {
+    $('#ajuda-tit').textContent = tit;
+    $('#ajuda-passos').innerHTML = lista.map(function (t) { return '<li>' + t + '</li>'; }).join('');
+    $('#ajuda-dica').textContent = dica || '';
+    $('#ajuda-dica').classList.toggle('hide', !dica);
+    $('#ios-help').classList.remove('hide');
+  }
+  function ajudaInstalar() {
+    if (emApp) {
+      passos('Abra no navegador', [
+        'Toque nos <strong>três pontinhos</strong> (ou no ícone de compartilhar) aqui no canto da tela.',
+        'Escolha <strong>Abrir no navegador</strong> (Chrome ou Safari).',
+        'Depois toque em <strong>Instalar</strong> de novo.'
+      ], 'Dentro do WhatsApp, Instagram ou Facebook não dá para instalar o app.');
+    } else if (ios) {
+      passos('Instalar no iPhone', [
+        'Toque no botão <strong>Compartilhar</strong> (quadrado com uma seta para cima) na barra do Safari.',
+        'Role a lista e toque em <strong>Adicionar à Tela de Início</strong>.',
+        'Toque em <strong>Adicionar</strong>. Pronto, o ícone aparece na sua tela.'
+      ], 'Se abriu o link pelo WhatsApp ou Instagram, toque em “Abrir no Safari” primeiro.');
+    } else if (android) {
+      passos('Instalar no Android', [
+        'Toque nos <strong>três pontinhos ⋮</strong> no canto do navegador.',
+        'Toque em <strong>Instalar aplicativo</strong> (ou <strong>Adicionar à tela inicial</strong>).',
+        'Confirme em <strong>Instalar</strong>. Pronto, o ícone aparece na sua tela.'
+      ], 'Use o Chrome para a instalação funcionar melhor.');
+    } else {
+      passos('Instalar no computador', [
+        'Procure o ícone de <strong>instalar</strong> (monitor com uma seta) no canto direito da barra de endereço.',
+        'Clique nele e confirme em <strong>Instalar</strong>.'
+      ], 'Se não aparecer, abra o menu do navegador (⋮) e procure “Instalar” ou “Salvar e compartilhar”.');
+    }
+  }
+  function instalar() {
     if (promptEv) {
       var ev = promptEv; promptEv = null;
       ev.prompt();
       if (ev.userChoice) ev.userChoice.then(function (r) { if (r && r.outcome === 'accepted') esconder(); else avaliar(); });
       esconder();
-    } else if (ios) { $('#ios-help').classList.remove('hide'); }
-  };
+    } else ajudaInstalar();
+  }
+  window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); promptEv = e; avaliar(); });
+  window.addEventListener('appinstalled', function () { promptEv = null; esconder(); $('#nav-install').classList.add('hide'); });
+  $('#install-x').onclick = function () { try { localStorage.setItem('pwaDispensado', String(Date.now())); } catch (e) {} esconder(); };
+  $('#install-ok').onclick = instalar;
+  $('#nav-install').onclick = instalar;
   $('#ios-help-ok').onclick = function () { $('#ios-help').classList.add('hide'); };
   $('#ios-help').addEventListener('click', function (e) { if (e.target === this) this.classList.add('hide'); });
   avaliar();
