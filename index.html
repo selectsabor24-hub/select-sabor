@@ -45,7 +45,7 @@
   ║         · Melhoria: renderContas usa cache; seção 3.22 documentada   ║
   ║  v3.3 — Seções novas: Planilhas já lançadas (3.23), calendário       ║
   ║         visual de lançamentos com marcação de cartão                 ║
-  ║  v5.9 — Menu lateral: verde fosco (#273529), destaque #99CD85,     ║
+  ║  v5.9 — Menu lateral: verde escuro (#061C15), destaque #99CD85,   ║
   ║         texto branco, item                                          ║
   ║         ativo marrom/âmbar; igual nos temas claro e escuro.         ║
   ║         Perfil "Atendimento" não vê o resumo do dia (Vendas/        ║
@@ -3409,17 +3409,17 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
   --accent: #2F5233; --accent-hover: #244427; --accent-bg: #E8F1E9; --accent-text: #1F4D2B;
   --radius: 16px; --shadow-sm: 0 2px 8px rgba(80,60,20,.08); --shadow-md: 0 6px 18px rgba(80,60,20,.12);
 }
-/* v5.9 — Menu lateral verde fosco (#273529) + destaques #99CD85 + item ativo marrom/âmbar, alto contraste.
+/* v5.9 — Menu lateral verde escuro (#061C15) + destaques #99CD85 + item ativo marrom/âmbar, alto contraste.
    Vale para os DOIS temas (claro e escuro): só a sidebar é verde; o resto do tema escuro não muda. */
 :root, :root[data-theme="dark"] {
-  --sidebar-bg: #273529; --sidebar-border: rgba(255,255,255,.12);
+  --sidebar-bg: #061C15; --sidebar-border: rgba(255,255,255,.12);
   --sidebar-text: #F4F7EE; --sidebar-text2: #99CD85;
   --sidebar-active: #FFFFFF; --sidebar-hover: rgba(255,255,255,.10);
   --sidebar-active-bg: linear-gradient(135deg, #A8631A 0%, #8C4C00 100%); --sidebar-accent: #F3C77E;
 }
 :root .sidebar {
-  background: radial-gradient(circle at 20% 0%, rgba(153,205,133,.10), transparent 17rem), linear-gradient(180deg, #2E4133 0%, #273529 55%, #1E2B20 100%) !important;
-  box-shadow: 18px 0 44px rgba(20,30,22,.28);
+  background: radial-gradient(circle at 20% 0%, rgba(153,205,133,.10), transparent 17rem), linear-gradient(180deg, #0A2820 0%, #061C15 55%, #04140F 100%) !important;
+  box-shadow: 18px 0 44px rgba(2,12,9,.35);
 }
 :root .nav-item { color: var(--sidebar-text) !important; }
 :root .nav-item .nav-icon { opacity: 1; }
