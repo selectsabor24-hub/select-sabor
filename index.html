@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <script>try{var t=localStorage.getItem("caixa-theme");if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Controle de Caixa v5.8</title>
+<title>Controle de Caixa v5.9</title>
 
 <!-- ============================================================
      PWA — Progressive Web App
@@ -34,7 +34,7 @@
 <!--
   ╔══════════════════════════════════════════════════════════════════════╗
   ║           CONTROLE DE CAIXA                                           ║
-  ║           Versão: 5.8 — Perfil "Atendimento" (pedidos, motoqueiro, comandas, cardápio) ║
+  ║           Versão: 5.9 — Menu lateral verde (alto contraste) nos dois temas ║
   ╠══════════════════════════════════════════════════════════════════════╣
   ║  HISTÓRICO DE VERSÕES                                                ║
   ║  ─────────────────────────────────────────────────────────────────  ║
@@ -45,6 +45,8 @@
   ║         · Melhoria: renderContas usa cache; seção 3.22 documentada   ║
   ║  v3.3 — Seções novas: Planilhas já lançadas (3.23), calendário       ║
   ║         visual de lançamentos com marcação de cartão                 ║
+  ║  v5.9 — Menu lateral: verde escuro (#0F2B00), texto branco, item   ║
+  ║         ativo marrom/âmbar; igual nos temas claro e escuro.         ║
   ║  v5.8 — Perfil de acesso "Atendimento" por usuário (Configurações): ║
   ║         só vê Pedidos online, Motoqueiro, Comandas/Mesas e Cardápio.║
   ║         Regras do Firebase também bloqueiam as demais áreas.        ║
@@ -3396,15 +3398,28 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
 :root:not([data-theme="dark"]) {
   --bg: #F8F3E8; --surface2: #F0E8D6; --border: #E6DBC3; --border2: #D2C4A3;
   --accent: #2F5233; --accent-hover: #244427; --accent-bg: #E8F1E9; --accent-text: #1F4D2B;
-  --sidebar-bg: #1F4D2B; --sidebar-border: rgba(255,255,255,.12); --sidebar-text: #D9E6D7; --sidebar-text2: #9DBB9F;
-  --sidebar-active: #FFFFFF; --sidebar-hover: rgba(255,255,255,.08); --sidebar-active-bg: #B8742F; --sidebar-accent: #F3C77E;
   --radius: 16px; --shadow-sm: 0 2px 8px rgba(80,60,20,.08); --shadow-md: 0 6px 18px rgba(80,60,20,.12);
 }
-:root:not([data-theme="dark"]) .sidebar {
-  background: radial-gradient(circle at 20% 0%, rgba(243,199,126,.16), transparent 17rem), linear-gradient(180deg, #24572F 0%, #1F4D2B 55%, #163A20 100%) !important;
-  box-shadow: 18px 0 44px rgba(31,77,43,.18);
+/* v5.9 — Menu lateral verde escuro + item ativo marrom/âmbar, alto contraste.
+   Vale para os DOIS temas (claro e escuro): só a sidebar é verde; o resto do tema escuro não muda. */
+:root, :root[data-theme="dark"] {
+  --sidebar-bg: #0F2B00; --sidebar-border: rgba(255,255,255,.14);
+  --sidebar-text: #F4F7EE; --sidebar-text2: #BFD0AE;
+  --sidebar-active: #FFFFFF; --sidebar-hover: rgba(255,255,255,.10);
+  --sidebar-active-bg: linear-gradient(135deg, #A8631A 0%, #8C4C00 100%); --sidebar-accent: #F3C77E;
 }
-:root:not([data-theme="dark"]) .nav-item.active { box-shadow: 0 10px 22px rgba(184,116,47,.35) !important; }
+:root .sidebar {
+  background: radial-gradient(circle at 20% 0%, rgba(243,199,126,.12), transparent 17rem), linear-gradient(180deg, #17400A 0%, #0F2B00 55%, #0A2000 100%) !important;
+  box-shadow: 18px 0 44px rgba(10,32,0,.28);
+}
+:root .nav-item { color: var(--sidebar-text) !important; }
+:root .nav-item .nav-icon { opacity: 1; }
+:root .nav-item:hover { background: var(--sidebar-hover) !important; color: #FFFFFF !important; }
+:root .nav-item.active { background: var(--sidebar-active-bg) !important; color: #FFFFFF !important; font-weight: 600; box-shadow: 0 10px 22px rgba(140,76,0,.40) !important; }
+:root .nav-item.active .nav-icon { color: #FFFFFF !important; }
+:root .nav-section-label { color: var(--sidebar-text2) !important; }
+:root .logo-title { color: #FFFFFF; }
+:root .logo-sub { color: var(--sidebar-text2) !important; }
 :root:not([data-theme="dark"]) .metric-card { border-color: #EADFC6; box-shadow: 0 4px 14px rgba(80,60,20,.09); }
 :root:not([data-theme="dark"]) .card { border-color: #EADFC6; box-shadow: 0 3px 12px rgba(80,60,20,.07); }
 :root:not([data-theme="dark"]) .page-title { color: #1F4D2B; }
@@ -3512,7 +3527,7 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
           <img src="logo.png" alt="Select Sabor" style="width:44px;height:44px;border-radius:50%;flex-shrink:0;background:#fff;box-shadow:0 0 0 2px rgba(255,255,255,0.18)">
           <div>
             <div class="logo-title">Controle de Caixa</div>
-            <div class="logo-sub">v5.8</div>
+            <div class="logo-sub">v5.9</div>
           </div>
         </div>
         <span id="status-dot" style="display:none;width:8px;height:8px;border-radius:50%;background:#4ADE80;flex-shrink:0;box-shadow:0 0 0 2px rgba(74,222,128,0.2)" title="Conectado"></span>
