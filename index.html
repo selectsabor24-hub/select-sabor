@@ -3383,13 +3383,16 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
 .pc-hd-chave { display:flex; align-items:center; gap:8px; font-weight:700; font-size:14px; }
 .pc-hd-atalhos { display:flex; gap:8px; flex-wrap:wrap; margin:10px 0; }
 .pc-hd-atalhos button { border:1px solid var(--border,#ddd); background:#fff; border-radius:10px; padding:7px 11px; font-size:12px; font-weight:700; cursor:pointer; }
-.pc-hd-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(165px,1fr)); gap:10px; }
-.pc-hd { border:1px solid var(--border,#ddd); border-radius:14px; padding:10px 12px; background:#fff; }
+.pc-hd-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:12px; }
+.pc-hd { border:1px solid var(--border,#ddd); border-radius:14px; padding:12px 14px; background:#fff; box-sizing:border-box; min-width:0; }
 .pc-hd.off { opacity:.6; background:#f5f5f5; }
-.pc-hd-top { display:flex; justify-content:space-between; align-items:center; font-weight:800; margin-bottom:8px; }
-.pc-hd-top label { display:flex; align-items:center; gap:6px; font-size:12px; font-weight:700; }
-.pc-hd-t { display:flex; align-items:center; gap:6px; font-size:12px; }
-.pc-hd-t input { width:100%; min-width:0; padding:6px; border:1px solid var(--border,#ddd); border-radius:8px; font:inherit; font-size:14px; }
+.pc-hd-top { display:flex; justify-content:space-between; align-items:center; gap:8px; font-weight:800; font-size:15px; margin-bottom:10px; white-space:nowrap; }
+.pc-hd-top label { display:flex; align-items:center; gap:6px; font-size:12px; font-weight:700; white-space:nowrap; cursor:pointer; }
+.pc-hd-t { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.pc-hd-t > div { min-width:0; }
+.pc-hd-t small { display:block; font-size:10px; font-weight:800; letter-spacing:.6px; opacity:.6; margin-bottom:4px; }
+.pc-hd .pc-hd-t input { display:block; width:100%; min-width:0; box-sizing:border-box; padding:8px 8px; border:1px solid var(--border,#ddd); border-radius:10px; font:inherit; font-size:15px; font-weight:700; background:#fff; }
+.pc-hd .pc-hd-t input::-webkit-calendar-picker-indicator { margin:0 0 0 2px; padding:0; width:16px; }
 .ped-checks { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 10px; }
 .ped-checks label { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; }
 .ped-vazio { text-align: center; padding: 28px 14px; }
@@ -19115,7 +19118,7 @@ function pedHdMontar(c) {
     const a = x ? x.abre : (typeof c.abreMin === 'number' ? c.abreMin : 480), f = x ? x.fecha : (typeof c.fechaMin === 'number' ? c.fechaMin : 1080);
     h += '<div class="pc-hd' + (on ? '' : ' off') + '" id="pc-hd-' + d + '"><div class="pc-hd-top"><span><small style="opacity:.6">' + _HD_ABR[d] + '</small> ' + _HD_NOMES[d] + '</span>' +
       '<label><input type="checkbox" id="pc-hd-' + d + '-on"' + (on ? ' checked' : '') + ' onchange="pedHdAtualiza()"> ' + 'Aberto' + '</label></div>' +
-      '<div class="pc-hd-t"><input type="time" id="pc-hd-' + d + '-a" value="' + _pedMinHM(a) + '"> até <input type="time" id="pc-hd-' + d + '-f" value="' + _pedMinHM(f) + '"></div></div>';
+      '<div class="pc-hd-t"><div><small>ABRE</small><input type="time" id="pc-hd-' + d + '-a" value="' + _pedMinHM(a) + '"></div><div><small>FECHA</small><input type="time" id="pc-hd-' + d + '-f" value="' + _pedMinHM(f) + '"></div></div></div>';
   }
   document.getElementById('pc-hd-grid').innerHTML = h;
   pedHdAtualiza();
