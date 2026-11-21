@@ -708,7 +708,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     return ord.map(function (e) {
       var k = e.g + ':' + e.o, tx = esc((cont[k] > 1 ? cont[k] + '× ' : '') + e.on);
       return e.q
-        ? '<span style="display:flex;align-items:center;gap:6px"><span>' + tx + '</span><button type="button" data-rmo="' + esc(k) + '" data-id="' + esc(key) + '" aria-label="Remover ' + esc(e.on) + '" style="background:none;border:0;color:var(--mut);font:inherit;font-size:16px;font-weight:700;line-height:1;padding:4px 6px;cursor:pointer">✕</button></span>'
+        ? '<span style="display:flex;align-items:center;gap:8px;margin:3px 0"><span>' + tx + '</span><button type="button" data-rmo="' + esc(k) + '" data-id="' + esc(key) + '" aria-label="Remover ' + esc(e.on) + '" title="Remover" style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;flex:0 0 auto;border:0;background:none;color:var(--vermelho);padding:0;cursor:pointer"><svg width="14" height="14" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M1.5 1.5l7 7M8.5 1.5l-7 7"/></svg></button></span>'
         : '<span style="display:block">' + tx + '</span>';
     }).join('');
   }
