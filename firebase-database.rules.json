@@ -1,0 +1,481 @@
+{
+  "rules": {
+    "caixa": {
+      ".read": "auth != null && (auth.token.email == 'selectsabor24@gmail.com' || (root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true && root.child('caixa/usuarios/' + auth.uid + '/perfil').val() != 'atendimento'))",
+      ".write": "auth != null && (auth.token.email == 'selectsabor24@gmail.com')",
+      "usuarios": {
+        ".read": "auth != null && (auth.token.email == 'selectsabor24@gmail.com')",
+        "$uid": {
+          ".write": "auth != null && (auth.token.email == 'selectsabor24@gmail.com')",
+          ".read": "auth != null && auth.uid == $uid"
+        }
+      },
+      "lojas": {
+        ".write": "auth != null && (auth.token.email == 'selectsabor24@gmail.com')"
+      },
+      "lojasCad": {
+        ".write": "auth != null && (auth.token.email == 'selectsabor24@gmail.com')",
+        ".read": "auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true)"
+      },
+      "lancamentos_loja": {
+        "$lojaId": {
+          "$lancamentoId": {
+            ".write": "auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true)",
+            ".validate": "newData.val() == null || (newData.hasChildren(['id', 'data']))"
+          },
+          ".read": "auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true)"
+        }
+      },
+      "comandas": {
+        "$lojaId": {
+          "$comandaId": {
+            ".write": "auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true)",
+            ".validate": "newData.val() == null || newData.hasChildren(['id','mesa','status'])"
+          },
+          ".read": "auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true)"
+        }
+      },
+      "cardapio": {
+        "$lojaId": {
+          "$itemId": {
+            ".write": "auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true)",
+            ".validate": "newData.val() == null || newData.hasChildren(['id','nome'])",
+            "fotoV": {
+              ".validate": "newData.isNumber()"
+            }
+          },
+          ".read": true
+        }
+      },
+      "motoqueiros": {
+        "$lojaId": {
+          "$motId": {
+            ".write": "auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true)",
+            ".validate": "newData.val() == null || (newData.hasChildren(['id','nome']) && newData.child('nome').isString() && newData.child('nome').val().length <= 40)"
+          },
+          ".read": "auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true)"
+        }
+      },
+      "fornecedores": {
+        ".write": "auth != null && (auth.token.email == 'selectsabor24@gmail.com' || (root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true && root.child('caixa/usuarios/' + auth.uid + '/perfil').val() != 'atendimento'))"
+      },
+      "funcionarios": {
+        "$id": {
+          ".write": "auth != null && (auth.token.email == 'selectsabor24@gmail.com' || (root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true && root.child('caixa/usuarios/' + auth.uid + '/perfil').val() != 'atendimento'))"
+        }
+      },
+      "pagamentos_func": {
+        "$id": {
+          ".write": "auth != null && (auth.token.email == 'selectsabor24@gmail.com' || (root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true && root.child('caixa/usuarios/' + auth.uid + '/perfil').val() != 'atendimento'))"
+        }
+      },
+      "ponto_func": {
+        "$id": {
+          ".write": "auth != null && (auth.token.email == 'selectsabor24@gmail.com' || (root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true && root.child('caixa/usuarios/' + auth.uid + '/perfil').val() != 'atendimento'))"
+        }
+      },
+      "faltas_func": {
+        "$id": {
+          ".write": "auth != null && (auth.token.email == 'selectsabor24@gmail.com' || (root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true && root.child('caixa/usuarios/' + auth.uid + '/perfil').val() != 'atendimento'))"
+        }
+      },
+      "contas_pagar": {
+        "$id": {
+          ".write": "auth != null && (auth.token.email == 'selectsabor24@gmail.com' || (root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true && root.child('caixa/usuarios/' + auth.uid + '/perfil').val() != 'atendimento'))"
+        }
+      },
+      "metas": {
+        "$id": {
+          ".write": "auth != null && (auth.token.email == 'selectsabor24@gmail.com' || (root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true && root.child('caixa/usuarios/' + auth.uid + '/perfil').val() != 'atendimento'))"
+        }
+      },
+      "config_usuario": {
+        "$uid": {
+          ".write": "auth != null && auth.uid == $uid"
+        }
+      },
+      "fechamentos_caixa": {
+        "$lojaId": {
+          "$data": {
+            ".write": "auth != null && (auth.token.email == 'selectsabor24@gmail.com' || (root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true && root.child('caixa/usuarios/' + auth.uid + '/perfil').val() != 'atendimento'))",
+            ".validate": "newData.val() == null || newData.hasChildren(['data','status'])"
+          },
+          ".read": "auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true)"
+        }
+      },
+      "auditoria": {
+        "$lojaId": {
+          "$auditId": {
+            ".write": "auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true)",
+            ".validate": "newData.val() == null || newData.hasChildren(['id','acao','criadoEm'])"
+          }
+        }
+      },
+      "backups": {
+        "$lojaId": {
+          "$backupId": {
+            ".write": "auth != null && (auth.token.email == 'selectsabor24@gmail.com')"
+          }
+        }
+      },
+      "pedidosConfig": {
+        "$lojaId": {
+          ".read": true,
+          ".write": "auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true)",
+          ".validate": "newData.hasChildren(['aberto'])",
+          "aberto": {
+            ".validate": "newData.isBoolean()"
+          },
+          "nome": {
+            ".validate": "newData.isString() && newData.val().length <= 80"
+          },
+          "taxaEntrega": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1000"
+          },
+          "pedidoMinimo": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 10000"
+          },
+          "tempoEstimado": {
+            ".validate": "newData.isString() && newData.val().length <= 40"
+          },
+          "whatsapp": {
+            ".validate": "newData.isString() && newData.val().length <= 20"
+          },
+          "aceitaEntrega": {
+            ".validate": "newData.isBoolean()"
+          },
+          "aceitaRetirada": {
+            ".validate": "newData.isBoolean()"
+          },
+          "aviso": {
+            ".validate": "newData.isString() && newData.val().length <= 200"
+          },
+          "lojaEndereco": {
+            ".validate": "newData.isString() && newData.val().length <= 200"
+          },
+          "lojaLat": {
+            ".validate": "newData.isNumber() && newData.val() >= -90 && newData.val() <= 90"
+          },
+          "lojaLng": {
+            ".validate": "newData.isNumber() && newData.val() >= -180 && newData.val() <= 180"
+          },
+          "faixas": {
+            "$i": {
+              ".validate": "newData.hasChildren(['ate','valor'])",
+              "ate": {
+                ".validate": "newData.isNumber() && newData.val() > 0 && newData.val() <= 500"
+              },
+              "valor": {
+                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1000"
+              },
+              "$outro": {
+                ".validate": "false"
+              }
+            }
+          },
+          "taxaAcima": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1000"
+          },
+          "lojaCep": {
+            ".validate": "newData.isString() && newData.val().matches(/^[0-9]{5}-[0-9]{3}$/)"
+          },
+          "lojaRua": {
+            ".validate": "newData.isString() && newData.val().length <= 120"
+          },
+          "lojaNumero": {
+            ".validate": "newData.isString() && newData.val().length <= 20"
+          },
+          "lojaBairro": {
+            ".validate": "newData.isString() && newData.val().length <= 80"
+          },
+          "lojaCidade": {
+            ".validate": "newData.isString() && newData.val().length <= 80"
+          },
+          "lojaUf": {
+            ".validate": "newData.isString() && newData.val().length === 2"
+          },
+          "avisoFotoV": {
+            ".validate": "newData.isNumber()"
+          },
+          "destaqueId": {
+            ".validate": "newData.isString() && newData.val().length <= 60"
+          },
+          "destaqueIds": {
+            ".validate": "newData.hasChildren()",
+            "$i": {
+              ".validate": "$i.matches(/^[0-7]$/) && newData.isString() && newData.val().length <= 60"
+            }
+          },
+          "horarioOn": {
+            ".validate": "newData.isBoolean()"
+          },
+          "abreMin": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() < 1440"
+          },
+          "fechaMin": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() < 1440"
+          },
+          "$outro": {
+            ".validate": "false"
+          }
+        }
+      },
+      "pedidos": {
+        "$lojaId": {
+          ".indexOn": [
+            "ts",
+            "status",
+            "motoqueiro"
+          ],
+          "$pedidoId": {
+            ".read": true,
+            ".write": "(!data.exists() && newData.exists()) || (auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true))",
+            ".validate": "$pedidoId.matches(/^[-A-Za-z0-9_]{8,40}$/) && newData.hasChildren(['ts','codigo','cliente','tipo','pagamento','itens','status']) && (data.exists() || (root.child('caixa/pedidosConfig').child($lojaId).child('aberto').val() === true && (root.child('caixa/pedidosConfig').child($lojaId).child('horarioOn').val() !== true || ((root.child('caixa/pedidosConfig').child($lojaId).child('abreMin').val() < root.child('caixa/pedidosConfig').child($lojaId).child('fechaMin').val() && (((now - 10800000) % 86400000) / 60000) >= root.child('caixa/pedidosConfig').child($lojaId).child('abreMin').val() && (((now - 10800000) % 86400000) / 60000) < root.child('caixa/pedidosConfig').child($lojaId).child('fechaMin').val()) || (root.child('caixa/pedidosConfig').child($lojaId).child('abreMin').val() > root.child('caixa/pedidosConfig').child($lojaId).child('fechaMin').val() && ((((now - 10800000) % 86400000) / 60000) >= root.child('caixa/pedidosConfig').child($lojaId).child('abreMin').val() || (((now - 10800000) % 86400000) / 60000) < root.child('caixa/pedidosConfig').child($lojaId).child('fechaMin').val())))))) && (newData.child('tipo').val() !== 'entrega' || newData.child('endereco').child('rua').exists())",
+            "ts": {
+              ".validate": "newData.isNumber() && (data.exists() ? newData.val() === data.val() : newData.val() === now)"
+            },
+            "codigo": {
+              ".validate": "newData.isString() && newData.val().matches(/^[A-Z0-9]{4}$/) && (!data.exists() || newData.val() === data.val())"
+            },
+            "status": {
+              ".validate": "(!data.exists() && newData.val() === 'novo') || (data.exists() && (auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true)) && (newData.val() === 'novo' || newData.val() === 'preparo' || newData.val() === 'pronto' || newData.val() === 'saiu' || newData.val() === 'entregue' || newData.val() === 'cancelado')) || (data.exists() && (auth != null && root.child('caixa/motoqueirosUid/' + auth.uid + '/ativo').val() === true && root.child('caixa/motoqueirosUid/' + auth.uid + '/lojaId').val() === $lojaId) && ((data.val() === 'pronto' && newData.val() === 'saiu') || (data.val() === 'saiu' && (newData.val() === 'pronto' || (newData.val() === 'entregue' && (!newData.parent().child('comCodigo').exists() || (root.child('caixa/codigosEntrega/' + $lojaId + '/' + $pedidoId).exists() && newData.parent().child('codigoConfirm').val() === root.child('caixa/codigosEntrega/' + $lojaId + '/' + $pedidoId).val())))))))",
+              ".write": "(auth != null && root.child('caixa/motoqueirosUid/' + auth.uid + '/ativo').val() === true && root.child('caixa/motoqueirosUid/' + auth.uid + '/lojaId').val() === $lojaId)"
+            },
+            "cliente": {
+              ".validate": "newData.hasChildren(['nome','telefone'])",
+              "nome": {
+                ".validate": "newData.isString() && newData.val().length >= 2 && newData.val().length <= 60"
+              },
+              "telefone": {
+                ".validate": "newData.isString() && newData.val().length >= 8 && newData.val().length <= 20 && newData.val().matches(/^[0-9()+ -]+$/)"
+              },
+              "$outro": {
+                ".validate": "false"
+              }
+            },
+            "tipo": {
+              ".validate": "newData.val() === 'entrega' || newData.val() === 'retirada'"
+            },
+            "endereco": {
+              ".validate": "newData.hasChildren(['rua','numero','bairro'])",
+              "rua": {
+                ".validate": "newData.isString() && newData.val().length >= 2 && newData.val().length <= 120"
+              },
+              "numero": {
+                ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 20"
+              },
+              "bairro": {
+                ".validate": "newData.isString() && newData.val().length >= 2 && newData.val().length <= 80"
+              },
+              "cep": {
+                ".validate": "newData.isString() && newData.val().matches(/^[0-9]{5}-[0-9]{3}$/)"
+              },
+              "complemento": {
+                ".validate": "newData.isString() && newData.val().length <= 120"
+              },
+              "referencia": {
+                ".validate": "newData.isString() && newData.val().length <= 120"
+              },
+              "distanciaKm": {
+                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 500"
+              },
+              "distAprox": {
+                ".validate": "newData.isBoolean()"
+              },
+              "$outro": {
+                ".validate": "false"
+              }
+            },
+            "pagamento": {
+              ".validate": "newData.val() === 'dinheiro' || newData.val() === 'pix' || newData.val() === 'cartao'"
+            },
+            "troco": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100000"
+            },
+            "obs": {
+              ".validate": "newData.isString() && newData.val().length <= 300"
+            },
+            "itens": {
+              ".validate": "newData.hasChildren()",
+              "$itemId": {
+                ".validate": "$itemId.matches(/^[-A-Za-z0-9_~:,]{1,700}$/) && newData.hasChildren(['q','n']) && (data.exists() || root.child('caixa/cardapio').child($lojaId).child(newData.child('ref').exists() ? newData.child('ref').val() : $itemId).exists())",
+                "ref": {
+                  ".validate": "newData.isString() && newData.val().matches(/^[-A-Za-z0-9_]{1,60}$/)"
+                },
+                "sel": {
+                  ".validate": "newData.hasChildren()",
+                  "$i": {
+                    ".validate": "$i.matches(/^[0-9]{1,3}$/) && newData.hasChildren(['g','o','n'])",
+                    "g": {
+                      ".validate": "newData.isString() && newData.val().matches(/^[-A-Za-z0-9_]{1,40}$/)"
+                    },
+                    "o": {
+                      ".validate": "newData.isString() && newData.val().matches(/^[-A-Za-z0-9_]{1,40}$/)"
+                    },
+                    "n": {
+                      ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 80"
+                    },
+                    "$outro": {
+                      ".validate": "false"
+                    }
+                  }
+                },
+                "q": {
+                  ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 99"
+                },
+                "n": {
+                  ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 200"
+                },
+                "p": {
+                  ".validate": "(auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true)) && newData.isNumber() && newData.val() >= 0"
+                },
+                "$outro": {
+                  ".validate": "false"
+                }
+              }
+            },
+            "total": {
+              ".validate": "(auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true)) && newData.isNumber() && newData.val() >= 0"
+            },
+            "taxa": {
+              ".validate": "(auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true)) && newData.isNumber() && newData.val() >= 0"
+            },
+            "previsao": {
+              ".validate": "(auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true)) && newData.isString() && newData.val().length <= 40"
+            },
+            "motivo": {
+              ".validate": "(auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true)) && newData.isString() && newData.val().length <= 200"
+            },
+            "lancado": {
+              ".validate": "(auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true)) && newData.isBoolean()"
+            },
+            "atualizadoEm": {
+              ".validate": "((auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true)) || (auth != null && root.child('caixa/motoqueirosUid/' + auth.uid + '/ativo').val() === true && root.child('caixa/motoqueirosUid/' + auth.uid + '/lojaId').val() === $lojaId)) && newData.isNumber()",
+              ".write": "(auth != null && root.child('caixa/motoqueirosUid/' + auth.uid + '/ativo').val() === true && root.child('caixa/motoqueirosUid/' + auth.uid + '/lojaId').val() === $lojaId)"
+            },
+            "motoqueiro": {
+              ".validate": "((auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true)) || (auth != null && root.child('caixa/motoqueirosUid/' + auth.uid + '/ativo').val() === true && root.child('caixa/motoqueirosUid/' + auth.uid + '/lojaId').val() === $lojaId)) && newData.isString() && newData.val().length <= 40",
+              ".write": "(auth != null && root.child('caixa/motoqueirosUid/' + auth.uid + '/ativo').val() === true && root.child('caixa/motoqueirosUid/' + auth.uid + '/lojaId').val() === $lojaId)"
+            },
+            "hist": {
+              "$st": {
+                ".validate": "((auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true)) || (auth != null && root.child('caixa/motoqueirosUid/' + auth.uid + '/ativo').val() === true && root.child('caixa/motoqueirosUid/' + auth.uid + '/lojaId').val() === $lojaId)) && newData.isNumber()",
+                ".write": "(auth != null && root.child('caixa/motoqueirosUid/' + auth.uid + '/ativo').val() === true && root.child('caixa/motoqueirosUid/' + auth.uid + '/lojaId').val() === $lojaId) && ($st === 'pronto' || $st === 'saiu' || $st === 'entregue')"
+              }
+            },
+            "comCodigo": {
+              ".validate": "newData.val() === true && !data.exists()"
+            },
+            "codigoConfirm": {
+              ".validate": "newData.isString() && newData.val().matches(/^[0-9]{4}$/)",
+              ".write": "(auth != null && root.child('caixa/motoqueirosUid/' + auth.uid + '/ativo').val() === true && root.child('caixa/motoqueirosUid/' + auth.uid + '/lojaId').val() === $lojaId)"
+            },
+            "chat": {
+              "$msgId": {
+                ".write": "!data.exists() && newData.exists() && newData.child('de').val() === 'cliente'",
+                ".validate": "$msgId.matches(/^[-A-Za-z0-9_]{8,40}$/) && newData.hasChildren(['de','txt','ts'])",
+                "de": {
+                  ".validate": "newData.val() === 'cliente' || newData.val() === 'loja'"
+                },
+                "txt": {
+                  ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 300"
+                },
+                "ts": {
+                  ".validate": "newData.isNumber() && newData.val() === now"
+                },
+                "$outro": {
+                  ".validate": "false"
+                }
+              }
+            },
+            "$outro": {
+              ".validate": "false"
+            }
+          },
+          ".read": "(auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true)) || (auth != null && root.child('caixa/motoqueirosUid/' + auth.uid + '/ativo').val() === true && root.child('caixa/motoqueirosUid/' + auth.uid + '/lojaId').val() === $lojaId && query.limitToLast <= 100 && ((query.orderByChild === 'status' && (query.equalTo === 'pronto' || query.equalTo === 'preparo')) || (query.orderByChild === 'motoqueiro' && query.equalTo === root.child('caixa/motoqueirosUid/' + auth.uid + '/nome').val())))"
+        }
+      },
+      "codigosEntrega": {
+        "$lojaId": {
+          "$pedidoId": {
+            ".write": "(!data.exists() && newData.exists()) || (auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true))",
+            ".validate": "$pedidoId.matches(/^[-A-Za-z0-9_]{8,40}$/) && newData.isString() && newData.val().matches(/^[0-9]{4}$/)"
+          },
+          ".read": "auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true)"
+        }
+      },
+      "pushMotoqueiros": {
+        "$lojaId": {
+          "$uid": {
+            ".read": "(auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true))",
+            ".write": "(auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true)) || (auth != null && auth.uid == $uid && root.child('caixa/motoqueirosUid/' + auth.uid + '/ativo').val() === true && root.child('caixa/motoqueirosUid/' + auth.uid + '/lojaId').val() === $lojaId)",
+            ".validate": "newData.val() == null || newData.hasChildren(['endpoint','p256dh','auth'])",
+            "endpoint": {
+              ".validate": "newData.isString() && newData.val().length <= 800 && newData.val().beginsWith('https://')"
+            },
+            "p256dh": {
+              ".validate": "newData.isString() && newData.val().length <= 200"
+            },
+            "auth": {
+              ".validate": "newData.isString() && newData.val().length <= 60"
+            },
+            "nome": {
+              ".validate": "newData.isString() && newData.val().length <= 40"
+            },
+            "ts": {
+              ".validate": "newData.isNumber()"
+            },
+            "$outro": {
+              ".validate": "false"
+            }
+          },
+          ".read": "auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true)"
+        }
+      },
+      "pushConfig": {
+        "$lojaId": {
+          ".read": "(auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true))",
+          ".write": "(auth != null && (auth.token.email == 'selectsabor24@gmail.com' || (root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true && root.child('caixa/usuarios/' + auth.uid + '/perfil').val() != 'atendimento')))",
+          ".validate": "newData.val() == null || newData.hasChildren(['url','segredo'])",
+          "url": {
+            ".validate": "newData.isString() && newData.val().length <= 300 && newData.val().beginsWith('https://')"
+          },
+          "segredo": {
+            ".validate": "newData.isString() && newData.val().length <= 200"
+          },
+          "$outro": {
+            ".validate": "false"
+          }
+        }
+      },
+      "motoqueirosUid": {
+        "$uid": {
+          ".read": "auth != null && auth.uid == $uid",
+          ".write": "auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true)",
+          ".validate": "newData.val() == null || (newData.hasChildren(['lojaId','nome','ativo']) && newData.child('lojaId').isString() && newData.child('ativo').isBoolean())"
+        }
+      },
+      "recusasEntrega": {
+        "$lojaId": {
+          ".read": "auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true)",
+          "$uid": {
+            ".read": "auth != null && auth.uid === $uid && root.child('caixa/motoqueirosUid/' + auth.uid + '/lojaId').val() === $lojaId",
+            "$pedidoId": {
+              ".write": "(auth != null && root.child('caixa/motoqueirosUid/' + auth.uid + '/ativo').val() === true && root.child('caixa/motoqueirosUid/' + auth.uid + '/lojaId').val() === $lojaId) && auth.uid === $uid && $pedidoId.matches(/^[-A-Za-z0-9_]{8,40}$/)",
+              ".validate": "newData.val() === null || newData.isNumber()"
+            }
+          }
+        }
+      },
+      "cardapioFotos": {
+        "$lojaId": {
+          ".read": true,
+          "$itemId": {
+            ".write": "auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true)",
+            ".validate": "newData.val() === null || (newData.isString() && newData.val().beginsWith('data:image/') && newData.val().length <= 70000)"
+          }
+        }
+      }
+    }
+  }
+}
