@@ -2,7 +2,7 @@
 // Escopo restrito a pedido.html: não interfere no Controle de Caixa (sw.js).
 // Estratégia: network-first (sempre a versão mais nova); cache só se a rede falhar.
 // Firebase e demais domínios externos nunca passam pelo cache.
-const CACHE_NAME = 'pedido-v2';
+const CACHE_NAME = 'pedido-v3';
 
 self.addEventListener('install', () => { self.skipWaiting(); });
 

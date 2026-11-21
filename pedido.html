@@ -691,12 +691,14 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
       parte.split(',').forEach(function (p) {
         var a = p.split(':'), g = gs.find(function (x) { return x.id === a[0]; }), o = g && g.opcoes.find(function (x) { return x.id === a[1]; });
         if (!g || !o || o.ativo === false) { ok = false; return; }
-        ex.push({ g: g.id, o: o.id, gn: g.nome, on: o.nome, preco: Number(o.preco) || 0 });
+        ex.push({ g: g.id, o: o.id, gn: g.nome, on: o.nome, preco: Number(o.preco) || 0, q: g.max > 1 && g.rep });
       });
     }
     return { item: it, extras: ex, ok: ok };
   }
-  function precoDe(key) { var f = linhaInfo(key); return f.item ? round2((Number(f.item.preco) || 0) + f.extras.reduce(function (s, e) { return s + e.preco; }, 0)) : 0; }
+  /* Grupos com quantidade (máx. > 1 e "pode repetir"): cada escolha conta como uma unidade e cobra o valor do item. */
+  function unidadesCobradas(qtdEscolhas) { return Math.max(1, qtdEscolhas); }
+  function precoDe(key) { var f = linhaInfo(key); return f.item ? round2((Number(f.item.preco) || 0) * unidadesCobradas(f.extras.filter(function (e) { return e.q; }).length) + f.extras.reduce(function (s, e) { return s + e.preco; }, 0)) : 0; }
   function qtdItem(id) { return Object.keys(cart).reduce(function (s, k) { return s + (baseId(k) === id ? cart[k] : 0); }, 0); }
   /* "2× Coca-Cola, Fanta Laranja" (agrupa opções repetidas) */
   function resumoExtras(ex) {
@@ -895,9 +897,9 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     return faltou;
   }
   function opcTotal() {
-    var ex = 0;
-    opc.gs.forEach(function (g) { (opc.sel[g.id] || []).forEach(function (oid) { var o = g.opcoes.find(function (x) { return x.id === oid; }); if (o) ex += Number(o.preco) || 0; }); });
-    return round2(((Number(opc.it.preco) || 0) + ex) * opc.q);
+    var ex = 0, un = 0;
+    opc.gs.forEach(function (g) { (opc.sel[g.id] || []).forEach(function (oid) { var o = g.opcoes.find(function (x) { return x.id === oid; }); if (o) { ex += Number(o.preco) || 0; if (g.max > 1 && g.rep) un++; } }); });
+    return round2(((Number(opc.it.preco) || 0) * unidadesCobradas(un) + ex) * opc.q);
   }
   function opcDesenhar(erroId) {
     var box = $('#opc'); if (!box) return;
