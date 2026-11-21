@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Entregas — Motoqueiro</title>
-<meta name="theme-color" content="#2F5233">
+<meta name="theme-color" content="#FBF3E0">
 <meta name="robots" content="noindex">
 <link rel="manifest" href="manifest-motoqueiro.json">
 <meta name="mobile-web-app-capable" content="yes">
@@ -146,65 +146,31 @@ button { cursor: pointer; }
 #chamada .bs .rc { background: var(--erro); }
 @keyframes tremer { 0%,100% { transform: rotate(0); } 20% { transform: rotate(-14deg); } 40% { transform: rotate(14deg); } 60% { transform: rotate(-10deg); } 80% { transform: rotate(10deg); } }
 @media (max-width: 380px) { .links a, .links button { flex: 1 1 calc(50% - 8px); } }
-</style>
 
-<style id="select-sabor-brand-premium">
-/* Select Sabor — entregas com acabamento premium e paleta oficial */
-:root {
-  --verde: #2F5233; --verde2: #3F7A47; --verde-bg: #E8F1E9;
-  --bg: #F7F4EF; --card: #FFFFFF; --txt: #1F2A22; --mut: #6B6258; --borda: #E7E2D9;
-  --roxo: #8A4F12; --azul: #3F7A47;
-}
-body { background: radial-gradient(circle at 88% 0%, rgba(184,116,47,.08), transparent 25rem), var(--bg); }
-.login {
-  background:
-    radial-gradient(circle at 15% 12%, rgba(184,116,47,.22), transparent 17rem),
-    linear-gradient(145deg, #24452B 0%, #18351F 72%, #102117 100%);
-}
-.login-box {
-  border: 1px solid rgba(255,255,255,.75);
-  border-radius: 22px; box-shadow: 0 22px 58px rgba(0,0,0,.25);
-}
-.login-box img {
-  width: 92px; height: 92px; object-fit: contain; padding: 2px;
-  background: #fff; box-shadow: 0 5px 17px rgba(47,82,51,.14);
-}
-.login-box h1 { color: var(--verde); letter-spacing: -.035em; }
-.login-box input { border-radius: 12px; }
-.btn-prim {
-  border-radius: 13px;
-  background: linear-gradient(135deg, #2F5233, #3F7A47);
-  box-shadow: 0 7px 18px rgba(47,82,51,.20);
-  transition: transform .18s ease, box-shadow .18s ease;
-}
-.btn-prim:active { transform: scale(.985); }
-.top {
-  background: linear-gradient(135deg, #24452B, #2F5233 68%, #3F7A47);
-  box-shadow: 0 8px 22px rgba(31,62,36,.16);
-}
-.ib { border-radius: 12px; transition: transform .18s ease, opacity .18s ease; }
-.ib:active { transform: scale(.96); }
-.met, .card, .resumo {
-  border-radius: 16px; box-shadow: 0 3px 13px rgba(55,42,25,.055);
-}
-.met { padding: 14px; }
-.met b { letter-spacing: -.035em; font-variant-numeric: tabular-nums; }
-.tabs { gap: 7px; }
-.tabs button { border-radius: 12px; transition: transform .18s ease, box-shadow .18s ease; }
-.card, .resumo { padding: 16px; transition: box-shadow .18s ease, transform .18s ease; }
-.card:active { transform: scale(.995); }
-.links a, .links button, .acoes button, .prep, .cobrar { border-radius: 12px; }
-.taxa-dia { border-radius: 16px; box-shadow: 0 8px 20px rgba(0,0,0,.13); }
-#modal .m { border-radius: 20px 20px 0 0; box-shadow: 0 -12px 35px rgba(0,0,0,.13); }
-#toast, #alerta { border-radius: 14px; box-shadow: 0 9px 24px rgba(0,0,0,.18); }
-button:focus-visible, a:focus-visible, input:focus-visible { outline-offset: 3px; }
-@media (min-width: 700px) { .wrap { max-width: 680px; } .card, .resumo { padding: 18px; } }
-@media (max-width: 380px) { .mets { gap: 6px; } .met { padding: 9px; } .met b { font-size: 21px; } }
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { transition: none !important; animation: none !important; }
-}
+/* ===== Visual premium (igual ao conceito do Select Sabor) ===== */
+:root { --bg: #F8F3E8; --marrom: #8A4F12; }
+.top { background: linear-gradient(180deg, #FFFBF1, #F6ECD6); color: var(--verde); border-bottom: 1px solid #E9DDC2; box-shadow: 0 2px 10px rgba(80,60,20,.08); }
+.top .logo { width: 48px; height: 48px; border-radius: 50%; background: #fff; flex-shrink: 0; box-shadow: 0 0 0 2px #E9DDC2; }
+.top .quem b { color: var(--marrom); font-size: 19px; }
+.top .quem small { color: #5B4A2F; opacity: 1; }
+.top .ib { background: #fff; color: var(--verde); border: 1px solid #E9DDC2; box-shadow: 0 2px 6px rgba(80,60,20,.08); }
+.mets { gap: 10px; }
+.met { text-align: center; background: linear-gradient(160deg, var(--verde), var(--verde2)); border: 0; color: #fff; padding: 12px 6px; box-shadow: 0 4px 12px rgba(47,82,51,.25); display: flex; flex-direction: column; align-items: center; }
+.met::before { font-size: 24px; line-height: 1.1; }
+.met:nth-child(1)::before { content: "📦"; } .met:nth-child(2)::before { content: "🛵"; } .met:nth-child(3)::before { content: "✅"; }
+.met b { order: 2; font-size: 26px; line-height: 1.1; }
+.met small { order: 3; color: #fff; text-transform: none; letter-spacing: 0; font-size: 12px; font-weight: 600; opacity: .95; }
+.tabs button { border-color: #E9DDC2; }
+.card { border: 1px solid #EADFC6; border-left: 1px solid #EADFC6; border-radius: 18px; box-shadow: 0 4px 14px rgba(80,60,20,.09); }
+.card.vazio { box-shadow: none; }
+.card .cab { align-items: center; }
+.card .cod { font-size: 20px; color: var(--txt); }
+.card .badge { margin-left: auto; font-size: 13px; font-weight: 800; padding: 4px 12px; border-radius: 99px; color: #fff; background: var(--cor, var(--roxo)); }
+.card .hora { flex-basis: 100%; margin-top: 2px; }
+.end { font-size: 17px; }
+.links button { flex: 1 1 100%; min-height: 48px; background: var(--verde); border-color: var(--verde); color: #fff; font-weight: 800; font-size: 16px; }
+.btn-atualizar { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 56px; margin-top: 4px; border: 0; border-radius: 16px; background: linear-gradient(160deg, var(--verde), var(--verde2)); color: #fff; font-weight: 800; font-size: 18px; box-shadow: 0 6px 16px rgba(47,82,51,.3); }
 </style>
-
 </head>
 <body>
 
@@ -230,6 +196,7 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline-offset: 3px
 <div id="tela-app" class="hide">
   <header class="top">
     <div class="wrap">
+      <img class="logo" src="logo.png" alt="" onerror="this.style.display='none'">
       <div class="quem">
         <b id="tp-nome">Motoqueiro</b>
         <small><span class="dot" id="tp-dot"></span><span id="tp-loja">—</span></small>
@@ -255,6 +222,7 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline-offset: 3px
       <button data-t="hoje">Entregues</button>
     </div>
     <div id="lista"></div>
+    <button type="button" class="btn-atualizar" id="bt-atualizar">✓ Atualizar status</button>
     <div class="rodape" id="rodape"></div>
   </main>
 </div>
@@ -525,10 +493,10 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline-offset: 3px
     if (p.status === 'pronto') acoes = '<button class="p" data-a="sair" data-id="' + id + '">🛵 Saí para entrega</button>';
     else if (p.status === 'saiu') acoes = '<button class="p" data-a="entregue" data-id="' + id + '">✅ Entregue</button><button data-a="voltar" data-id="' + id + '">↩ Ainda não saí</button>';
 
-    var links = fin ? '' : '<div class="links"><button type="button" data-a="rota" data-id="' + id + '">🗺 Rota</button></div>';
+    var links = fin ? '' : '<div class="links"><button type="button" data-a="rota" data-id="' + id + '">➤ Ver rota</button></div>';
 
     return '<div class="card" style="--cor:' + cor + '">' +
-      '<div class="cab"><span class="cod">#' + esc(p.codigo || '') + '</span><span class="hora">' + quando + '</span></div>' +
+      '<div class="cab"><span class="cod">#' + esc(p.codigo || '') + '</span><span class="badge">' + ({ preparo: 'Em preparo', pronto: 'Aguardando', saiu: 'Em entrega', entregue: 'Entregue' }[p.status] || '') + '</span><span class="hora">' + quando + '</span></div>' +
       '<div class="end">📍 ' + esc(endTxt) + (extra ? '<small>' + esc(extra) + '</small>' : '') + '</div>' +
       '<div class="cli"><strong>' + esc(cli.nome || '') + '</strong>' + (cli.telefone ? ' · ' + esc(cli.telefone) : '') + '</div>' +
       links + cobrar +
@@ -538,6 +506,7 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline-offset: 3px
   }
 
   /* ---------- Ações ---------- */
+  $('#bt-atualizar').addEventListener('click', function () { render(); toast('Lista atualizada ✅'); });
   $('#tabs').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (b && b.dataset.t) { tab = b.dataset.t; render(); } });
   $('#lista').addEventListener('click', function (ev) {
     var b = ev.target.closest('button[data-a]'); if (!b) return;
