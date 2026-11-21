@@ -255,6 +255,10 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
 .item .stepper button { width: 34px; height: 38px; font-size: 20px; }
 .item .stepper span { min-width: 18px; }
 
+.cats { background: transparent; border-bottom: 0; padding: 10px 0 6px; }
+.cats .scroll { padding: 2px 14px; gap: 10px; }
+.cats button { background: #F0E5CC; border: 0; color: #4A3B22; font-weight: 700; padding: 9px 18px; box-shadow: 0 1px 3px rgba(80,60,20,.1); }
+.cats button.on { background: #1F4D2B; color: #fff; }
 /* Barra inferior (Início · Pedidos · Minha conta) */
 .navbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 31; display: flex; background: #fff; border-top: 1px solid #E9DDC2; padding: 6px 0 calc(6px + var(--safe-b)); box-shadow: 0 -4px 14px rgba(80,60,20,.08); }
 .navbar button { flex: 1; border: 0; background: transparent; display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 12px; font-weight: 600; color: var(--mut); padding: 4px 0; min-height: 48px; }
@@ -804,10 +808,13 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     var cats = categorias().filter(function (c) { return porCat[c]; });
     // categorias (chips)
     var sc = $('#cats-scroll');
-    sc.innerHTML = cats.map(function (c, ix) { return '<button type="button" data-cat="' + ix + '" class="' + (c === catAtiva ? 'on' : '') + '">' + esc(c) + '</button>'; }).join('');
-    $('#cats').classList.toggle('hide', cats.length < 2);
+    if (catAtiva && cats.indexOf(catAtiva) < 0) catAtiva = '';
+    sc.innerHTML = '<button type="button" data-cat="todas" data-catn="" class="' + (catAtiva ? '' : 'on') + '">Todas</button>' +
+      cats.map(function (c, ix) { return '<button type="button" data-cat="' + ix + '" data-catn="' + esc(c) + '" class="' + (c === catAtiva ? 'on' : '') + '">' + esc(c) + '</button>'; }).join('');
+    $('#cats').classList.toggle('hide', !cats.length);
     var h = '';
     cats.forEach(function (c, ix) {
+      if (catAtiva && c !== catAtiva) return;
       h += '<h2 class="cat-titulo" id="cat-' + ix + '">' + esc(c) + '</h2>';
       porCat[c].sort(function (a, b) { return String(a.nome).localeCompare(String(b.nome), 'pt-BR'); }).forEach(function (i) {
         var q = cart[i.id] || 0;
@@ -1213,8 +1220,10 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     var t = ev.target.closest('button'); if (!t) return;
     if (t.hasAttribute('data-m') && t.hasAttribute('data-id')) { mudar(t.getAttribute('data-id'), parseInt(t.getAttribute('data-m'), 10)); return; }
     if (t.hasAttribute('data-cat')) {
-      var el = document.getElementById('cat-' + t.getAttribute('data-cat'));
-      if (el) { var y = el.getBoundingClientRect().top + window.pageYOffset - 64; window.scrollTo({ top: y, behavior: 'smooth' }); }
+      catAtiva = t.getAttribute('data-catn') || '';
+      desenharMenu();
+      var lista = $('#menu-lista'), alvo = lista.getBoundingClientRect().top + window.pageYOffset - 150;
+      if (window.pageYOffset > alvo) window.scrollTo({ top: Math.max(0, alvo), behavior: 'smooth' });
       return;
     }
     if (t.hasAttribute('data-modo')) { modo = t.getAttribute('data-modo'); setErro(''); desenharCheckout(); agendarDist(); return; }
