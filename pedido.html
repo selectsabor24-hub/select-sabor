@@ -1198,12 +1198,20 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     av.classList.toggle('destaque', (!!txt || !!foto || !!dest) && aberta()); // aviso do dia em destaque; "fechado" continua discreto
     av.classList.toggle('com-foto', !!foto || !!dest);
   }
+  /* Horário de hoje para mostrar no cabeçalho (só quando a loja usa horário de funcionamento) */
+  function horarioHoje() {
+    if (!cfg || cfg.horarioOn !== true) return '';
+    if (cfg.horarioDia === true) { var h = horDia(diaBR()); return h ? 'Hoje: ' + fmtMin(h.abre) + ' às ' + fmtMin(h.fecha) : 'Hoje: fechado'; }
+    if (typeof cfg.abreMin === 'number' && typeof cfg.fechaMin === 'number') return 'Hoje: ' + fmtMin(cfg.abreMin) + ' às ' + fmtMin(cfg.fechaMin);
+    return '';
+  }
   function desenharCabecalho() {
     $('#loja-nome').textContent = (cfg && cfg.nome) || 'Cardápio';
     if (window.pedidoPwa && cfg && cfg.nome) window.pedidoPwa.nome(cfg.nome);
     document.title = ((cfg && cfg.nome) ? cfg.nome + ' · ' : '') + 'Faça seu pedido';
     var info = [];
     if (cfg && cfg.tempoEstimado) info.push('⏱ ' + esc(rotuloPreparo(cfg.tempoEstimado)));
+    var hh = horarioHoje(); if (hh) info.push('🕒 ' + esc(hh));
     if (aceitaEntrega() && porKmAtivo()) info.push('🛵 Entrega a partir de ' + brl(menorTaxa()));
     else if (aceitaEntrega() && cfg && Number(cfg.taxaEntrega) > 0) info.push('🛵 Entrega ' + brl(cfg.taxaEntrega));
     else if (aceitaEntrega() && cfg) info.push('🛵 Entrega grátis');

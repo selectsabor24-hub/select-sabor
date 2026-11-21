@@ -2,7 +2,7 @@
 // Escopo restrito a pedido.html: não interfere no Controle de Caixa (sw.js).
 // Estratégia: network-first (sempre a versão mais nova); cache só se a rede falhar.
 // Firebase e demais domínios externos nunca passam pelo cache.
-const CACHE_NAME = 'pedido-v13'; // horário por dia da semana + QR das mesas + atualização automática
+const CACHE_NAME = 'pedido-v14'; // horário de hoje no cabeçalho + horário por dia + QR das mesas
 
 self.addEventListener('install', () => { self.skipWaiting(); });
 
