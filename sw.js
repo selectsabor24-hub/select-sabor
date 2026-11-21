@@ -16,7 +16,7 @@
 // isso não é mais um problema para ele. Ainda assim, a cada atualização
 // grande, é boa prática mudar o número abaixo (ex.: v1 → v2) para
 // forçar a limpeza dos caches antigos no 'activate'.
-const CACHE_NAME = 'caixa-v37'; // v1.5: foto do cartão inteira e centralizada na comanda → limpa os caches antigos
+const CACHE_NAME = 'caixa-v38'; // v1.6: tela de complementos maior na comanda → limpa os caches antigos
 
 // Recursos do shell que devem ser cacheados na instalação
 const SHELL_URLS = [
