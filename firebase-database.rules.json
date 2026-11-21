@@ -200,6 +200,12 @@
           "destaqueId": {
             ".validate": "newData.isString() && newData.val().length <= 60"
           },
+          "destaqueIds": {
+            ".validate": "newData.hasChildren()",
+            "$i": {
+              ".validate": "$i.matches(/^[0-7]$/) && newData.isString() && newData.val().length <= 60"
+            }
+          },
           "horarioOn": {
             ".validate": "newData.isBoolean()"
           },

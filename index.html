@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <script>try{var t=localStorage.getItem("caixa-theme");if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Controle de Caixa v6.1</title>
+<title>Controle de Caixa v6.2</title>
 
 <!-- ============================================================
      PWA — Progressive Web App
@@ -45,6 +45,8 @@
   ║         · Melhoria: renderContas usa cache; seção 3.22 documentada   ║
   ║  v3.3 — Seções novas: Planilhas já lançadas (3.23), calendário       ║
   ║         visual de lançamentos com marcação de cartão                 ║
+  ║  v6.2 — Destaques: vários itens em destaque, que passam sozinhos     ║
+  ║         (carrossel) no topo da página de pedidos                    ║
   ║  v6.1 — Complementos: foto em cada opção (cadastro, pedido online e ║
   ║         escolha na comanda)                                         ║
   ║  v6.0 — Cardápio: COMPLEMENTOS por item (ex.: Sabor do Refrigerante)║
@@ -3581,7 +3583,7 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
           <img src="logo.png" alt="Select Sabor" style="width:44px;height:44px;border-radius:50%;flex-shrink:0;background:#fff;box-shadow:0 0 0 2px rgba(255,255,255,0.18)">
           <div>
             <div class="logo-title">Controle de Caixa</div>
-            <div class="logo-sub">v6.1</div>
+            <div class="logo-sub">v6.2</div>
           </div>
         </div>
         <span id="status-dot" style="display:none;width:8px;height:8px;border-radius:50%;background:#4ADE80;flex-shrink:0;box-shadow:0 0 0 2px rgba(74,222,128,0.2)" title="Conectado"></span>
@@ -20153,27 +20155,40 @@ function renderCardapio() {
 /* ───────── Destaque do cardápio ─────────
    O item escolhido aparece no topo da página de pedidos (pedido.html), com foto, preço e botão
    de adicionar à sacola. Fica em pedidosConfig/<loja>/destaqueId. */
+function _cdpDestaqueIds() {
+  const c = _pedCfg() || {};
+  const l = _cdpLista(c.destaqueIds);
+  return l.length ? l.map(String) : (c.destaqueId ? [String(c.destaqueId)] : []);
+}
 function _cdpDestaqueCard() {
-  const c = _pedCfg() || {}, atual = c.destaqueId || '';
+  const marcados = _cdpDestaqueIds();
   const itens = _cmdCardapio().filter(i => i.ativo !== false).sort((a, b) => String(a.nome).localeCompare(String(b.nome)));
-  const opts = itens.map(i => `<option value="${escapeAttr(i.id)}"${i.id === atual ? ' selected' : ''}>${escapeHtml(i.nome)} — ${fmt(i.preco)}</option>`).join('');
+  const lista = itens.map(i => `<label style="display:flex;align-items:center;gap:10px;padding:7px 4px;border-bottom:1px solid var(--border);cursor:pointer;font-size:14px">
+      <input type="checkbox" class="cdp-dest-ck" value="${escapeAttr(i.id)}"${marcados.includes(i.id) ? ' checked' : ''} onchange="cdpDestaqueContar()">
+      <span style="flex:1;min-width:0">${escapeHtml(i.nome)} <span style="color:var(--text3)">— ${fmt(i.preco)}</span></span>
+      <span style="font-size:12px;color:var(--text3);white-space:nowrap">${i.fotoV ? '📷 com foto' : 'sem foto'}</span></label>`).join('');
   return `<div class="card mb-5">
-    <div class="card-title">⭐ Destaque do cardápio</div>
-    <div class="txt-hint" style="margin-bottom:10px">O item escolhido aparece em destaque no topo da página de pedidos, com foto, preço e botão para o cliente já adicionar à sacola. Dica: escolha um item que tenha foto.</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-      <select id="cdp-destaque-sel" class="cdp-in" style="min-width:240px;flex:1;max-width:420px"><option value="">Nenhum (sem destaque)</option>${opts}</select>
-      <button class="btn btn-primary" type="button" onclick="cdpDestaqueSalvar()">💾 Salvar destaque</button>
+    <div class="card-title">⭐ Destaques do cardápio</div>
+    <div class="txt-hint" style="margin-bottom:10px">Marque um ou mais itens (até 8). Eles aparecem no topo da página de pedidos, com foto, preço e botão de adicionar, e <strong>passam sozinhos</strong> um após o outro. Com um só, ele fica fixo. Dica: escolha itens que tenham foto.</div>
+    <div style="max-height:240px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-sm);padding:2px 10px;margin-bottom:10px">${lista || '<div class="txt-hint" style="padding:10px 0">Cadastre itens no cardápio para destacar.</div>'}</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      <button class="btn btn-primary" type="button" onclick="cdpDestaqueSalvar()">💾 Salvar destaques</button>
+      <span id="cdp-dest-cont" style="font-size:13px;color:var(--text3)">${marcados.length} selecionado(s)</span>
     </div>
   </div>`;
+}
+function cdpDestaqueContar() {
+  const n = document.querySelectorAll('.cdp-dest-ck:checked').length;
+  const el = document.getElementById('cdp-dest-cont'); if (el) el.textContent = n + ' selecionado(s)' + (n > 8 ? ' — máximo 8' : '');
 }
 function cdpDestaqueSalvar() {
   if (_cmdSemLoja()) return;
   if (!_pedCfg()) { showToast('Configure os pedidos online antes (Pedidos online → Configurar).', false); return; }
-  const id = (document.getElementById('cdp-destaque-sel') || {}).value || '';
-  const ref = _dbRef('pedidosConfig/' + _lojaAtiva + '/destaqueId');
-  (id ? ref.set(id) : ref.remove()).then(() => {
-    const it = _cmdCardapio().find(i => i.id === id);
-    showToast(!id ? 'Destaque removido' : (it && !it.fotoV ? 'Destaque salvo ✔ (esse item não tem foto — adicione uma para ficar mais bonito)' : 'Destaque salvo ✔'));
+  const ids = Array.from(document.querySelectorAll('.cdp-dest-ck:checked')).map(e => e.value);
+  if (ids.length > 8) { showToast('Escolha no máximo 8 destaques', false); return; }
+  _dbRef('pedidosConfig/' + _lojaAtiva).update({ destaqueIds: ids.length ? ids : null, destaqueId: null }).then(() => {
+    const semFoto = ids.some(id => { const it = _cmdCardapio().find(i => i.id === id); return it && !it.fotoV; });
+    showToast(!ids.length ? 'Destaques removidos' : (semFoto ? 'Destaques salvos ✔ (algum item não tem foto — adicione para ficar mais bonito)' : 'Destaques salvos ✔'));
   }).catch(e => { console.error(e); showToast('Sem permissão para salvar. Publique as regras do Firebase.', false); });
 }
 

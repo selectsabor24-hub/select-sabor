@@ -329,6 +329,12 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
 .opc-ok { flex: 1; min-height: 48px; border: 0; border-radius: 14px; background: var(--verde); color: #fff; font-weight: 800; padding: 0 14px; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
 .opc-ok[disabled] { background: #C9CFC9; }
 .linha .n small.ex { display: block; color: var(--mut); margin-top: 2px; }
+.aviso.destaque .dest-dots { position: absolute; left: 0; right: 0; bottom: 8px; z-index: 2; display: flex; justify-content: center; gap: 7px; }
+.aviso.destaque .dest-dots.solto { position: static; padding: 6px 0 0; }
+.aviso.destaque .dest-dot { width: 10px; height: 10px; min-height: 0; padding: 0; border: 0; border-radius: 99px; background: rgba(255,255,255,.55); box-shadow: 0 0 0 1px rgba(0,0,0,.15); transition: width .25s; }
+.aviso.destaque .dest-dot.on { width: 24px; background: #fff; }
+.aviso.destaque .aviso-foto.troca .aviso-img, .aviso.destaque .aviso-foto.troca .aviso-bg { animation: destFade .45s ease-out both; }
+@keyframes destFade { from { opacity: 0; } to { opacity: 1; } }
 </style>
 </head>
 <body>
@@ -634,7 +640,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
   function fotoCacheSalvar(c) { try { localStorage.setItem('fotosCard_' + LOJA, JSON.stringify(c)); return true; } catch (e) { return false; } }
   function pintarFoto(id) {
     var d = FOTOS[id]; if (!d) return;
-    try { if (cfg && cfg.destaqueId === id) desenharAviso(); } catch (e) {}
+    try { if (destaqueLista().some(function (d) { return d.id === id; })) desenharAviso(); } catch (e) {}
     Array.prototype.forEach.call(document.querySelectorAll('.ft[data-f]'), function (el) {
       if (el.getAttribute('data-f') !== id) return;
       el.classList.remove('sk');
@@ -945,17 +951,53 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
 
   /* ---------- Tela 1: menu ---------- */
   /* Aviso do dia + item em destaque (cfg.destaqueId): foto, preço e botão de adicionar à sacola. */
-  function destaqueItem() {
-    var id = cfg && cfg.destaqueId; if (!id) return null;
-    return itensDisponiveis().filter(function (i) { return i.id === id; })[0] || null;
+  function destaqueLista() {
+    var ids = listaDe(cfg && cfg.destaqueIds).map(String);
+    if (!ids.length && cfg && cfg.destaqueId) ids = [String(cfg.destaqueId)];
+    var disp = itensDisponiveis();
+    return ids.map(function (id) { return disp.filter(function (i) { return i.id === id; })[0]; }).filter(Boolean);
+  }
+  /* Carrossel: vários destaques passam sozinhos a cada 5 s (pausa ao tocar; também dá para arrastar ou tocar nas bolinhas). */
+  var destIdx = 0, destPausaAte = 0, destTimer = null, destTrocou = false, destTouchX = null;
+  function destIr(n, pausar) {
+    var tot = destaqueLista().length; if (tot < 2) return;
+    destIdx = ((n % tot) + tot) % tot; destTrocou = true;
+    if (pausar) destPausaAte = Date.now() + 9000;
+    desenharAviso();
+  }
+  function destIniciarTimer() {
+    if (destTimer) return;
+    destTimer = setInterval(function () {
+      if (document.hidden || Date.now() < destPausaAte) return;
+      if (!$('#v-menu') || $('#v-menu').classList.contains('hide') || $('#opc') && !$('#opc').classList.contains('hide')) return;
+      destIr(destIdx + 1, false);
+    }, 5000);
+  }
+  (function () {
+    var av = document.getElementById('aviso'); if (!av) return;
+    av.addEventListener('click', function (e) { var d = e.target.closest && e.target.closest('[data-dot]'); if (d) destIr(parseInt(d.getAttribute('data-dot'), 10), true); });
+    av.addEventListener('touchstart', function (e) { destTouchX = e.touches && e.touches[0] ? e.touches[0].clientX : null; }, { passive: true });
+    av.addEventListener('touchend', function (e) {
+      if (destTouchX === null) return;
+      var x = e.changedTouches && e.changedTouches[0] ? e.changedTouches[0].clientX : destTouchX, dx = x - destTouchX; destTouchX = null;
+      if (Math.abs(dx) > 50) destIr(destIdx + (dx < 0 ? 1 : -1), true);
+    }, { passive: true });
+  })();
+  function dotsDest(n, solto) {
+    var d = document.createElement('div'); d.className = 'dest-dots' + (solto ? ' solto' : '');
+    for (var k = 0; k < n; k++) { var b = document.createElement('button'); b.type = 'button'; b.className = 'dest-dot' + (k === destIdx ? ' on' : ''); b.setAttribute('data-dot', k); b.setAttribute('aria-label', 'Destaque ' + (k + 1)); d.appendChild(b); }
+    return d;
   }
   var _fotoAnimada = null; // última foto cujo efeito de entrada já rodou
   function desenharAviso() {
     var av = $('#aviso'); if (!av) return;
     var txt = !aberta() ? (foraDoHorarioLoja() ? 'Estamos fechados no momento. Nosso horário de pedidos é das ' + fmtMin(cfg.abreMin) + ' às ' + fmtMin(cfg.fechaMin) + '. Você pode ver o cardápio, mas só dá para enviar pedidos quando abrirmos.' : 'Estamos fechados no momento. Você pode ver o cardápio, mas só dá para enviar pedidos quando abrirmos.') : '';
-    var dest = aberta() ? destaqueItem() : null;
+    var dests = aberta() ? destaqueLista() : [];
+    if (destIdx >= dests.length) destIdx = 0;
+    var dest = dests[destIdx] || null;
+    if (dests.length > 1) destIniciarTimer();
     var foto = aberta() ? ((dest && dest.fotoV && FOTOS[dest.id]) || null) : null;
-    var animar = !!foto && foto !== _fotoAnimada; if (foto) _fotoAnimada = foto;
+    var animar = !!foto && foto !== _fotoAnimada && (dests.length < 2 || _fotoAnimada === null); if (foto) _fotoAnimada = foto;
     av.textContent = '';
     if (dest) { var bd = document.createElement('span'); bd.className = 'dest-badge' + (foto ? '' : ' sem') + (animar ? ' anim' : ''); bd.textContent = '⭐ Destaque'; av.appendChild(bd); }
     if (foto) {
@@ -963,8 +1005,13 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
       var fw = document.createElement('div'); fw.className = 'aviso-foto';
       var bg = document.createElement('img'); bg.className = 'aviso-bg' + (animar ? ' anim' : ''); bg.alt = ''; bg.src = foto; bg.setAttribute('aria-hidden', 'true');
       var im = document.createElement('img'); im.className = 'aviso-img' + (animar ? ' anim' : ''); im.alt = ''; im.src = foto;
-      fw.appendChild(bg); fw.appendChild(im); av.appendChild(fw);
+      fw.appendChild(bg); fw.appendChild(im);
+      if (destTrocou) { fw.classList.add('troca'); }
+      if (dests.length > 1) fw.appendChild(dotsDest(dests.length));
+      av.appendChild(fw);
     }
+    if (dest && !foto && dests.length > 1) av.appendChild(dotsDest(dests.length, true));
+    destTrocou = false;
     var tx = document.createElement('span'); tx.className = 'aviso-txt'; tx.textContent = txt; av.appendChild(tx);
     if (dest) {
       var q = qtdItem(dest.id), id = esc(dest.id);
