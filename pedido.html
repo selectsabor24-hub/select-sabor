@@ -230,6 +230,37 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
   .codigo .cod { font-size: 32px; letter-spacing: 3px; }
 }
 </style>
+
+<style id="select-sabor-premium-refinement">
+/* Refinamento premium preservando integralmente a paleta original */
+body{letter-spacing:-.01em}
+.top{box-shadow:0 8px 24px rgba(0,0,0,.15);padding-bottom:20px}
+.top img{border:3px solid rgba(255,255,255,.82);box-shadow:0 8px 22px rgba(0,0,0,.18)}
+.wrap{max-width:720px;padding-left:16px;padding-right:16px}
+.item,.bloco,.resumo,.install,.status-card,.sheet{border-radius:17px;box-shadow:0 3px 12px rgba(0,0,0,.045)}
+.item{padding:14px;gap:14px;transition:transform .18s ease,box-shadow .18s ease}
+.item:active{transform:scale(.992)}
+.item .ft{border-radius:13px;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.item .nome{font-size:15px;letter-spacing:-.02em}
+.add,.btn-enviar,.barra button,.install .ok,.sheet button{box-shadow:0 6px 16px rgba(0,0,0,.14);border-radius:13px;transition:transform .18s ease,box-shadow .18s ease}
+.add:active,.btn-enviar:active,.barra button:active,.install .ok:active{transform:scale(.985)}
+.tela-topo{backdrop-filter:blur(14px)}
+.voltar,.btn-sec{border-radius:12px}
+.campo input,.campo textarea,.chat-form textarea{border-radius:12px}
+.opcoes button{border-radius:13px;border-width:1.5px}
+.bloco{padding:16px;margin-top:14px}
+.bloco h3{letter-spacing:.07em;font-size:11px}
+.barra{padding-top:18px}
+.barra button{box-shadow:0 9px 24px rgba(0,0,0,.17)}
+.cod-ent{border-radius:16px}
+.status-card{padding:24px 16px}
+.toast{box-shadow:0 8px 24px rgba(0,0,0,.2)}
+button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline-offset:2px}
+@media(min-width:700px){.wrap{padding-left:20px;padding-right:20px}.item{padding:16px}.item .ft{width:92px;height:92px;flex-basis:92px}}
+@media(max-width:380px){.wrap{padding-left:12px;padding-right:12px}.item{gap:10px}.item .ft{width:72px;height:72px;flex-basis:72px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;animation:none!important}}
+</style>
+
 </head>
 <body>
 
