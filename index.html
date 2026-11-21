@@ -53,6 +53,8 @@
   ║         travava (estado do perfil anterior); agora o logout         ║
   ║         recarrega a página e limpa tudo (cache do app incluso;      ║
   ║         localStorage com pendências/backups é preservado).          ║
+  ║         Sair protege dados: envia pendentes ao Firebase antes de    ║
+  ║         desconectar e avisa se há valores digitados sem salvar.     ║
   ║  v5.8 — Perfil de acesso "Atendimento" por usuário (Configurações): ║
   ║         só vê Pedidos online, Motoqueiro, Comandas/Mesas e Cardápio.║
   ║         Regras do Firebase também bloqueiam as demais áreas.        ║
@@ -7716,7 +7718,7 @@ function _sincronizarComFirebase() {
     console.warn('[sync] Firebase indisponível — sync adiado.');
     _syncIndicator('error');
     showToast('⚠️ Sem conexão. Dados salvos localmente e serão sincronizados ao reconectar.', false);
-    return;
+    return Promise.resolve();
   }
 
   // Lê os dados pendentes do localStorage
@@ -7728,7 +7730,7 @@ function _sincronizarComFirebase() {
 
   if (!pendente || !Array.isArray(pendente.dados)) {
     _syncIndicator('saved');
-    return;
+    return Promise.resolve();
   }
 
   const novosDados = pendente.dados;
@@ -7759,7 +7761,7 @@ function _sincronizarComFirebase() {
     console.log('[sync] ⚠️ NENHUMA alteração para enviar (updates vazio) — sync encerrado sem gravar');
     try { localStorage.removeItem(_chaveLocalPendente(_lojaAtiva)); } catch(e) {}
     _syncIndicator('saved');
-    return;
+    return Promise.resolve();
   }
   console.log('[sync] 📤 Enviando', Object.keys(updates).length, 'registros ao Firebase...');
 
@@ -7769,7 +7771,7 @@ function _sincronizarComFirebase() {
 
   // 3️⃣ ENVIA PARA O FIREBASE
   _salvandoDados = true;
-  _dbRef('lancamentos_loja/' + _lojaAtiva).update(updates)
+  return _dbRef('lancamentos_loja/' + _lojaAtiva).update(updates)
     .then(() => {
       console.log('[sync] ✅ Firebase sincronizado:', _lojaAtiva, qtdSync, 'registros');
       _registrarAuditoria('sincronizou_lancamentos', _lojaAtiva, { quantidade: qtdSync });
@@ -9689,7 +9691,7 @@ window.addEventListener('pagehide', _flushSyncPendente);
 window.addEventListener('beforeunload', (e) => {
   // Garante o envio do que estiver pendente antes de sair
   _flushSyncPendente();
-  if (_formTemDados()) {
+  if (_formTemDados() && !window._descartarForm) {
     e.preventDefault();
     e.returnValue = ''; // necessário para Chrome mostrar o diálogo
   }
@@ -20651,8 +20653,10 @@ setInterval(() => {
       // Atendimento ↔ Admin no mesmo aparelho deixava a tela com o menu/dados do perfil anterior.
       if (window._sessaoAutorizada) {
         window._sessaoAutorizada = false;
-        _limparCacheApp().then(() => location.reload());
-        return;
+        // Se há valores digitados e não salvos (e o usuário não pediu para descartar), não recarrega:
+        // mantém a tela como estava para nada ser perdido.
+        const _temDigitado = (typeof _formTemDados === 'function') && _formTemDados() && !window._descartarForm;
+        if (!_temDigitado) { _limparCacheApp().then(() => location.reload()); return; }
       }
       // Não logado: mostrar tela de login
       document.getElementById('app-shell').style.display      = 'none';
@@ -21215,8 +21219,57 @@ function _limparCacheApp() {
   return Promise.race([limpar, new Promise(res => setTimeout(res, 1500))]);
 }
 
-function sair() {
+/** v5.9 — Há lançamento ainda não enviado ao servidor neste aparelho? */
+function _temPendenteLocal() {
+  try { return !!(_lojaAtiva && localStorage.getItem(_chaveLocalPendente(_lojaAtiva))); } catch (e) { return false; }
+}
+
+/** v5.9 — Envia ao Firebase tudo que estiver pendente ANTES de desconectar (depois do signOut
+ *  o Firebase recusaria a gravação). Espera no máximo 6 s. */
+function _enviarPendentesAntesDeSair() {
+  let p;
+  try {
+    if (_syncFirebaseTimer) { clearTimeout(_syncFirebaseTimer); _syncFirebaseTimer = null; }
+    p = _sincronizarComFirebase();
+  } catch (e) { p = Promise.resolve(); }
+  return Promise.race([Promise.resolve(p).catch(() => {}), new Promise(res => setTimeout(res, 6000))]);
+}
+
+function _sairAgora(descartarForm) {
+  window._descartarForm = !!descartarForm; // permite recarregar sem o aviso de "dados não salvos"
   firebase.auth().signOut();
+}
+
+/** Sair com proteção: nada digitado ou pendente é perdido sem o usuário confirmar. */
+function sair() {
+  // 1) Valores digitados no lançamento e ainda não salvos
+  if (typeof _formTemDados === 'function' && _formTemDados()) {
+    showModal('Há dados não salvos',
+      'Você digitou valores no lançamento que ainda não foram salvos. Se sair agora, eles serão perdidos.',
+      [
+        { label: 'Voltar e salvar', style: 'secondary' },
+        { label: 'Sair mesmo assim', style: 'danger', action: () => _sairDepoisDeEnviar(true) }
+      ]);
+    return;
+  }
+  _sairDepoisDeEnviar(false);
+}
+
+function _sairDepoisDeEnviar(descartarForm) {
+  // 2) Lançamentos salvos no aparelho: envia ao servidor antes de desconectar
+  _enviarPendentesAntesDeSair().then(() => {
+    if (_temPendenteLocal()) {
+      // Não conseguiu enviar (ex.: sem internet). Os dados continuam guardados neste aparelho.
+      showModal('Lançamentos ainda não enviados',
+        'Não foi possível enviar tudo ao servidor agora (sem conexão?). Os dados continuam guardados neste aparelho e serão enviados quando um usuário com permissão entrar de novo. Deseja sair mesmo assim?',
+        [
+          { label: 'Continuar logado', style: 'secondary' },
+          { label: 'Sair mesmo assim', style: 'danger', action: () => _sairAgora(descartarForm) }
+        ]);
+      return;
+    }
+    _sairAgora(descartarForm);
+  });
 }
 
 /** Sair pelo menu do celular: fecha o menu e pede confirmação. */
