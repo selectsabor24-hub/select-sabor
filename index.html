@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <script>try{var t=localStorage.getItem("caixa-theme");if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Controle de Caixa v6.8</title>
+<title>Controle de Caixa v6.10</title>
 
 <!-- ============================================================
      PWA — Progressive Web App
@@ -45,6 +45,8 @@
   ║         · Melhoria: renderContas usa cache; seção 3.22 documentada   ║
   ║  v3.3 — Seções novas: Planilhas já lançadas (3.23), calendário       ║
   ║         visual de lançamentos com marcação de cartão                 ║
+  ║  v6.10 — Pedidos online: complementos separados por grupo, cada um com a sua soma║
+  ║  v6.9 — Pedidos online: mostra a quantidade total de unidades       ║
   ║  v6.8 — Pedidos online: item com complementos sem repetir o valor   ║
   ║  v6.7 — Pedidos online: valor do item com complementos embaixo      ║
   ║  v6.6 — Pedidos online: itens com complementos organizados          ║
@@ -3391,6 +3393,9 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
 .ped-it-p { flex: none; white-space: nowrap; font-weight: 700; }
 .ped-itens li.ped-it-comext { flex-direction: column; align-items: stretch; gap: 2px; }
 .ped-itens li.ped-it-comext .ped-it-p { align-self: flex-end; }
+.ped-gr { margin-top: 8px; }
+.ped-gr-t { font-weight: 700; font-size: 13px; color: var(--text); }
+.ped-gr .ped-ext { margin-top: 2px; }
 .ped-itens .ped-ext { list-style: none; margin: 3px 0 2px; padding: 0 0 0 4px; border: 0; }
 .ped-itens .ped-ext li { display: block; padding: 1px 0 1px 14px; position: relative; font-size: 13px; color: var(--text2); }
 .ped-itens .ped-ext li::before { content: "•"; position: absolute; left: 3px; color: var(--text3); }
@@ -3641,7 +3646,7 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
           <img src="img/logo.png" alt="Select Sabor" style="width:44px;height:44px;border-radius:50%;flex-shrink:0;background:#fff;box-shadow:0 0 0 2px rgba(255,255,255,0.18)">
           <div>
             <div class="logo-title">Controle de Caixa</div>
-            <div class="logo-sub">v6.8</div>
+            <div class="logo-sub">v6.10</div>
           </div>
         </div>
         <span id="status-dot" style="display:none;width:8px;height:8px;border-radius:50%;background:#4ADE80;flex-shrink:0;box-shadow:0 0 0 2px rgba(74,222,128,0.2)" title="Conectado"></span>
@@ -18241,7 +18246,25 @@ function _pedItens(p) {
       _cdpLista(it.sel).forEach(sl => { const g = gs.find(x => x.id === sl.g); const o = g && g.opcoes.find(x => x.id === sl.o); if (o) { extra += o.preco; if (_gMax(g) > 1 && g.rep) un++; } });
     }
     const preco = fixo ? it.p : _cmdRound((card ? (parseFloat(card.preco) || 0) : 0) * Math.max(1, un) + extra);
-    return { id: k, q: parseInt(it.q) || 0, n: it.n || (card && card.nome) || 'Item', preco, fixo, noCardapio: !!card, temSel: !!(it.sel && _cdpLista(it.sel).length) };
+    // complementos agrupados por grupo (ex.: "Sabor do Refrigerante · 11 un"), cada grupo com a sua soma
+    let grupos = [];
+    if (card && it.sel) {
+      const gs = _cdpGrupos(card), lista = _cdpLista(it.sel), mapa = {};
+      let ok = 0;
+      lista.forEach(sl => {
+        const gi = gs.findIndex(x => x.id === sl.g), g = gs[gi], o = g && g.opcoes.find(x => x.id === sl.o);
+        if (!o) return;
+        ok++;
+        let e = mapa[g.id];
+        if (!e) { e = mapa[g.id] = { gi, nome: g.nome, qtd: _gMax(g) > 1 && g.rep, total: 0, ops: [], idx: {} }; grupos.push(e); }
+        e.total++;
+        if (e.idx[o.id] === undefined) { e.idx[o.id] = e.ops.length; e.ops.push({ n: o.nome, c: 0 }); }
+        e.ops[e.idx[o.id]].c++;
+      });
+      if (ok !== lista.length) grupos = [];   // alguma opção saiu do cardápio: usa a lista simples
+      grupos.sort((a, b) => a.gi - b.gi);
+    }
+    return { id: k, q: parseInt(it.q) || 0, n: it.n || (card && card.nome) || 'Item', preco, fixo, noCardapio: !!card, un, grupos, temSel: !!(it.sel && _cdpLista(it.sel).length) };
   });
 }
 /* ---------- Taxa por distância (km) ---------- */
@@ -18605,8 +18628,15 @@ function _pedCardHtml(p) {
   const itens = t.itens.map(i => {
     const sp = _pedSepNome(i);
     const aviso = (!i.noCardapio && !i.fixo) ? ' <em class="ped-warn">(fora do cardápio)</em>' : '';
-    const ext = sp.extras.length ? `<ul class="ped-ext">${sp.extras.map(x => `<li>${escapeHtml(x)}</li>`).join('')}</ul>` : '';
-    return `<li${sp.extras.length ? ' class="ped-it-comext"' : ''}><span class="ped-it-n"><strong>${i.q}× ${escapeHtml(sp.nome)}</strong>${aviso}${ext}</span>${sp.extras.length ? '' : `<span class="ped-it-p">${fmt(i.preco * i.q)}</span>`}</li>`;
+    let ext = '', temExt = false;
+    if (i.grupos && i.grupos.length) {
+      temExt = true;
+      ext = i.grupos.map(g => `<div class="ped-gr"><div class="ped-gr-t">${escapeHtml(g.nome || 'Complementos')}${g.qtd ? ' · ' + g.total + ' un' : ''}</div><ul class="ped-ext">${g.ops.map(o => `<li>${(g.qtd || o.c > 1) ? o.c + '× ' : ''}${escapeHtml(o.n)}</li>`).join('')}</ul></div>`).join('');
+    } else if (sp.extras.length) {
+      temExt = true;
+      ext = `<ul class="ped-ext">${sp.extras.map(x => `<li>${escapeHtml(x)}</li>`).join('')}</ul>`;
+    }
+    return `<li${temExt ? ' class="ped-it-comext"' : ''}><span class="ped-it-n"><strong>${i.q}× ${escapeHtml(sp.nome)}</strong>${aviso}${ext}</span>${temExt ? '' : `<span class="ped-it-p">${fmt(i.preco * i.q)}</span>`}</li>`;
   }).join('');
   return `<div class="card ped-card" style="--ped-cor:${st.cor}">
     <div class="ped-head">
