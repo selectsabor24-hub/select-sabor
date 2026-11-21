@@ -1369,7 +1369,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     var titulo = (st === 'entregue' && !entrega) ? r.tRetirada : r.t;
     var desc = st === 'pronto' ? (entrega ? r.dEntrega : r.dRetirada) : r.d;
     if (st === 'cancelado' && pedido.motivo) desc = 'Motivo: ' + pedido.motivo;
-    var h = '<div class="codigo"><div class="rot">Pedido</div><div class="cod">' + esc(pedido.codigo || '') + '</div><div style="color:var(--mut);font-size:14px">' + esc((cfg && cfg.nome) || '') + (pedido.ts ? ' · ' + hora(pedido.ts) : '') + '</div></div>';
+    var h = '<div class="codigo"><div class="rot">Pedido</div><div class="cod">' + esc(pedido.codigo || '') + '</div><div style="color:var(--mut);font-size:14px">' + esc((cfg && cfg.nome) || '') + (pedido.ts ? ' · ' + hora(pedido.ts) : '') + '</div>' + (pedido.cliente && pedido.cliente.nome ? '<div style="font-weight:800;font-size:18px;margin-top:4px">' + esc(pedido.cliente.nome) + '</div>' : '') + '</div>';
     h += '<div class="status-card ' + (st === 'cancelado' ? 'cancel' : '') + '"><div class="ic">' + r.ic + '</div><div class="tt">' + esc(titulo) + '</div><div class="ds">' + esc(desc) + '</div>' +
       (pedido.previsao && STATUS_FINAIS.indexOf(st) < 0 ? '<div class="prev">⏱ Previsão: ' + esc(pedido.previsao) + '</div>' : '') + '</div>';
     if (entrega && pedido.comCodigo && st !== 'entregue' && st !== 'cancelado') {

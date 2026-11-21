@@ -298,14 +298,14 @@
             "itens": {
               ".validate": "newData.hasChildren()",
               "$itemId": {
-                ".validate": "$itemId.matches(/^[-A-Za-z0-9_~:,]{1,300}$/) && newData.hasChildren(['q','n']) && (data.exists() || root.child('caixa/cardapio').child($lojaId).child(newData.child('ref').exists() ? newData.child('ref').val() : $itemId).exists())",
+                ".validate": "$itemId.matches(/^[-A-Za-z0-9_~:,]{1,700}$/) && newData.hasChildren(['q','n']) && (data.exists() || root.child('caixa/cardapio').child($lojaId).child(newData.child('ref').exists() ? newData.child('ref').val() : $itemId).exists())",
                 "ref": {
                   ".validate": "newData.isString() && newData.val().matches(/^[-A-Za-z0-9_]{1,60}$/)"
                 },
                 "sel": {
                   ".validate": "newData.hasChildren()",
                   "$i": {
-                    ".validate": "$i.matches(/^[0-9]{1,2}$/) && newData.hasChildren(['g','o','n'])",
+                    ".validate": "$i.matches(/^[0-9]{1,3}$/) && newData.hasChildren(['g','o','n'])",
                     "g": {
                       ".validate": "newData.isString() && newData.val().matches(/^[-A-Za-z0-9_]{1,40}$/)"
                     },

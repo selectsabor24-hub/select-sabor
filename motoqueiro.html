@@ -522,7 +522,7 @@ button { cursor: pointer; }
     var links = fin ? '' : '<div class="links"><button type="button" data-a="rota" data-id="' + id + '">➤ Ver rota</button></div>';
 
     return '<div class="card" style="--cor:' + cor + '">' +
-      '<div class="cab"><span class="cod">#' + esc(p.codigo || '') + '</span><span class="badge">' + ({ preparo: 'Em preparo', pronto: 'Aguardando', saiu: 'Em entrega', entregue: 'Entregue' }[p.status] || '') + '</span><span class="hora">' + quando + '</span></div>' +
+      '<div class="cab"><span class="cod">#' + esc(p.codigo || '') + '</span>' + (cli.nome ? '<span style="font-weight:700;font-size:15px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">· ' + esc(cli.nome) + '</span>' : '') + '<span class="badge">' + ({ preparo: 'Em preparo', pronto: 'Aguardando', saiu: 'Em entrega', entregue: 'Entregue' }[p.status] || '') + '</span><span class="hora">' + quando + '</span></div>' +
       '<div class="end">📍 ' + esc(endTxt) + (extra ? '<small>' + esc(extra) + '</small>' : '') + '</div>' +
       '<div class="cli"><strong>' + esc(cli.nome || '') + '</strong>' + (cli.telefone ? ' · ' + esc(cli.telefone) : '') + '</div>' +
       links + cobrar +

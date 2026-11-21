@@ -18453,7 +18453,7 @@ function _pedCardHtml(p) {
     `<li><span>${i.q}× ${escapeHtml(i.n)}${(!i.noCardapio && !i.fixo) ? ' <em class="ped-warn">(fora do cardápio)</em>' : ''}</span><span>${fmt(i.preco * i.q)}</span></li>`).join('');
   return `<div class="card ped-card" style="--ped-cor:${st.cor}">
     <div class="ped-head">
-      <span class="ped-cod">#${escapeHtml(p.codigo || '')}</span>
+      <span class="ped-cod">#${escapeHtml(p.codigo || '')}</span><span class="ped-nome" style="font-weight:700;font-size:15px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.cliente && p.cliente.nome ? '· ' + escapeHtml(p.cliente.nome) : ''}</span>
       <span class="ped-chip" style="background:${st.cor}">${st.lbl}</span>
       <span class="ped-tipo">${ent ? '🛵 Entrega' : '🏪 Retirada'}</span>
       <span class="ped-hora">${_pedHora(p.ts)} · ${_pedHa(p.ts)}</span>
@@ -19500,7 +19500,7 @@ function _motCardHtml(p) {
 
   return `<div class="card mot-card" style="--mot-cor:${cor}">
     <div class="ped-head">
-      <span class="ped-cod">#${escapeHtml(p.codigo || '')}</span>
+      <span class="ped-cod">#${escapeHtml(p.codigo || '')}</span><span class="ped-nome" style="font-weight:700;font-size:15px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.cliente && p.cliente.nome ? '· ' + escapeHtml(p.cliente.nome) : ''}</span>
       <span class="ped-hora">${quando}</span>
     </div>
     <div class="mot-end">📍 ${escapeHtml(endTxt)}${extra ? `<small>${escapeHtml(extra)}</small>` : ''}</div>

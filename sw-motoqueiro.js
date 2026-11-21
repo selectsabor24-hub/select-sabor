@@ -4,7 +4,7 @@
 // Estratégia: network-first (sempre a versão mais nova); cache só se a rede falhar.
 // Firebase e demais domínios externos nunca passam pelo cache.
 // Também cuida do toque na notificação de "nova entrega": abre/foca o app.
-const CACHE_NAME = 'motoqueiro-v2';
+const CACHE_NAME = 'motoqueiro-v3';
 
 self.addEventListener('install', () => { self.skipWaiting(); });
 
