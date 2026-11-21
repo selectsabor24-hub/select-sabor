@@ -2,7 +2,7 @@
 // Escopo restrito a pedido.html: não interfere no Controle de Caixa (sw.js).
 // Estratégia: network-first (sempre a versão mais nova); cache só se a rede falhar.
 // Firebase e demais domínios externos nunca passam pelo cache.
-const CACHE_NAME = 'pedido-v10'; // CEP editável em Minha conta + atualização automática + card de destaque
+const CACHE_NAME = 'pedido-v11'; // botão Salvar dados em Minha conta + CEP editável + atualização automática
 
 self.addEventListener('install', () => { self.skipWaiting(); });
 

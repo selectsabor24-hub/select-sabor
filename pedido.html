@@ -277,6 +277,10 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
 #conta-modal .cm-cep-msg { display: block; min-height: 16px; margin: 4px 0 0; font-size: 12px; color: var(--mut); }
 #conta-modal .bs button { flex: 1; min-height: 48px; border-radius: 12px; border: 1.5px solid var(--borda); background: #fff; font-weight: 700; }
 #conta-modal .bs button.p { background: var(--verde); border-color: var(--verde); color: #fff; }
+#conta-modal .cm-salvar { display: block; width: 100%; min-height: 50px; margin-top: 14px; border-radius: 12px; border: 0; background: var(--verde); color: #fff; font-weight: 800; font-size: 16px; }
+#conta-modal .cm-salvar:active { filter: brightness(.92); }
+#conta-modal .bs { margin-top: 8px; }
+#conta-modal .bs button.d { color: #B91C1C; border-color: #F3C7C7; }
 /* ===== Adaptação a qualquer tamanho de tela (celular, tablet, notebook, monitor grande) ===== */
 :root { --w-menu: 640px; }
 @media (min-width: 700px)  { :root { --w-menu: 860px; } #menu-lista { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 16px; } }
@@ -1236,39 +1240,55 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
         '<div class="l cm-cep"><span>📮</span><input id="cm-cep" type="text" inputmode="numeric" autocomplete="postal-code" maxlength="9" placeholder="Informe seu CEP (00000-000)" value="' + esc(c.cep ? mascaraCep(c.cep) : '') + '" aria-label="CEP"></div><small class="cm-cep-msg" id="cm-cep-msg"></small>' +
         '<p style="color:var(--mut);font-size:13px;margin:10px 0 0">Estes dados ficam salvos só neste aparelho para agilizar o próximo pedido.</p>'
       : '<p style="color:var(--mut)">Você ainda não tem dados salvos. Eles aparecem aqui depois do seu primeiro pedido.</p>') +
-      '<div class="bs"><button type="button" id="cm-fechar">Fechar</button>' + (tem ? '<button type="button" class="p" id="cm-apagar">Apagar meus dados</button>' : '') + '</div></div>';
+      (tem ? '<button type="button" class="cm-salvar" id="cm-salvar">Salvar dados</button>' : '') + '<div class="bs"><button type="button" id="cm-fechar">Fechar</button>' + (tem ? '<button type="button" class="d" id="cm-apagar">Apagar meus dados</button>' : '') + '</div></div>';
     m.classList.remove('hide');
     $('#cm-fechar').onclick = function () { m.classList.add('hide'); navMarcar('inicio'); };
     if (tem) $('#cm-apagar').onclick = function () { try { localStorage.removeItem('cliente'); } catch (e) {} m.classList.add('hide'); navMarcar('inicio'); toast('Dados apagados deste aparelho'); };
     if (!tem) return;
-    /* CEP editável: ao completar 8 números busca no ViaCEP, salva neste aparelho e já vale para o próximo pedido */
-    var inp = $('#cm-cep'), msg = $('#cm-cep-msg'), seq = 0;
-    var salvar = function (up) {
-      var cl = lsGet('cliente') || {}; Object.keys(up).forEach(function (k) { cl[k] = up[k]; }); lsSet('cliente', cl);
-      var e = fmtEnd(cl); $('#cm-end').textContent = '📍 ' + (e || '—');
-    };
-    inp.addEventListener('input', function () {
-      inp.value = mascaraCep(inp.value);
-      var d = digitos(inp.value), my = ++seq;
-      if (!d.length) { salvar({ cep: '' }); msg.style.color = ''; msg.textContent = ''; return; }
-      if (d.length !== 8) { msg.style.color = ''; msg.textContent = 'Digite os 8 números do CEP.'; return; }
-      msg.style.color = ''; msg.textContent = 'Buscando endereço…';
+    /* CEP editável: ao completar 8 números busca no ViaCEP (prévia); só grava neste aparelho ao tocar em "Salvar dados" */
+    var inp = $('#cm-cep'), msg = $('#cm-cep-msg'), seq = 0, pend = null;
+    var aviso = function (t, cor) { msg.style.color = cor || ''; msg.textContent = t || ''; };
+    var buscar = function (d) {
+      var my = ++seq; aviso('Buscando endereço…');
       var ctl = window.AbortController ? new AbortController() : null, to = setTimeout(function () { if (ctl) ctl.abort(); }, 8000);
-      fetch('https://viacep.com.br/ws/' + d + '/json/', ctl ? { signal: ctl.signal } : undefined)
+      return fetch('https://viacep.com.br/ws/' + d + '/json/', ctl ? { signal: ctl.signal } : undefined)
         .then(function (r) { return r.json(); })
         .then(function (j) {
-          clearTimeout(to); if (my !== seq) return;
-          if (!j || j.erro) { msg.style.color = '#B91C1C'; msg.textContent = 'CEP não encontrado. Confira os números.'; return; }
-          var cl = lsGet('cliente') || {}, up = { cep: mascaraCep(d), cid: j.localidade || '', uf: j.uf || '' };
-          if (j.logradouro && !cl.rua) up.rua = j.logradouro;
-          if (j.bairro && !cl.bairro) up.bairro = j.bairro;
-          salvar(up); msg.style.color = '#1f7a35'; msg.textContent = '✓ CEP salvo' + (j.localidade ? ' · ' + j.localidade + (j.uf ? '/' + j.uf : '') : '');
+          clearTimeout(to); if (my !== seq) return null;
+          if (!j || j.erro) { pend = null; aviso('CEP não encontrado. Confira os números.', '#B91C1C'); return null; }
+          var cl = lsGet('cliente') || {};
+          pend = { cep: mascaraCep(d), cid: j.localidade || '', uf: j.uf || '' };
+          if (j.logradouro && !cl.rua) pend.rua = j.logradouro;
+          if (j.bairro && !cl.bairro) pend.bairro = j.bairro;
+          aviso('✓ ' + (j.localidade ? j.localidade + (j.uf ? '/' + j.uf : '') + ' · ' : '') + 'toque em Salvar dados', '#1f7a35'); return pend;
         })
         .catch(function () {
-          clearTimeout(to); if (my !== seq) return;
-          salvar({ cep: mascaraCep(d) }); msg.style.color = ''; msg.textContent = 'CEP salvo (não consegui conferir agora).';
+          clearTimeout(to); if (my !== seq) return null;
+          pend = { cep: mascaraCep(d) }; aviso('Não consegui conferir agora, mas você pode salvar.'); return pend;
         });
+    };
+    inp.addEventListener('input', function () {
+      inp.value = mascaraCep(inp.value); pend = null; seq++;
+      var d = digitos(inp.value);
+      if (!d.length) aviso('');
+      else if (d.length !== 8) aviso('Digite os 8 números do CEP.');
+      else buscar(d);
     });
+    $('#cm-salvar').onclick = function () {
+      var d = digitos(inp.value);
+      if (d.length && d.length !== 8) { aviso('Digite os 8 números do CEP.', '#B91C1C'); inp.focus(); return; }
+      var gravar = function () {
+        var cl = lsGet('cliente') || {};
+        if (!d.length) cl.cep = '';
+        else {
+          if (!pend || digitos(pend.cep) !== d) { aviso('CEP não encontrado. Confira os números.', '#B91C1C'); return; }
+          Object.keys(pend).forEach(function (k) { cl[k] = pend[k]; });
+        }
+        lsSet('cliente', cl);
+        m.classList.add('hide'); navMarcar('inicio'); toast('Dados salvos ✔');
+      };
+      if (d.length === 8 && (!pend || digitos(pend.cep) !== d)) buscar(d).then(gravar); else gravar();
+    };
   }
   function navMarcar(q) { Array.prototype.forEach.call(document.querySelectorAll('#navbar button'), function (b) { b.classList.toggle('on', b.dataset.nav === q); }); }
   $('#navbar').addEventListener('click', function (ev) {
