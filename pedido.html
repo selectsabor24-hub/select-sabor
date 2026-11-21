@@ -346,6 +346,11 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
 .item .preco .por, .dest-preco .por { color: #1f8a3b; font-weight: 800; }
 .promo-tag { display: inline-block; margin-left: 8px; background: #e8f5ea; color: #1f7a35; border: 1px solid #b9dfc0; border-radius: 999px; padding: 1px 8px; font-size: 11px; font-weight: 800; letter-spacing: .2px; white-space: nowrap; }
 .item .preco { flex-wrap: wrap; row-gap: 2px; }
+/* Card de destaque (fundo marrom): preço promocional em evidência e com bom contraste */
+.aviso.destaque .dest-preco { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; margin-top: 6px; }
+.aviso.destaque .dest-preco .de { color: #FFEFD6; opacity: .9; font-size: 13px; font-weight: 600; margin-right: 0; text-decoration-thickness: 1.5px; text-decoration-color: rgba(255,255,255,.85); }
+.aviso.destaque .dest-preco .por { background: #fff; color: #0F6B2A; font-size: 20px; font-weight: 900; line-height: 1; padding: 5px 12px; border-radius: 999px; box-shadow: 0 2px 8px rgba(0,0,0,.28); letter-spacing: -.2px; }
+.aviso.destaque .dest-preco .promo-tag { margin-left: 0; background: #FFD84D; color: #5A3405; border: 0; font-size: 11px; font-weight: 900; padding: 4px 10px; text-transform: uppercase; letter-spacing: .4px; }
 /* ===== Histórico de pedidos (aba Pedidos) ===== */
 #conta-modal .hp-lista { max-height: 60vh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 .hp-item { display: block; width: 100%; text-align: left; background: #fff; border: 1.5px solid var(--borda); border-radius: 12px; padding: 10px 12px; margin: 0 0 8px; }
