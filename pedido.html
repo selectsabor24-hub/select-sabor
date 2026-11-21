@@ -237,11 +237,13 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
 .top h1 { color: var(--marrom); }
 .top .slogan { color: var(--verde); }
 .top .sub { color: #5B4A2F; }
-.top .sub span { white-space: nowrap; }
-.top .st-row { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px 10px; margin-top: 8px; }
-.top .st-row .chip-st { margin-top: 0; }
-.top .st-row .hoje { font-size: 12.5px; font-weight: 700; color: #5B4A2F; white-space: nowrap; background: rgba(255,255,255,.55); border-radius: 99px; padding: 3px 10px; }
-.top .st-row .hoje:empty { display: none; }
+.top .info-bar { flex: 1; min-width: 0; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; margin-top: 12px; background: rgba(255,255,255,.65); border: 1px solid #E9DDC2; border-radius: 14px; overflow: hidden; }
+.top .info-bar:empty { display: none; }
+.top .ib { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 8px 4px; min-width: 0; text-align: center; line-height: 1.15; }
+.top .ib + .ib { border-left: 1px solid #E9DDC2; }
+.top .ib small { font-size: 10.5px; font-weight: 700; letter-spacing: .4px; text-transform: uppercase; color: #8A7A5A; white-space: nowrap; }
+.top .ib b { font-size: 13.5px; font-weight: 800; color: #3B2F17; }
+.top .ib.fechado b { color: var(--vermelho); }
 .top .wrap { position: relative; }
 .top-cart { position: absolute; right: 14px; top: 0; border: 0; background: transparent; font-size: 26px; line-height: 1; padding: 6px; }
 .top-cart b { position: absolute; top: -2px; right: -2px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 99px; background: #D62828; color: #fff; font-size: 12px; display: flex; align-items: center; justify-content: center; }
@@ -390,10 +392,10 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
       <div style="min-width:0;flex:1;text-align:center">
         <h1 id="loja-nome">Cardápio</h1>
         <div class="slogan">Restaurante e Lanchonete</div>
-        <div class="sub" id="loja-info"></div>
-        <div class="st-row"><span class="chip-st" id="loja-chip"></span><span class="hoje" id="loja-hoje"></span></div>
+        <span class="chip-st" id="loja-chip"></span>
       </div>
     </div>
+    <div class="wrap"><div class="info-bar" id="loja-info"></div></div>
   </header>
   <div class="wrap">
     <div id="banner-andamento" class="banner-andamento hide"></div>
@@ -1218,13 +1220,15 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     if (window.pedidoPwa && cfg && cfg.nome) window.pedidoPwa.nome(cfg.nome);
     document.title = ((cfg && cfg.nome) ? cfg.nome + ' · ' : '') + 'Faça seu pedido';
     var info = [];
-    if (cfg && cfg.tempoEstimado) info.push('⏱ ' + esc(rotuloPreparo(cfg.tempoEstimado)));
-    var hh = horarioHoje(); $('#loja-hoje').textContent = hh ? '🕒 ' + hh : '';
-    if (aceitaEntrega() && porKmAtivo()) info.push('🛵 Entrega a partir de ' + brl(menorTaxa()));
-    else if (aceitaEntrega() && cfg && Number(cfg.taxaEntrega) > 0) info.push('🛵 Entrega ' + brl(cfg.taxaEntrega));
-    else if (aceitaEntrega() && cfg) info.push('🛵 Entrega grátis');
-    if (cfg && Number(cfg.pedidoMinimo) > 0) info.push('Pedido mín. ' + brl(cfg.pedidoMinimo));
-    $('#loja-info').innerHTML = info.map(function (t) { return '<span>' + t + '</span>'; }).join('');
+    var prep = (cfg && cfg.tempoEstimado) ? rotuloPreparo(cfg.tempoEstimado).replace(/^preparo:?\s*/i, '') : '';
+    if (prep) info.push({ ic: '⏱', lb: 'Preparo', v: prep });
+    if (aceitaEntrega() && porKmAtivo()) info.push({ ic: '🛵', lb: 'Entrega desde', v: brl(menorTaxa()) });
+    else if (aceitaEntrega() && cfg && Number(cfg.taxaEntrega) > 0) info.push({ ic: '🛵', lb: 'Entrega', v: brl(cfg.taxaEntrega) });
+    else if (aceitaEntrega() && cfg) info.push({ ic: '🛵', lb: 'Entrega', v: 'Grátis' });
+    var hh = horarioHoje();
+    if (hh) { var hv = hh.replace(/^Hoje:\s*/, ''); info.push({ ic: '🕒', lb: 'Hoje', v: hv.charAt(0).toUpperCase() + hv.slice(1), off: /fechado/i.test(hv) }); }
+    if (cfg && Number(cfg.pedidoMinimo) > 0) info.push({ ic: '🧾', lb: 'Pedido mín.', v: brl(cfg.pedidoMinimo) });
+    $('#loja-info').innerHTML = info.map(function (x) { return '<div class="ib' + (x.off ? ' fechado' : '') + '"><small>' + x.ic + ' ' + esc(x.lb) + '</small><b>' + esc(x.v) + '</b></div>'; }).join('');
     var chip = $('#loja-chip');
     chip.className = 'chip-st ' + (aberta() ? 'on' : 'off');
     chip.textContent = aberta() ? '● Aberto para pedidos' : (foraDoHorarioLoja() ? '● Fechado · ' + (cfg.horarioDia === true ? proxAbre().replace('Abrimos', 'abre') : 'abre às ' + fmtMin(cfg.abreMin)) : '● Fechado no momento');
