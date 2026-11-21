@@ -4452,8 +4452,11 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
       </div>
 
       <div class="card">
-        <div class="card-title">Histórico de alterações</div>
-        <div class="txt-hint mb-4">Registra criação, edição, exclusão, fechamento, reabertura e backup manual.</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+          <div class="card-title" style="margin:0">Histórico de alterações</div>
+          <button class="btn btn-secondary" id="audit-limpar-btn" style="padding:5px 12px;font-size:12px;color:var(--red-mid);display:none" onclick="auditLimpar()">🗑 Limpar histórico</button>
+        </div>
+        <div class="txt-hint mb-4" style="margin-top:6px">Registra criação, edição, exclusão, fechamento, reabertura e backup manual.</div>
         <div class="table-wrap">
           <table>
             <thead><tr><th>Data/Hora</th><th>Usuário</th><th>Ação</th><th>Detalhes</th></tr></thead>
@@ -7074,6 +7077,30 @@ function _registrarAuditoria(acao, alvo, detalhes = {}) {
   });
 }
 
+/** Apaga todo o histórico de alterações da loja ativa (só administrador) e deixa um registro da limpeza. */
+function auditLimpar() {
+  if (!_lojaAtiva || !db) return;
+  if (!_usuarioAtualInfo().admin) { showToast('Só o administrador pode limpar o histórico', false); return; }
+  showModal('Limpar histórico de alterações',
+    'Todos os registros do histórico desta loja serão apagados. <strong>Não é possível desfazer.</strong><br><br>Isso não altera lançamentos, comandas nem o caixa — só a lista de registros.',
+    [{ label: 'Limpar histórico', style: 'danger', action: () => {
+        const ref = _dbRef('auditoria/' + _lojaAtiva);
+        ref.once('value').then(snap => {
+          const v = snap.val() || {}, up = {}, ks = Object.keys(v);
+          if (!ks.length) { showToast('O histórico já está vazio'); return null; }
+          ks.forEach(k => { up[k] = null; });
+          return ref.update(up).then(() => {
+            _cache.auditoria = [];
+            showToast('Histórico limpo (' + ks.length + ' registro' + (ks.length > 1 ? 's' : '') + ')');
+            return _registrarAuditoria('limpou_historico', _lojaAtiva, { quantidade: ks.length });
+          });
+        }).catch(e => {
+          console.error(e);
+          showToast(e && /permission/i.test(e.message || e.code || '') ? 'Sem permissão para limpar o histórico.' : 'Erro ao limpar o histórico', false);
+        });
+    }}, { label: 'Voltar', style: 'secondary' }]);
+}
+
 function _lancamentoResumoAuditoria(d) {
   if (!d) return {};
   return {
@@ -7185,6 +7212,8 @@ function renderFechamento() {
 
   const auditBody = document.getElementById('audit-tbody');
   const auditEmpty = document.getElementById('audit-empty');
+  const auditBtn = document.getElementById('audit-limpar-btn');
+  if (auditBtn) auditBtn.style.display = (_usuarioAtualInfo().admin && (_cache.auditoria || []).length) ? '' : 'none';
   if (auditBody) {
     const rows = (_cache.auditoria || []).slice().sort((a,b) => String(b.criadoEm || '').localeCompare(String(a.criadoEm || ''))).slice(0, 50);
     auditBody.innerHTML = rows.map(a => {
