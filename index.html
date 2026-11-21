@@ -227,7 +227,7 @@
 /* ============================================================
    IMPORTS — Fontes
    ============================================================ */
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Mono:wght@400;500;600&family=Great+Vibes&display=swap');
 
 /* ============================================================
    1.1 VARIÁVEIS E RESET — :root, *, body
@@ -2574,7 +2574,7 @@ table { max-width: 100%; }
     grid-template-columns: 1fr !important;
   }
   #lanc-loja-destaque { padding: 12px 14px !important; }
-  #lanc-loja-nome { font-size: 20px !important; }
+  #lanc-loja-nome { font-size: 34px !important; }
   #lanc-loja-logo { width: 56px !important; height: 56px !important; }
   .btn { font-size: 13px; }
 }
@@ -3416,6 +3416,7 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
   --sidebar-text: #F4F7EE; --sidebar-text2: #99CD85;
   --sidebar-active: #FFFFFF; --sidebar-hover: rgba(255,255,255,.10);
   --sidebar-active-bg: linear-gradient(135deg, #A8631A 0%, #8C4C00 100%); --sidebar-accent: #F3C77E;
+  --brand: #0F3A2B; /* faixa de aviso de atualização do app */
 }
 :root .sidebar {
   background: radial-gradient(circle at 20% 0%, rgba(153,205,133,.10), transparent 17rem), linear-gradient(180deg, #0A2820 0%, #061C15 55%, #04140F 100%) !important;
@@ -3958,11 +3959,12 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
       </div>
 
       <!-- Destaque grande da loja ativa -->
-      <div id="lanc-loja-destaque" style="display:flex;align-items:center;justify-content:center;gap:12px;background:linear-gradient(135deg,var(--brand,#1A4E7F),#2563A8);color:#fff;border-radius:var(--radius);padding:16px 22px;margin-bottom:1.25rem;box-shadow:0 4px 14px rgba(0,0,0,.12);text-align:center">
-        <img id="lanc-loja-logo" src="logo.png" alt="Select Sabor" style="width:72px;height:72px;border-radius:50%;flex-shrink:0;background:#fff;box-shadow:0 0 0 3px rgba(255,255,255,.35)">
+      <div id="lanc-loja-destaque" style="display:flex;align-items:center;justify-content:center;gap:12px;background:linear-gradient(135deg,#061C15 0%,#0F3A2B 100%);color:#fff;border:1px solid rgba(243,199,126,.35);border-radius:var(--radius);padding:16px 22px;margin-bottom:1.25rem;box-shadow:0 6px 18px rgba(6,28,21,.28);text-align:center">
+        <img id="lanc-loja-logo" src="logo.png" alt="Select Sabor" style="width:72px;height:72px;border-radius:50%;flex-shrink:0;background:#fff;box-shadow:0 0 0 3px rgba(243,199,126,.65)">
         <div style="min-width:0">
-          <div style="font-size:12px;letter-spacing:.5px;text-transform:uppercase;opacity:.85">Lançando no restaurante</div>
-          <div id="lanc-loja-nome" style="font-size:26px;font-weight:800;line-height:1.15;word-break:break-word">—</div>
+          <div style="font-size:11px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:rgba(255,255,255,.75)">Lançando no restaurante</div>
+          <div id="lanc-loja-nome" style="font-family:'Great Vibes','Brush Script MT','Segoe Script',cursive;font-size:46px;font-weight:400;line-height:1.05;color:#F6D58E;text-shadow:0 2px 10px rgba(0,0,0,.35);word-break:break-word">—</div>
+          <div style="font-size:11px;font-weight:600;letter-spacing:.32em;text-transform:uppercase;color:#99CD85;margin-top:3px">Restaurante e Lanchonete</div>
         </div>
       </div>
 
