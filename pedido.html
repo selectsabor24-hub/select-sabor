@@ -592,8 +592,31 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
 
   /* Service worker próprio da página de pedidos (escopo só desta página) */
   if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+    /* Atualização automática: o cliente não precisa fazer nada.
+       1) procura versão nova ao abrir, ao voltar para o app, ao reconectar e a cada 10 min;
+       2) quando um service worker novo assume, a página recarrega sozinha (a sacola é salva no aparelho);
+       3) se o cliente ficou 30+ min fora do app, recarrega ao voltar (garante a versão nova mesmo sem trocar o SW).
+       Não recarrega enquanto o cliente está digitando; tenta de novo em 5 s. */
+    var tinhaSW = !!navigator.serviceWorker.controller; // 1ª instalação não recarrega
+    var recarregando = false, saiuEm = 0;
+    var ocupado = function () { var a = document.activeElement; return !!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)); };
+    var recarregar = function () {
+      if (recarregando) return;
+      if (ocupado()) { setTimeout(recarregar, 5000); return; }
+      recarregando = true; location.reload();
+    };
+    navigator.serviceWorker.addEventListener('controllerchange', function () { if (tinhaSW) recarregar(); });
+    document.addEventListener('visibilitychange', function () {
+      if (document.hidden) { saiuEm = Date.now(); }
+      else if (saiuEm && Date.now() - saiuEm > 30 * 60 * 1000) { saiuEm = 0; recarregar(); }
+    });
     window.addEventListener('load', function () {
-      navigator.serviceWorker.register('./sw-pedido.js', { scope: location.pathname }).catch(function () {});
+      navigator.serviceWorker.register('./sw-pedido.js', { scope: location.pathname, updateViaCache: 'none' }).then(function (reg) {
+        var checar = function () { try { reg.update(); } catch (e) {} };
+        setInterval(checar, 10 * 60 * 1000);
+        document.addEventListener('visibilitychange', function () { if (!document.hidden) checar(); });
+        window.addEventListener('online', checar);
+      }).catch(function () {});
     });
   }
 })();

@@ -2,7 +2,7 @@
 // Escopo restrito a pedido.html: não interfere no Controle de Caixa (sw.js).
 // Estratégia: network-first (sempre a versão mais nova); cache só se a rede falhar.
 // Firebase e demais domínios externos nunca passam pelo cache.
-const CACHE_NAME = 'pedido-v8'; // card de destaque: preço promocional com mais contraste
+const CACHE_NAME = 'pedido-v9'; // atualização automática no aparelho do cliente + card de destaque com mais contraste
 
 self.addEventListener('install', () => { self.skipWaiting(); });
 
@@ -22,7 +22,7 @@ self.addEventListener('fetch', event => {
   if (url.searchParams.has('_fresh') || url.searchParams.has('_v')) return;
 
   event.respondWith(
-    fetch(req)
+    fetch(req, { cache: 'no-cache' }) // sempre revalida com o servidor (ignora cópia velha do cache HTTP)
       .then(res => {
         if (res.ok) {
           const copia = res.clone();
