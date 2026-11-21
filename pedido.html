@@ -254,6 +254,21 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
 .item .stepper { position: absolute; right: 6px; bottom: 8px; }
 .item .stepper button { width: 34px; height: 38px; font-size: 20px; }
 .item .stepper span { min-width: 18px; }
+
+/* Barra inferior (Início · Pedidos · Minha conta) */
+.navbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 31; display: flex; background: #fff; border-top: 1px solid #E9DDC2; padding: 6px 0 calc(6px + var(--safe-b)); box-shadow: 0 -4px 14px rgba(80,60,20,.08); }
+.navbar button { flex: 1; border: 0; background: transparent; display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 12px; font-weight: 600; color: var(--mut); padding: 4px 0; min-height: 48px; }
+.navbar button span { font-size: 22px; line-height: 1; }
+.navbar button.on { color: var(--verde); }
+#v-menu .barra { bottom: calc(60px + var(--safe-b)); padding-bottom: 10px; }
+#v-menu .espaco-barra { height: calc(150px + var(--safe-b)); }
+#conta-modal { position: fixed; inset: 0; z-index: 60; background: rgba(0,0,0,.5); display: flex; align-items: flex-end; justify-content: center; padding: 14px; }
+#conta-modal .m { background: #fff; width: 100%; max-width: 420px; border-radius: 18px; padding: 18px; margin-bottom: var(--safe-b); }
+#conta-modal h3 { margin: 0 0 10px; }
+#conta-modal .l { padding: 6px 0; border-bottom: 1px dashed var(--borda); font-size: 15px; overflow-wrap: anywhere; }
+#conta-modal .bs { display: flex; gap: 8px; margin-top: 14px; }
+#conta-modal .bs button { flex: 1; min-height: 48px; border-radius: 12px; border: 1.5px solid var(--borda); background: #fff; font-weight: 700; }
+#conta-modal .bs button.p { background: var(--verde); border-color: var(--verde); color: #fff; }
 </style>
 </head>
 <body>
@@ -286,6 +301,12 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
   <main class="wrap" id="menu-lista"></main>
   <div class="espaco-barra"></div>
   <div class="barra hide" id="barra"><button id="btn-sacola"></button></div>
+  <nav class="navbar" id="navbar" aria-label="Menu principal">
+    <button type="button" class="on" data-nav="inicio"><span>🏠</span>Início</button>
+    <button type="button" data-nav="pedidos"><span>🧾</span>Pedidos</button>
+    <button type="button" data-nav="conta"><span>👤</span>Minha conta</button>
+  </nav>
+  <div id="conta-modal" class="hide"></div>
 </div>
 
 <!-- ============ TELA 2: SACOLA / DADOS ============ -->
@@ -802,6 +823,29 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     _assinHr = assinaturaHorarios();
   }
   document.addEventListener('click', function (e) { if (e.target.closest && e.target.closest('#top-cart')) { var b = document.getElementById('btn-sacola'); if (b && !$('#barra').classList.contains('hide')) b.click(); } });
+  /* ---------- Barra inferior ---------- */
+  function contaAbrir() {
+    var c = lsGet('cliente') || {}, m = $('#conta-modal');
+    var end = [[c.rua, c.num].filter(Boolean).join(', '), c.bairro, c.comp, c.cid ? c.cid + (c.uf ? '/' + c.uf : '') : '', c.cep].filter(Boolean).join(' — ');
+    var tem = c.nome || c.tel || end;
+    m.innerHTML = '<div class="m"><h3>Minha conta</h3>' + (tem
+      ? '<div class="l">👤 ' + esc(c.nome || '—') + '</div><div class="l">📞 ' + esc(c.tel || '—') + '</div><div class="l">📍 ' + esc(end || '—') + '</div><p style="color:var(--mut);font-size:13px;margin:10px 0 0">Estes dados ficam salvos só neste aparelho para agilizar o próximo pedido.</p>'
+      : '<p style="color:var(--mut)">Você ainda não tem dados salvos. Eles aparecem aqui depois do seu primeiro pedido.</p>') +
+      '<div class="bs"><button type="button" id="cm-fechar">Fechar</button>' + (tem ? '<button type="button" class="p" id="cm-apagar">Apagar meus dados</button>' : '') + '</div></div>';
+    m.classList.remove('hide');
+    $('#cm-fechar').onclick = function () { m.classList.add('hide'); navMarcar('inicio'); };
+    if (tem) $('#cm-apagar').onclick = function () { try { localStorage.removeItem('cliente'); } catch (e) {} m.classList.add('hide'); navMarcar('inicio'); toast('Dados apagados deste aparelho'); };
+  }
+  function navMarcar(q) { Array.prototype.forEach.call(document.querySelectorAll('#navbar button'), function (b) { b.classList.toggle('on', b.dataset.nav === q); }); }
+  $('#navbar').addEventListener('click', function (ev) {
+    var b = ev.target.closest('button[data-nav]'); if (!b) return;
+    var q = b.dataset.nav; navMarcar(q);
+    if (q === 'inicio') { window.scrollTo({ top: 0, behavior: 'smooth' }); }
+    else if (q === 'pedidos') {
+      var u = pedidoAtivoSalvo();
+      if (u) abrirAcompanhamento(u.id, false); else { toast('Você ainda não fez pedidos nas últimas 24h'); navMarcar('inicio'); }
+    } else contaAbrir();
+  });
   function desenharBarra() {
     var n = qtdTotal(), b = $('#barra');
     b.classList.toggle('hide', n === 0);
