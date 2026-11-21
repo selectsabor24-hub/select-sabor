@@ -701,6 +701,25 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
   function precoDe(key) { var f = linhaInfo(key); return f.item ? round2((Number(f.item.preco) || 0) * unidadesCobradas(f.extras.filter(function (e) { return e.q; }).length) + f.extras.reduce(function (s, e) { return s + e.preco; }, 0)) : 0; }
   function qtdItem(id) { return Object.keys(cart).reduce(function (s, k) { return s + (baseId(k) === id ? cart[k] : 0); }, 0); }
   /* "2× Coca-Cola, Fanta Laranja" (agrupa opções repetidas) */
+  /* Lista das opções da linha, uma por linha; nas de quantidade (q) tem ✕ para remover só aquela opção */
+  function extrasHtml(key, ex) {
+    var ord = [], cont = {};
+    ex.forEach(function (e) { var k = e.g + ':' + e.o; if (!cont[k]) { cont[k] = 0; ord.push(e); } cont[k]++; });
+    return ord.map(function (e) {
+      var k = e.g + ':' + e.o, tx = esc((cont[k] > 1 ? cont[k] + '× ' : '') + e.on);
+      return e.q
+        ? '<span style="display:flex;align-items:center;gap:6px"><span>' + tx + '</span><button type="button" data-rmo="' + esc(k) + '" data-id="' + esc(key) + '" aria-label="Remover ' + esc(e.on) + '" style="background:none;border:0;color:var(--mut);font:inherit;font-size:16px;font-weight:700;line-height:1;padding:4px 6px;cursor:pointer">✕</button></span>'
+        : '<span style="display:block">' + tx + '</span>';
+    }).join('');
+  }
+  function removerOpcao(key, par) {
+    var base = String(key).split('~'), it = itemDe(base[0]); if (!it || !cart[key]) return;
+    var gs = gruposDe(it), resto = (base[1] || '').split(',').filter(function (p) { return p && p !== par; });
+    var temQtd = resto.some(function (p) { var g = gs.find(function (x) { return x.id === p.split(':')[0]; }); return g && g.max > 1 && g.rep; });
+    var q = cart[key]; delete cart[key];
+    if (temQtd) { var nk = base[0] + '~' + resto.sort().join(','); cart[nk] = Math.min(99, (cart[nk] || 0) + q); }
+    salvarCart(); desenharMenu(); desenharAviso(); desenharBarra(); desenharCheckout();
+  }
   function resumoExtrasLinhas(ex) {
     var ord = [], cont = {};
     ex.forEach(function (e) { if (!cont[e.o]) { cont[e.o] = 0; ord.push(e); } cont[e.o]++; });
@@ -1147,7 +1166,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
       var f = linhaInfo(id), i = f.item || {};
       // Linha cuja quantidade já foi escolhida nos complementos (ex.: 2× Coca + 3× Fanta): sem o − 1 +, só "Remover"
       var semQtd = cart[id] === 1 && f.extras.some(function (e) { return e.q; });
-      return '<div class="linha"><div class="n"><strong>' + esc(i.nome || 'Item') + '</strong>' + (f.extras.length ? '<small class="ex">' + resumoExtrasLinhas(f.extras).map(esc).join('<br>') + '</small>' : '') + '<small style="color:var(--mut)">' + brl(precoDe(id)) + (semQtd ? '' : ' cada') + '</small></div>' +
+      return '<div class="linha"><div class="n"><strong>' + esc(i.nome || 'Item') + '</strong>' + (f.extras.length ? '<small class="ex">' + extrasHtml(id, f.extras) + '</small>' : '') + '<small style="color:var(--mut)">' + brl(precoDe(id)) + (semQtd ? '' : ' cada') + '</small></div>' +
         (semQtd
           ? '<button type="button" data-m="-1" data-id="' + esc(id) + '" aria-label="Remover" style="background:none;border:0;color:var(--mut);font:inherit;font-size:13px;font-weight:700;text-decoration:underline;padding:8px">Remover</button></div>'
           : '<div class="stepper"><button type="button" data-m="-1" data-id="' + esc(id) + '" aria-label="Diminuir">−</button><span>' + cart[id] + '</span><button type="button" data-m="1" data-id="' + esc(id) + '" aria-label="Aumentar">+</button></div></div>');
@@ -1507,6 +1526,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
   /* ---------- Eventos ---------- */
   document.addEventListener('click', function (ev) {
     var t = ev.target.closest('button'); if (!t) return;
+    if (t.hasAttribute('data-rmo') && t.hasAttribute('data-id')) { removerOpcao(t.getAttribute('data-id'), t.getAttribute('data-rmo')); return; }
     if (t.hasAttribute('data-m') && t.hasAttribute('data-id')) { mudar(t.getAttribute('data-id'), parseInt(t.getAttribute('data-m'), 10)); return; }
     if (t.hasAttribute('data-cat')) {
       catAtiva = t.getAttribute('data-catn') || '';
