@@ -18,7 +18,7 @@
 <script src="https://cdn.jsdelivr.net/npm/firebase@10.12.2/firebase-auth-compat.min.js"></script>
 <!--
   ╔══════════════════════════════════════════════════════════════════════╗
-  ║  APP DO MOTOQUEIRO — Select Sabor                          v1.3      ║
+  ║  APP DO MOTOQUEIRO — Select Sabor                          v1.4      ║
   ╠══════════════════════════════════════════════════════════════════════╣
   ║  · Login individual (e-mail + senha criados em Motoqueiro > Cadastro)║
   ║  · Lê os pedidos de ENTREGA da loja do motoqueiro (caixa/pedidos)    ║
@@ -108,10 +108,20 @@ button { cursor: pointer; }
 .acoes button { flex: 1 1 140px; min-height: 52px; border-radius: 12px; border: 1.5px solid var(--borda); background: #fff; font-weight: 800; font-size: 16px; }
 .acoes button.p { background: var(--verde); border-color: var(--verde); color: #fff; }
 .acoes button:disabled { opacity: .6; }
-.taxa-dia { background: var(--verde); color: #fff; border-radius: 16px; padding: 12px 16px; margin: 0 0 12px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.taxa-dia small { display: block; font-size: 12px; font-weight: 700; opacity: .85; text-transform: uppercase; letter-spacing: .4px; }
-.taxa-dia .sub { font-size: 12px; font-weight: 500; opacity: .85; margin-top: 2px; text-transform: none; letter-spacing: 0; }
-.taxa-dia b { font-size: 28px; white-space: nowrap; }
+.ganhos { margin: 0 0 12px; }
+.ganhos-top { display: flex; align-items: center; justify-content: space-between; margin: 0 0 8px; }
+.ganhos-top h3 { margin: 0; font-size: 17px; display: flex; align-items: center; gap: 8px; }
+.ganhos-top button { border: 0; background: none; padding: 2px 4px; font-size: 18px; line-height: 1; cursor: pointer; }
+.ganhos-g { display: grid; grid-template-columns: 1.15fr 1fr; gap: 10px; align-items: stretch; }
+.g-box { background: #fff; border: 1px solid var(--borda); border-radius: 16px; padding: 12px 14px; min-width: 0; }
+.g-dia { background: #F3F4F6; display: flex; flex-direction: column; justify-content: space-between; gap: 6px; }
+.g-dia small { font-size: 12px; color: var(--mut); font-weight: 600; }
+.g-dia b { display: block; font-size: 26px; line-height: 1.1; white-space: nowrap; }
+.g-dia .rua { font-size: 11px; color: var(--mut); }
+.g-dia .saldo { font-size: 12px; font-weight: 700; padding-top: 6px; border-top: 1px dashed var(--borda); }
+.g-st { display: flex; flex-direction: column; justify-content: center; }
+.g-st .l { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 6px 0; font-size: 13px; color: var(--mut); }
+.g-st .l b { font-size: 18px; color: var(--txt); }
 .resumo { background: #fff; border-radius: 16px; padding: 14px; margin-bottom: 12px; border: 1px solid var(--borda); }
 .resumo h3 { margin: 0 0 8px; font-size: 15px; }
 .resumo .l { display: flex; justify-content: space-between; gap: 10px; padding: 5px 0; border-bottom: 1px dashed var(--borda); font-size: 15px; }
@@ -240,7 +250,7 @@ button { cursor: pointer; }
       <div class="met"><small>Na rua</small><b id="m-rua">0</b></div>
       <div class="met"><small>Hoje</small><b id="m-hoje">0</b></div>
     </div>
-    <div class="taxa-dia" id="tx-dia"></div>
+    <div class="ganhos" id="tx-dia"></div>
     <div class="tabs" id="tabs">
       <button data-t="preparo">Em preparo</button>
       <button data-t="sair">Para sair</button>
@@ -415,7 +425,7 @@ button { cursor: pointer; }
     // se deslocando), entregas prontas que ninguém pegou + as dele.
     // Entregas que este motoqueiro recusou (cada um lê só as suas)
     ouvir(ref('recusasEntrega/' + eu.lojaId + '/' + eu.uid).limitToLast(200), 'value', function (s) {
-      recusas = s.val() || {}; recusasOk = true; chamadaAtualizar();
+      recusas = s.val() || {}; recusasOk = true; render();
     }, function (e) { recusasOk = true; console.warn('[recusas] sem acesso (publique as regras novas do Firebase):', e && e.message); chamadaAtualizar(); });
     var prontosMap = {}, preparoMap = {}, meusMap = {};
     var prim = { pronto: false, preparo: false, meus: false }; // só avisa depois que as 3 listas chegaram
@@ -465,6 +475,25 @@ button { cursor: pointer; }
     };
   }
 
+  /* ---------- Saldo total = acumulado do MÊS (zera sozinho quando o mês vira) ----------
+     O Firebase só entrega as últimas 100 entregas ao motoqueiro; por isso o acumulado do mês fica
+     guardado também neste aparelho (por pedido, então nada é contado duas vezes). */
+  function mesDe(ts) { var d = new Date(ts); return d.getFullYear() + '-' + (d.getMonth() + 1); }
+  function saldoMes() {
+    var mes = mesDe(Date.now()), k = 'motMes_' + eu.uid, reg = null, mudou = false;
+    try { reg = JSON.parse(lsGet(k, 'null')); } catch (e) { reg = null; }
+    if (!reg || reg.m !== mes || !reg.t || typeof reg.t !== 'object') { reg = { m: mes, t: {} }; mudou = true; }
+    pedidos.forEach(function (p) {
+      if (p.status !== 'entregue' || p.motoqueiro !== eu.nome) return;
+      var ts = tsEntrega(p); if (!ts || mesDe(ts) !== mes) return;
+      var tx = round(totais(p).taxa), a = reg.t[p.id];
+      if (!a || a[0] !== ts || a[1] !== tx) { reg.t[p.id] = [ts, tx]; mudou = true; }
+    });
+    if (mudou) lsSet(k, JSON.stringify(reg));
+    var soma = 0; Object.keys(reg.t).forEach(function (id) { soma += +reg.t[id][1] || 0; });
+    return round(soma);
+  }
+
   /* ---------- Render ---------- */
   function render() {
     if (!eu) return;
@@ -472,12 +501,29 @@ button { cursor: pointer; }
     $('#m-sair').textContent = L.sair.length;
     $('#m-rua').textContent = L.rua.length;
     $('#m-hoje').textContent = L.hoje.length;
-    // Soma das taxas de entrega do dia (o que o motoqueiro tem a receber), sempre visível
+    // Ganhos = soma das taxas de entrega (o que o motoqueiro tem a receber)
     var taxasDia = 0, taxasRua = 0;
     L.hoje.forEach(function (p) { taxasDia += totais(p).taxa; });
     L.rua.forEach(function (p) { taxasRua += totais(p).taxa; });
-    $('#tx-dia').innerHTML = '<div><small>🛵 Taxas de hoje</small><div class="sub">' + L.hoje.length + ' entrega' + (L.hoje.length === 1 ? '' : 's') + ' feita' + (L.hoje.length === 1 ? '' : 's') +
-      (L.rua.length ? ' · +' + brl(round(taxasRua)) + ' na rua' : '') + '</div></div><b>' + brl(round(taxasDia)) + '</b>';
+    var aceitas = pedidos.filter(function (p) {
+      return p.motoqueiro === eu.nome && ((p.hist && hoje(p.hist.saiu)) || (p.status === 'entregue' && hoje(tsEntrega(p))));
+    }).length;
+    var recusadas = Object.keys(recusas).filter(function (k) { return hoje(recusas[k]); }).length;
+    var ocultar = lsGet('motGanhosOculto', '0') === '1';
+    var v = function (txt) { return ocultar ? 'R$ ••••' : txt; };
+    $('#tx-dia').innerHTML =
+      '<div class="ganhos-top"><h3>Seus ganhos <button type="button" id="bt-olho" aria-label="' + (ocultar ? 'Mostrar valores' : 'Ocultar valores') + '">' + (ocultar ? '🙈' : '👁') + '</button></h3></div>' +
+      '<div class="ganhos-g">' +
+        '<div class="g-box g-dia"><small>Ganhos do dia</small><b>' + v(brl(round(taxasDia))) + '</b>' +
+          (L.rua.length ? '<div class="rua">+ ' + v(brl(round(taxasRua))) + ' na rua</div>' : '') +
+          '<div class="saldo">Saldo total: ' + v(brl(saldoMes())) + '</div></div>' +
+        '<div class="g-box g-st">' +
+          '<div class="l"><span>Rotas aceitas</span><b>' + aceitas + '</b></div>' +
+          '<div class="l"><span>Finalizadas</span><b>' + L.hoje.length + '</b></div>' +
+          '<div class="l"><span>Recusadas</span><b>' + recusadas + '</b></div>' +
+        '</div>' +
+      '</div>';
+    var olho = $('#bt-olho'); if (olho) olho.onclick = function () { lsSet('motGanhosOculto', ocultar ? '0' : '1'); render(); };
     Array.prototype.forEach.call(document.querySelectorAll('#tabs button'), function (b) { b.classList.toggle('on', b.dataset.t === tab); });
     document.title = (L.sair.length ? '(' + L.sair.length + ') ' : '') + 'Entregas';
     atualizarBadge(L.sair.length);
@@ -771,7 +817,7 @@ button { cursor: pointer; }
   }
   function recusarEntrega(p) {
     recusas[p.id] = Date.now();
-    chamadaAtualizar();
+    render();
     db.ref('caixa/recusasEntrega/' + eu.lojaId + '/' + eu.uid + '/' + p.id).set(TS()).then(function () {
       toast('Entrega recusada. Ela segue para os outros motoqueiros.');
     }).catch(function (e) { delete recusas[p.id]; erroGrav(e); chamadaAtualizar(); });
