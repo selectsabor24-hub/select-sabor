@@ -45,6 +45,7 @@
   ║         · Melhoria: renderContas usa cache; seção 3.22 documentada   ║
   ║  v3.3 — Seções novas: Planilhas já lançadas (3.23), calendário       ║
   ║         visual de lançamentos com marcação de cartão                 ║
+  ║  v1.5  — Comanda: foto do cartão inteira e centralizada (sem cortar)              ║
   ║  v1.4  — Comanda: cartões do cardápio ainda menores (mais itens por linha)        ║
   ║  v1.3  — Comanda: cartões do cardápio menores (mais itens visíveis de uma vez)    ║
   ║  v1.2  — Comanda: cardápio em cartões (foto, descrição, preço, promoção e botão +)║
@@ -3374,8 +3375,8 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
 #modal-cmd-box .cmd-chip.cmd-ci:hover:not(.off) { border-color: var(--accent); transform: translateY(-1px); }
 #modal-cmd-box .cmd-chip.cmd-ci:active:not(.off) { transform: scale(.98); }
 #modal-cmd-box .cmd-chip.cmd-ci.off { opacity: .55; cursor: not-allowed; }
-.cmd-ci-foto { display: block; aspect-ratio: 2 / 1; background: #f3efe4; overflow: hidden; margin-bottom: 4px; }
-.cmd-ci-foto img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cmd-ci-foto { display: flex; align-items: center; justify-content: center; aspect-ratio: 2 / 1; background: #f3efe4; overflow: hidden; margin-bottom: 4px; padding: 3px; box-sizing: border-box; }
+.cmd-ci-foto img { width: 100%; height: 100%; object-fit: contain; object-position: center; display: block; }
 .cmd-ci-sem { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; font-size: 20px; opacity: .45; }
 .cmd-ci-nome { display: block; padding: 0 6px; font-weight: 800; font-size: 10.5px; text-transform: uppercase; letter-spacing: .2px; line-height: 1.25; }
 .cmd-ci-desc { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; padding: 1px 6px 0; font-size: 9.5px; color: var(--text3); line-height: 1.2; }
