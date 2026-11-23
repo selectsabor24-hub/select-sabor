@@ -770,6 +770,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
   }
   function foraDoHorarioLoja() { return !!(cfg && cfg.aberto === true) && !horarioLojaOk(); }
   function msgFechada() {
+    if (!canalOk()) return MESA ? 'Os pedidos pela mesa estão pausados no momento.' : (aceitaMesa() ? 'No momento os pedidos são feitos apenas na loja, pelo QR Code da mesa.' : 'No momento não estamos aceitando pedidos.');
     return foraDoHorarioLoja()
       ? (cfg.horarioDia === true ? 'Estamos fora do horário de pedidos. ' + proxAbre() + '.' : 'Já passou do nosso horário de pedidos (' + fmtMin(cfg.abreMin) + ' às ' + fmtMin(cfg.fechaMin) + '). Abrimos às ' + fmtMin(cfg.abreMin) + '.')
       : 'A loja está fechada no momento.';
@@ -954,7 +955,10 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
       .sort(function (x, y) { return (pos(x.n) - pos(y.n)) || (x.p - y.p); })
       .map(function (x) { return x.n; });
   }
-  function aberta() { return !!(cfg && cfg.aberto === true) && horarioLojaOk(); }
+  function aceitaMesa() { return !cfg || cfg.aceitaMesa !== false; }
+  /* canais: mesa (QR Code) liberada pela opção "somente na loja"; link (entrega/retirada) liberado se aceitar entrega ou retirada */
+  function canalOk() { return MESA ? aceitaMesa() : (aceitaEntrega() || aceitaRetirada()); }
+  function aberta() { return !!(cfg && cfg.aberto === true) && horarioLojaOk() && canalOk(); }
   function aceitaEntrega() { return !cfg || cfg.aceitaEntrega !== false; }
   function aceitaRetirada() { return !cfg || cfg.aceitaRetirada !== false; }
   /* ---------- Taxa por distância (km) ----------
@@ -1252,7 +1256,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
   var _fotoAnimada = null; // última foto cujo efeito de entrada já rodou
   function desenharAviso() {
     var av = $('#aviso'); if (!av) return;
-    var txt = !aberta() ? (foraDoHorarioLoja() ? 'Estamos fechados no momento. ' + infoHorario() + ' Você pode ver o cardápio, mas só dá para enviar pedidos quando abrirmos.' : 'Estamos fechados no momento. Você pode ver o cardápio, mas só dá para enviar pedidos quando abrirmos.') : '';
+    var txt = !canalOk() ? (MESA ? 'Os pedidos pela mesa estão pausados no momento. Você pode ver o cardápio por aqui.' : (aceitaMesa() ? 'Os pedidos são feitos somente na loja, pelo QR Code da mesa. Você pode ver o cardápio por aqui.' : 'No momento não estamos aceitando pedidos. Você pode ver o cardápio por aqui.')) : !aberta() ? (foraDoHorarioLoja() ? 'Estamos fechados no momento. ' + infoHorario() + ' Você pode ver o cardápio, mas só dá para enviar pedidos quando abrirmos.' : 'Estamos fechados no momento. Você pode ver o cardápio, mas só dá para enviar pedidos quando abrirmos.') : '';
     var dests = aberta() ? destaqueLista() : [];
     if (destIdx >= dests.length) destIdx = 0;
     var dest = dests[destIdx] || null;
@@ -1311,7 +1315,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     $('#loja-info').innerHTML = info.map(function (x) { return '<div class="ib' + (x.off ? ' fechado' : '') + '"><small>' + x.ic + ' ' + esc(x.lb) + '</small><b>' + esc(x.v) + '</b></div>'; }).join('');
     var chip = $('#loja-chip');
     chip.className = 'chip-st ' + (aberta() ? 'on' : 'off');
-    chip.textContent = aberta() ? '● Aberto para pedidos' : (foraDoHorarioLoja() ? '● Fechado · ' + (cfg.horarioDia === true ? proxAbre().replace('Abrimos', 'abre') : 'abre às ' + fmtMin(cfg.abreMin)) : '● Fechado no momento');
+    chip.textContent = !canalOk() ? (MESA ? '● Pedidos da mesa pausados' : (aceitaMesa() ? '● Pedidos só na loja (QR Code)' : '● Fechado no momento')) : aberta() ? '● Aberto para pedidos' : (foraDoHorarioLoja() ? '● Fechado · ' + (cfg.horarioDia === true ? proxAbre().replace('Abrimos', 'abre') : 'abre às ' + fmtMin(cfg.abreMin)) : '● Fechado no momento');
     desenharAviso();
   }
   function desenharMenu() {
@@ -1488,6 +1492,8 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
   }
   function validar() {
     if (!aberta()) return msgFechada();
+    if (!MESA && modo === 'entrega' && !aceitaEntrega()) return 'No momento não estamos fazendo entregas.';
+    if (!MESA && modo === 'retirada' && !aceitaRetirada()) return 'No momento não estamos aceitando retirada na loja.';
     var foraHr = Object.keys(cart).map(function (id) { return itemDe(baseId(id)); }).filter(function (i) { return i && !noHorario(i); });
     if (foraHr.length) {
       var msgHr = '"' + foraHr[0].nome + '" só está disponível ' + rotuloHorario(foraHr[0]) + ' e foi tirado da sacola.';

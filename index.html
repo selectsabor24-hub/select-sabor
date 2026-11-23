@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <script>try{var t=localStorage.getItem("caixa-theme");if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Controle de Caixa v1.9</title>
+<title>Controle de Caixa v1.10</title>
 
 <!-- ============================================================
      PWA — Progressive Web App
@@ -45,6 +45,7 @@
   ║         · Melhoria: renderContas usa cache; seção 3.22 documentada   ║
   ║  v3.3 — Seções novas: Planilhas já lançadas (3.23), calendário       ║
   ║         visual de lançamentos com marcação de cartão                 ║
+  ║  v1.10 — QR das mesas (nome e frase), Config. pedidos em menu próprio, canais aceitos, Telegram por horário ║
   ║  v1.9  — Cardápio no celular: cada item em bloco separado                          ║
   ║  v1.8  — Cardápio: organizar ordem das opções, copiar complementos, categorias (ordem/renomear), foto com zoom, busca fixa; atualização automática ║
   ║  v1.7  — Comanda: tela de complementos bem maior, opções em 2 colunas             ║
@@ -3484,6 +3485,14 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
 .ped-link input { flex: 1 1 220px; min-width: 0; }
 .pc-hd-status { display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; padding:12px 14px; border:1px solid var(--border,#e5e5e5); border-radius:12px; margin:8px 0 12px; }
 .pc-hd-status small { font-size:11px; font-weight:800; letter-spacing:.6px; opacity:.65; }
+/* Config. pedidos: blocos que abrem e fecham */
+.pc-col > .card-title { cursor:pointer; user-select:none; }
+.pc-tog { margin-left:auto; flex-shrink:0; width:38px; height:38px; padding:0; display:inline-flex; align-items:center; justify-content:center; border:1.5px solid var(--accent); border-radius:10px; background:transparent; color:var(--accent); cursor:pointer; }
+.pc-tog:hover { background:var(--accent-bg); }
+.pc-tog svg { width:18px; height:18px; transition:transform .18s ease; transform:rotate(180deg); }
+.pc-col.fechado > .card-title { margin-bottom:0 !important; }
+.pc-col.fechado .pc-tog svg { transform:none; }
+.pc-col.fechado > .pc-corpo { display:none; }
 .pc-hd-chave { display:flex; align-items:center; gap:8px; font-weight:700; font-size:14px; }
 .pc-hd-atalhos { display:flex; gap:8px; flex-wrap:wrap; margin:10px 0; }
 .pc-hd-atalhos button { border:1px solid var(--border,#ddd); background:#fff; border-radius:10px; padding:7px 11px; font-size:12px; font-weight:700; cursor:pointer; }
@@ -3769,7 +3778,7 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
           <img src="img/logo.png" alt="Select Sabor" style="width:44px;height:44px;border-radius:50%;flex-shrink:0;background:#fff;box-shadow:0 0 0 2px rgba(255,255,255,0.18)">
           <div>
             <div class="logo-title">Controle de Caixa</div>
-            <div class="logo-sub">v1.9</div>
+            <div class="logo-sub">v1.10</div>
           </div>
         </div>
         <span id="status-dot" style="display:none;width:8px;height:8px;border-radius:50%;background:#4ADE80;flex-shrink:0;box-shadow:0 0 0 2px rgba(74,222,128,0.2)" title="Conectado"></span>
@@ -3822,6 +3831,9 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
     <button class="nav-item" id="nav-pedidos" onclick="showSection('pedidos', this)">
       <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg></span> Pedidos online
       <span class="ped-badge" id="ped-badge-nav"></span>
+    </button>
+    <button class="nav-item" id="nav-pedidoscfg" onclick="showSection('pedidoscfg', this)">
+      <span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span> Config. pedidos
     </button>
     <button class="nav-item" id="nav-motoqueiro" onclick="showSection('motoqueiro', this)">
       <span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="5.5" cy="17.5" r="3"/><circle cx="18.5" cy="17.5" r="3"/><path d="M8.5 17.5H14l3-8h-4"/><path d="M13 5h3"/></svg></span> Motoqueiro
@@ -4955,6 +4967,12 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
         <p style="margin:0 0 10px;font-size:12px;opacity:.7;overflow-wrap:anywhere">🔗 Link usado: <span id="qr-mesas-link"></span></p>
         <label style="display:flex;align-items:center;gap:8px;font-weight:700;font-size:13px">🪑 Número de mesas
           <input type="number" id="qr-mesas-n" class="input-sm" min="1" max="100" value="5" style="width:90px"></label>
+        <label style="display:block;margin-top:12px;font-weight:700;font-size:13px">🏪 Nome da loja <span style="font-weight:400;opacity:.7">(opcional — sai centralizado no topo, antes da frase)</span>
+          <input type="text" id="qr-mesas-loja" class="input-sm" maxlength="40" placeholder="Ex.: 🍓 FRUTAÇAÍ 💜" oninput="qrMesasFraseSalvar()" style="display:block;width:100%;margin-top:6px;box-sizing:border-box;text-align:center;font-weight:800"></label>
+        <label style="display:block;margin-top:12px;font-weight:700;font-size:13px">💬 Frase em cima do QR Code <span style="font-weight:400;opacity:.7">(opcional — sai impressa acima do QR)</span>
+          <textarea id="qr-mesas-frase" class="input-sm" rows="4" maxlength="200" placeholder="Ex.:&#10;🍓 *FRUTAÇAÍ* 💜&#10;&#10;📲 Peça pelo QR Code e aproveite!&#10;Mais agilidade e zero filas!" oninput="qrMesasFraseSalvar()" style="display:block;width:100%;height:auto;margin-top:6px;resize:vertical;box-sizing:border-box"></textarea>
+          <span id="qr-mesas-frase-cont" style="font-weight:400;font-size:11px;opacity:.6">0/200</span>
+          <span style="display:block;font-weight:400;font-size:11px;opacity:.6">Dica: use *texto* para negrito e Enter para pular linha.</span></label>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
           <button class="btn btn-primary btn-md" onclick="qrMesasGerar()">🔄 Gerar QR Codes</button>
           <button class="btn btn-secondary btn-md" onclick="qrMesasImprimir()">🖨 Imprimir todos</button>
@@ -4980,12 +4998,32 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
 
       <div id="ped-topo"></div>
 
-      <!-- Configuração (cada categoria tem o seu próprio botão Salvar) -->
-      <div id="ped-config" style="display:none">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
-        <div style="font-size:17px;font-weight:700">Configurar pedidos online</div>
-        <button class="btn btn-secondary btn-md" type="button" onclick="pedConfigFechar()">✕ Fechar</button>
+      <div class="metrics-grid" id="ped-metricas"></div>
+
+      <div class="pv-toolbar" id="ped-tabs">
+        <input id="ped-busca" class="input-base" type="search" placeholder="🔍 Buscar pedido, cliente ou telefone" autocomplete="off" oninput="pedBuscar(this.value)" aria-label="Buscar pedido">
+        <select id="ped-visao" class="input-base" onchange="pedSetVisao(this.value)" aria-label="Modo de exibição dos pedidos">
+          <option value="quadros">📋 Quadros</option>
+          <option value="expedicao">📦 Expedição</option>
+          <option value="monitor">🛵 Monitor de entregadores</option>
+        </select>
       </div>
+
+      <div id="ped-novos"></div>
+      <div id="ped-lista"></div>
+    </div>
+
+    <!-- SEÇÃO: CONFIGURAÇÕES DOS PEDIDOS ONLINE -->
+    <div id="sec-pedidoscfg" class="section">
+      <div class="page-header">
+        <div>
+          <div class="page-title">⚙ Configurações dos pedidos online</div>
+          <div class="page-sub">Dados da loja, taxas, horários, endereço, entrega, som e links do cardápio.</div>
+        </div>
+      </div>
+
+      <!-- Configuração (cada categoria tem o seu próprio botão Salvar) -->
+      <div id="ped-config">
       <div class="cmd-tabs" id="ped-cfg-tabs" style="margin-bottom:14px">
         <button type="button" id="ped-cfg-tab-geral" onclick="pedConfigAba('geral')">⚙ Configurações</button>
         <button type="button" id="ped-cfg-tab-links" onclick="pedConfigAba('links')">🔗 Links</button>
@@ -5007,11 +5045,19 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
           <div class="form-group"><label>Pedido mínimo (R$)</label><input id="pc-min" class="input-base" inputmode="decimal" placeholder="0,00"></div>
         </div>
         <div class="ped-checks">
-          <label><input type="checkbox" id="pc-entrega"> Aceitar entrega</label>
-          <label><input type="checkbox" id="pc-retirada"> Aceitar retirada na loja</label>
           <label><input type="checkbox" id="pc-aberto"> Receber pedidos agora</label>
         </div>
         <div class="form-actions" style="margin-top:12px"><button class="btn btn-primary btn-md" type="button" onclick="pedConfigSalvarSecao('pedidos')">💾 Salvar pedidos e taxas</button></div>
+      </div>
+      <div class="card mb-5">
+        <div class="card-title">📲 Onde aceitar pedidos</div>
+        <div class="pc-hd-status"><div><small>SITUAÇÃO AGORA</small><div id="pc-modo-stat" style="font-size:16px;font-weight:800"></div></div></div>
+        <div class="ped-checks" style="flex-direction:column;align-items:flex-start;gap:10px;margin-top:10px">
+          <label><input type="checkbox" id="pc-aceita-mesa" onchange="pedCanalChave('aceitaMesa', this.checked)"> 🏪 Aceitar pedidos <b>somente na loja</b> (QR Code das mesas)</label>
+          <label><input type="checkbox" id="pc-aceita-entrega" onchange="pedCanalChave('aceitaEntrega', this.checked)"> 🛵 Aceitar pedidos <b>somente Entrega Motoqueiro</b></label>
+          <label><input type="checkbox" id="pc-aceita-retirada" onchange="pedCanalChave('aceitaRetirada', this.checked)"> 🛍 Aceitar pedidos <b>somente Retirada na loja</b> (pelo link)</label>
+        </div>
+        <div style="font-size:12px;opacity:.75;margin-top:8px;line-height:1.5"><b>Marcado</b> = você aceita esse tipo de pedido. <b>Desmarcado</b> = não aceita. Pode marcar uma, duas ou as três. <b>QR Code das mesas:</b> pedidos de quem está na loja. <b>Entrega Motoqueiro:</b> pedidos do link do cardápio entregues pelo motoqueiro. <b>Retirada na loja:</b> pedidos do link que o cliente vem buscar. Se deixar as duas do link desmarcadas, o link fica só para consulta. Salvam na hora.</div>
       </div>
       <div class="card mb-5">
         <div class="card-title">🕒 Horário de funcionamento</div>
@@ -5100,19 +5146,6 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
       </div>
       </div>
 
-      <div class="metrics-grid" id="ped-metricas"></div>
-
-      <div class="pv-toolbar" id="ped-tabs">
-        <input id="ped-busca" class="input-base" type="search" placeholder="🔍 Buscar pedido, cliente ou telefone" autocomplete="off" oninput="pedBuscar(this.value)" aria-label="Buscar pedido">
-        <select id="ped-visao" class="input-base" onchange="pedSetVisao(this.value)" aria-label="Modo de exibição dos pedidos">
-          <option value="quadros">📋 Quadros</option>
-          <option value="expedicao">📦 Expedição</option>
-          <option value="monitor">🛵 Monitor de entregadores</option>
-        </select>
-      </div>
-
-      <div id="ped-novos"></div>
-      <div id="ped-lista"></div>
     </div>
 
     <!-- SEÇÃO: MOTOQUEIRO -->
@@ -5505,6 +5538,7 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
             <div>
               <div style="font-size:13px;font-weight:500;color:var(--text)">⚠️ Alertas de vencimento</div>
               <div style="font-size:11px;color:var(--text3)">Contas vencidas ou vencendo em 3 dias</div>
+              <div style="font-size:11px;color:var(--text3);margin-top:5px">Enviar todo dia às <input type="time" id="tg-hora-alertas" value="08:00" onchange="_tg.salvarHora('alertas_hora', this.value)" onclick="event.stopPropagation()" style="padding:2px 6px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-size:12px"></div>
             </div>
             <input type="checkbox" id="tg-toggle-alertas" onchange="_tg.salvarToggle('alertas', this.checked)" style="width:16px;height:16px;cursor:pointer">
           </label>
@@ -5514,7 +5548,8 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
           <label style="display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer">
             <div>
               <div style="font-size:13px;font-weight:500;color:var(--text)">🌙 Resumo diário</div>
-              <div style="font-size:11px;color:var(--text3)">Enviado às 23h com vendas, despesas e lucro do dia</div>
+              <div style="font-size:11px;color:var(--text3)">Vendas, despesas e lucro do dia</div>
+              <div style="font-size:11px;color:var(--text3);margin-top:5px">Enviar todo dia às <input type="time" id="tg-hora-diario" value="23:00" onchange="_tg.salvarHora('diario_hora', this.value)" onclick="event.stopPropagation()" style="padding:2px 6px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-size:12px"></div>
             </div>
             <input type="checkbox" id="tg-toggle-diario" onchange="_tg.salvarToggle('diario', this.checked)" style="width:16px;height:16px;cursor:pointer">
           </label>
@@ -5524,7 +5559,8 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
           <label style="display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer">
             <div>
               <div style="font-size:13px;font-weight:500;color:var(--text)">📊 Relatório mensal</div>
-              <div style="font-size:11px;color:var(--text3)">Enviado no 1º dia do mês com resumo completo</div>
+              <div style="font-size:11px;color:var(--text3)">Resumo completo, no 1º dia do mês</div>
+              <div style="font-size:11px;color:var(--text3);margin-top:5px">Enviar às <input type="time" id="tg-hora-mensal" value="08:00" onchange="_tg.salvarHora('mensal_hora', this.value)" onclick="event.stopPropagation()" style="padding:2px 6px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-size:12px"></div>
             </div>
             <input type="checkbox" id="tg-toggle-mensal" onchange="_tg.salvarToggle('mensal', this.checked)" style="width:16px;height:16px;cursor:pointer">
           </label>
@@ -5538,6 +5574,10 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
           <button onclick="_tg.testar()"
             style="padding:8px 14px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif">
             📤 Testar conexão
+          </button>
+          <button onclick="_tg.verificar(true)"
+            style="padding:8px 14px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif">
+            ⚠️ Testar alertas
           </button>
           <button onclick="_tg.enviarResumoDiario(true)"
             style="padding:8px 14px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif">
@@ -6111,6 +6151,9 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
     <button class="drawer-item" id="di-pedidos" onclick="drawerNav('pedidos', this)">
       <span class="drawer-item-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg></span>Pedidos online
       <span class="ped-badge" id="ped-badge-di"></span>
+    </button>
+    <button class="drawer-item" id="di-pedidoscfg" onclick="drawerNav('pedidoscfg', this)">
+      <span class="drawer-item-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>Config. pedidos
     </button>
     <button class="drawer-item" id="di-motoqueiro" onclick="drawerNav('motoqueiro', this)">
       <span class="drawer-item-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="5.5" cy="17.5" r="3"/><circle cx="18.5" cy="17.5" r="3"/><path d="M8.5 17.5H14l3-8h-4"/><path d="M13 5h3"/></svg></span>Motoqueiro
@@ -6969,10 +7012,7 @@ function setLojaAtiva(id) {
     if (_contasPrimeiraVez) {
       _contasPrimeiraVez = false;
       _onLojaResolved();
-      // Verifica notificações Telegram com os dados da nova loja já carregados
-      if (typeof _tg !== 'undefined') {
-        _tg.verificar(true);
-      }
+      // (v4.26) O Telegram NÃO é mais disparado ao entrar no sistema: só envia nos horários configurados.
     }
     _refreshCurrentSection();
   });
@@ -8603,7 +8643,7 @@ function isAdminEmail(email) {
 /* Perfil do usuário logado: 'admin' | 'completo' | 'atendimento'.
    'atendimento' = só Pedidos online, Motoqueiro, Comandas/Mesas e Cardápio. */
 let _perfilAtual = 'completo';
-const _PERFIL_ATEND_SECOES = ['pedidos', 'motoqueiro', 'comandas', 'cardapio'];
+const _PERFIL_ATEND_SECOES = ['pedidos', 'pedidoscfg', 'motoqueiro', 'comandas', 'cardapio'];
 function _ehAtendimento() { return _perfilAtual === 'atendimento'; }
 
 function _usuarioTemAcesso(user) {
@@ -8829,6 +8869,7 @@ function _showSectionInternal(id, btn) {
     case 'planilhas':      renderPlanilhas();     break;
     case 'comandas':       renderComandas();      break;
     case 'pedidos':        renderPedidos();       break;
+    case 'pedidoscfg':     _pedConfigPreencher(); break;
       case 'motoqueiro':     renderMotoqueiro();    break;
     case 'cardapio':       renderCardapio();      break;
     case 'cartoes': {
@@ -18722,7 +18763,7 @@ function renderPedidos() {
     <div class="ped-topo-linha">
       <div>
         <div class="ped-status ${_pedStatusInfo(cfg).on ? 'on' : 'off'}" id="ped-status-el">${_pedStatusInfo(cfg).txt}</div>
-        <div class="ped-sub">${escapeHtml(cfg.nome || '')}${cfg.tempoEstimado ? ' · ⏱ Preparo ' + escapeHtml(cfg.tempoEstimado) : ''}${(cfg.horarioOn === true && _pedMinHM(cfg.abreMin) && _pedMinHM(cfg.fechaMin)) ? ' · 🕒 ' + _pedMinHM(cfg.abreMin) + ' às ' + _pedMinHM(cfg.fechaMin) : ''} · Entrega ${(parseFloat(cfg.taxaEntrega) || 0) > 0 ? fmt(cfg.taxaEntrega) : 'grátis'}</div>
+        <div class="ped-sub">${escapeHtml(cfg.nome || '')}${cfg.tempoEstimado ? ' · ⏱ Preparo ' + escapeHtml(cfg.tempoEstimado) : ''}${(cfg.horarioOn === true && _pedMinHM(cfg.abreMin) && _pedMinHM(cfg.fechaMin)) ? ' · 🕒 ' + _pedMinHM(cfg.abreMin) + ' às ' + _pedMinHM(cfg.fechaMin) : ''} · Entrega ${(parseFloat(cfg.taxaEntrega) || 0) > 0 ? fmt(cfg.taxaEntrega) : 'grátis'}${cfg.aceitaMesa === false ? ' · 🏪 QR Code não aceita' : ''}${cfg.aceitaEntrega === false ? ' · 🛵 Entrega não aceita' : ''}${cfg.aceitaRetirada === false ? ' · 🛍 Retirada não aceita' : ''}</div>
       </div>
       <button class="btn ${aberto ? 'btn-secondary' : 'btn-primary'} btn-md" onclick="pedToggleAberto()">${aberto ? '⏸ Pausar pedidos' : '▶ Abrir para pedidos'}</button>
     </div>
@@ -19311,7 +19352,28 @@ function pedConfigAba(aba) {
   if (tl) tl.classList.toggle('active', links);
   const inp = document.getElementById('ped-link-input'); if (inp) inp.value = _pedLinkCliente();
 }
-function pedConfigAbrir() {
+/** Deixa cada bloco da tela Config. pedidos com o botão de abrir/fechar (seta). Roda uma vez por bloco. */
+function pedConfigBlocos() {
+  document.querySelectorAll('#sec-pedidoscfg .card').forEach(card => {
+    if (card.dataset.pcCol) return;
+    const t = card.querySelector(':scope > .card-title'); if (!t) return;
+    card.dataset.pcCol = '1'; card.classList.add('pc-col');
+    const corpo = document.createElement('div'); corpo.className = 'pc-corpo';
+    while (t.nextSibling) corpo.appendChild(t.nextSibling);
+    card.appendChild(corpo);
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'pc-tog'; b.setAttribute('aria-expanded', 'true'); b.setAttribute('aria-label', 'Fechar bloco');
+    b.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>';
+    t.appendChild(b);
+    t.addEventListener('click', () => {
+      const fechado = card.classList.toggle('fechado');
+      b.setAttribute('aria-expanded', fechado ? 'false' : 'true');
+      b.setAttribute('aria-label', fechado ? 'Abrir bloco' : 'Fechar bloco');
+    });
+  });
+}
+function _pedConfigPreencher() {
+  pedConfigBlocos();
   if (!_lojaAtiva) { showToast('Aguarde o carregamento do restaurante', false); return; }
   const c = _pedCfg() || {};
   const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
@@ -19332,16 +19394,19 @@ function pedConfigAbrir() {
   _pedMapaLink();
   pedSomCfgAbrir();
   pedPushCfgAbrir();
-  document.getElementById('pc-entrega').checked  = c.aceitaEntrega !== false;
-  document.getElementById('pc-retirada').checked = c.aceitaRetirada !== false;
+  document.getElementById('pc-aceita-retirada').checked = c.aceitaRetirada !== false;
   document.getElementById('pc-aberto').checked   = _pedCfg() ? c.aberto === true : true;
   document.getElementById('pc-horario-on').checked = c.horarioOn === true;
+  document.getElementById('pc-aceita-mesa').checked = c.aceitaMesa !== false;
+  document.getElementById('pc-aceita-entrega').checked = c.aceitaEntrega !== false;
+  _pedModoStatus(c);
   pedHdMontar(c); pedHdStatus(c);
   pedConfigAba('geral');
-  const box = document.getElementById('ped-config');
-  box.style.display = '';
-  box.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  if (_currentSection !== 'pedidos') showSection('pedidos', document.getElementById('nav-pedidos'));
+}
+/** Abre a tela "Config. pedidos" (menu próprio). */
+function pedConfigAbrir() {
+  if (_currentSection === 'pedidoscfg') { _pedConfigPreencher(); return; }
+  showSection('pedidoscfg', document.getElementById('nav-pedidoscfg'));
 }
 /* ── Horário por dia da semana (horarios/0..6 = domingo..sábado: {on, abre, fecha} em minutos; horarioDia:true) ── */
 const _HD_NOMES = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
@@ -19396,7 +19461,30 @@ function pedHdChave(v) {
     .then(() => { const p = document.getElementById('pc-aberto'); if (p) p.checked = !!v; pedHdStatus(Object.assign({}, _pedCfg() || {}, { aberto: !!v })); showToast(v ? 'Loja recebendo pedidos ✔' : 'Loja fechada ✔'); })
     .catch(e => { console.error(e); showToast('Sem permissão para salvar. Publique as regras do Firebase.', false); });
 }
-function pedConfigFechar() { const b = document.getElementById('ped-config'); if (b) b.style.display = 'none'; }
+/* ── Onde aceitar pedidos: QR Code das mesas (aceitaMesa) e Entrega Motoqueiro (aceitaEntrega) — marcado = aceita; salvam na hora ── */
+function _pedModoStatus(c) {
+  const el = document.getElementById('pc-modo-stat'); if (!el) return;
+  c = c || _pedCfg() || {};
+  const mesa = c.aceitaMesa !== false, ent = c.aceitaEntrega !== false, ret = c.aceitaRetirada !== false;
+  if (!mesa && !ent && !ret) { el.textContent = '⛔ Nenhum tipo de pedido está sendo aceito'; return; }
+  el.textContent = '🏪 QR Code: ' + (mesa ? 'sim' : 'não') + ' · 🛵 Entrega: ' + (ent ? 'sim' : 'não') + ' · 🛍 Retirada: ' + (ret ? 'sim' : 'não');
+}
+function pedCanalChave(campo, v) {
+  if (!_lojaAtiva || (campo !== 'aceitaMesa' && campo !== 'aceitaEntrega' && campo !== 'aceitaRetirada')) return;
+  const upd = { somenteLoja: null, entregaPausada: null };   // limpa as opções antigas
+  upd[campo] = !!v;
+  _dbRef('pedidosConfig/' + _lojaAtiva).update(upd)
+    .then(() => {
+      _pedModoStatus(Object.assign({}, _pedCfg() || {}, { [campo]: !!v }));
+      showToast((campo === 'aceitaMesa' ? 'QR Code das mesas: ' : campo === 'aceitaEntrega' ? 'Entrega Motoqueiro: ' : 'Retirada na loja: ') + (v ? 'aceitando pedidos ✔' : 'não aceita pedidos ✔'));
+    })
+    .catch(e => {
+      console.error(e);
+      const el = document.getElementById(campo === 'aceitaMesa' ? 'pc-aceita-mesa' : campo === 'aceitaEntrega' ? 'pc-aceita-entrega' : 'pc-aceita-retirada'); if (el) el.checked = !v;
+      showToast('Sem permissão para salvar. Publique as regras do Firebase.', false);
+    });
+}
+function pedConfigFechar() { showSection('pedidos', document.getElementById('nav-pedidos')); }
 /** Salva UMA categoria da configuração (dados | pedidos | aviso | endereco | faixas),
  *  sem mexer nas demais: grava só os campos daquela categoria com update(). */
 function pedConfigSalvarSecao(secao) {
@@ -19411,11 +19499,8 @@ function pedConfigSalvarSecao(secao) {
     vazioNulo('whatsapp', v('pc-whats').replace(/[^\d()+ -]/g, '').slice(0, 20));
   } else if (secao === 'pedidos') {
     nome = 'Pedidos e taxas';
-    const entrega = document.getElementById('pc-entrega').checked, retirada = document.getElementById('pc-retirada').checked;
-    if (!entrega && !retirada) { showToast('Marque pelo menos entrega ou retirada', false); return; }
     upd.taxaEntrega = _pedRound(_pedNum(v('pc-taxa')));
     upd.pedidoMinimo = _pedRound(_pedNum(v('pc-min')));
-    upd.aceitaEntrega = entrega; upd.aceitaRetirada = retirada;
     upd.aberto = document.getElementById('pc-aberto').checked;
   } else if (secao === 'horario') {
     nome = 'Horário de funcionamento';
@@ -20238,6 +20323,23 @@ function qrMesasIniciar() {
   document.getElementById('qr-mesas-link').textContent = _pedLinkCliente() + '&mesa=1';
   if (inp.dataset.ok) return; inp.dataset.ok = '1';
   try { inp.value = localStorage.getItem('qrMesasN') || '5'; } catch (e) {}
+  try { const f = document.getElementById('qr-mesas-frase'); if (f) { f.value = localStorage.getItem('qrMesasFrase') || ''; }
+    const l = document.getElementById('qr-mesas-loja'); if (l) { l.value = localStorage.getItem('qrMesasLoja') || ''; }
+    qrMesasFraseSalvar(); } catch (e) {}
+}
+// Frase que sai impressa em cima de cada QR Code (opcional); fica salva neste aparelho
+function _qrFrase() { const f = document.getElementById('qr-mesas-frase'); return f ? f.value.trim().slice(0, 200) : ''; }
+// *texto* vira negrito e Enter vira linha nova (o texto é escapado antes, então é seguro)
+function _qrLoja() { const l = document.getElementById('qr-mesas-loja'); return l ? l.value.trim().slice(0, 40) : ''; }
+function _qrFraseHtml(t) { return escapeHtml(t || '').replace(/\*([^*\n]+)\*/g, '<b>$1</b>').replace(/\n/g, '<br>'); }
+function qrMesasFraseSalvar() {
+  const f = document.getElementById('qr-mesas-frase'); if (!f) return;
+  try { localStorage.setItem('qrMesasFrase', f.value); const l = document.getElementById('qr-mesas-loja'); if (l) localStorage.setItem('qrMesasLoja', l.value); } catch (e) {}
+  const c = document.getElementById('qr-mesas-frase-cont'); if (c) c.textContent = f.value.length + '/200';
+  const txt = _qrFrase();
+  const _lj = _qrLoja();
+  document.querySelectorAll('#qr-mesas-grid .qr-loja').forEach(el => { el.textContent = _lj; el.style.display = _lj ? '' : 'none'; });
+  document.querySelectorAll('#qr-mesas-grid .qr-frase').forEach(el => { el.innerHTML = _qrFraseHtml(txt); el.style.display = txt ? '' : 'none'; });
 }
 async function qrMesasGerar() {
   const n = parseInt(document.getElementById('qr-mesas-n').value, 10);
@@ -20248,6 +20350,14 @@ async function qrMesasGerar() {
   for (let i = 1; i <= n; i++) {
     const box = document.createElement('div');
     box.style.cssText = 'text-align:center;background:#fff;border:1px solid #e5e5e5;border-radius:12px;padding:10px';
+    const lj = document.createElement('div'); lj.className = 'qr-loja';
+    lj.style.cssText = 'font-size:15px;font-weight:900;line-height:1.2;color:#111;margin:0 0 6px;text-align:center;overflow-wrap:anywhere';
+    const _nl = _qrLoja(); lj.textContent = _nl; lj.style.display = _nl ? '' : 'none';
+    box.appendChild(lj);
+    const fr = document.createElement('div'); fr.className = 'qr-frase';
+    fr.style.cssText = 'font-size:11px;font-weight:600;line-height:1.3;color:#222;margin:0 0 6px;overflow-wrap:anywhere';
+    const _txt = _qrFrase(); fr.innerHTML = _qrFraseHtml(_txt); fr.style.display = _txt ? '' : 'none';
+    box.appendChild(fr);
     const qr = document.createElement('div'); qr.style.cssText = 'display:flex;justify-content:center';
     box.appendChild(qr);
     const lb = document.createElement('div'); lb.style.cssText = 'font-weight:800;margin-top:6px;color:#222'; lb.textContent = 'Mesa ' + i;
@@ -20263,14 +20373,21 @@ async function qrMesasImprimir() {
   document.querySelectorAll('#qr-mesas-grid > div').forEach((box, idx) => {
     const cv = box.querySelector('canvas'), im = box.querySelector('img');
     const src = cv ? cv.toDataURL('image/png') : (im ? im.src : '');
-    cards.push('<div class="c"><div class="t">Mesa ' + (idx + 1) + '</div><img src="' + src + '" alt=""><div class="d">Escaneie e faça seu pedido</div></div>');
+    const _frase = _qrFrase(), _loja = _qrLoja();
+    const _fHtml = _frase ? '<div class="f">' + _qrFraseHtml(_frase) + '</div>' : '';
+    if (_loja) {
+      // com nome da loja: nome centralizado no topo, frase, QR e "Mesa N" embaixo
+      cards.push('<div class="c"><div class="n">' + escapeHtml(_loja) + '</div>' + _fHtml + '<img src="' + src + '" alt=""><div class="t2">Mesa ' + (idx + 1) + '</div></div>');
+    } else {
+      cards.push('<div class="c"><div class="t">Mesa ' + (idx + 1) + '</div>' + _fHtml + '<img src="' + src + '" alt="">' + (_frase ? '' : '<div class="d">Escaneie e faça seu pedido</div>') + '</div>');
+    }
   });
   const w = window.open('', '_blank');
   if (!w) { showToast('O navegador bloqueou a janela de impressão. Permita pop-ups.', false); return; }
   w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>QR Code das Mesas</title><style>' +
     'body{font-family:Arial,sans-serif;margin:0;padding:12px}.g{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}' +
     '.c{border:2px dashed #999;border-radius:14px;padding:16px;text-align:center;page-break-inside:avoid}' +
-    '.t{font-size:28px;font-weight:900;margin-bottom:8px}.c img{width:230px;height:230px}.d{font-size:14px;margin-top:8px;color:#333}' +
+    '.t{font-size:28px;font-weight:900;margin-bottom:8px}.f{font-size:17px;font-weight:600;line-height:1.35;margin:0 0 10px;color:#111;overflow-wrap:anywhere}.f b{font-weight:900;font-size:1.2em}.n{font-size:26px;font-weight:900;line-height:1.15;margin:0 0 8px;color:#111;overflow-wrap:anywhere}.t2{font-size:26px;font-weight:900;margin-top:8px}.c img{width:230px;height:230px}.d{font-size:14px;margin-top:8px;color:#333}' +
     '</style></head><body><div class="g">' + cards.join('') + '</div></body></html>');
   w.document.close(); w.focus(); setTimeout(() => { try { w.print(); } catch (e) {} }, 500);
 }
@@ -21070,7 +21187,7 @@ function cdpDestaqueTirar(id) {
 }
 function cdpDestaqueSalvar() {
   if (_cmdSemLoja()) return;
-  if (!_pedCfg()) { showToast('Configure os pedidos online antes (Pedidos online → Configurar).', false); return; }
+  if (!_pedCfg()) { showToast('Configure os pedidos online antes (menu Config. pedidos).', false); return; }
   const todos = _cdpDestItens();
   const ids = (_cdpDestSel || []).filter(id => todos.some(i => i.id === id));
   if (ids.length > 8) { showToast('Escolha no máximo 8 destaques', false); return; }
@@ -23858,6 +23975,7 @@ function _aplicarPerfilAtendimento() {
   const TG_TOKEN_KEY      = 'tg_bot_token';
   const TG_CHAT_KEY       = 'tg_chat_id';
   const TG_TOGGLE_KEY     = 'tg_toggles';
+  const STORAGE_ALERTA_DIA = 'tg_ultimo_alerta_dia';
 
   const TOKEN_PADRAO  = '';
   const CHAT_PADRAO   = '';
@@ -23872,6 +23990,13 @@ function _aplicarPerfilAtendimento() {
     return d.getFullYear() + '-' +
       String(d.getMonth()+1).padStart(2,'0') + '-' +
       String(d.getDate()).padStart(2,'0');
+  }
+  // Horário configurado (HH:MM) de cada envio e janela de 60 min para disparar
+  function _horaCfg(key, padrao) { const v = _getToggles()[key]; return /^\d{2}:\d{2}$/.test(v || '') ? v : padrao; }
+  function _naJanela(hhmm) {
+    const p = hhmm.split(':').map(Number), a = new Date();
+    const ini = p[0] * 60 + p[1], agora = a.getHours() * 60 + a.getMinutes();
+    return agora >= ini && agora < ini + 60;
   }
   function _fmtBR(iso) { return iso.split('-').reverse().join('/'); }
   function _fmt(v) { return (parseFloat(v)||0).toLocaleString('pt-BR', { style:'currency', currency:'BRL' }); }
@@ -23952,6 +24077,20 @@ function _aplicarPerfilAtendimento() {
         showToast((value ? '\u2705 Ativado: ' : '\uD83D\uDD15 Desativado: ') + key);
     },
 
+    salvarHora: function(key, value) {
+      if (!/^\d{2}:\d{2}$/.test(value || '')) return;
+      const toggles = _getToggles();
+      toggles[key] = value;
+      localStorage.setItem(TG_TOGGLE_KEY, JSON.stringify(toggles));
+      try {
+        if (typeof _dbRef === 'function' && typeof firebase !== 'undefined') {
+          const uid = firebase.auth().currentUser?.uid;
+          if (uid) _dbRef('config_usuario/' + uid + '/tg_toggles/' + key).set(value);
+        }
+      } catch(e) {}
+      if (typeof showToast === 'function') showToast('\u23F0 Hor\u00e1rio salvo: ' + value);
+    },
+
     testar: async function() {
       _setStatus('\u23F3 Enviando...', '');
       const lojaName = (typeof getLojaAtiva === 'function' && getLojaAtiva()) ? getLojaAtiva().nome : 'Controle de Caixa';
@@ -23966,14 +24105,15 @@ function _aplicarPerfilAtendimento() {
       const token  = _getToken();
       const chatId = _getChatId();
       if (!token || !chatId) return;
-      const agora = Date.now();
-      const ultima = parseInt(localStorage.getItem(STORAGE_KEY) || '0');
-      if (!forcar && agora - ultima < 60 * 60 * 1000) return;
-      localStorage.setItem(STORAGE_KEY, String(agora));
-      const contas = (_cache && _cache.contasPagar) ? _cache.contasPagar : [];
-      if (!contas.length) return;
       const hoje = new Date();
       const hojeStr = dateToLocalISO(hoje);
+      // Automático: só no horário configurado e 1 vez por dia (nunca ao entrar no sistema)
+      if (!forcar) {
+        if (!_naJanela(_horaCfg('alertas_hora', '08:00'))) return;
+        if (localStorage.getItem(STORAGE_ALERTA_DIA) === hojeStr) return;
+      }
+      const contas = (_cache && _cache.contasPagar) ? _cache.contasPagar : [];
+      if (!contas.length) return;
       const vencidas = [], hoje_vc = [], breve = [];
       contas.filter(c => c.status !== 'paga').forEach(c => {
         if (!c.vencimento) return;
@@ -23984,9 +24124,17 @@ function _aplicarPerfilAtendimento() {
           if (diff <= 3) breve.push({ ...c, diff });
         }
       });
-      if (!vencidas.length && !hoje_vc.length && !breve.length) return;
+      if (!vencidas.length && !hoje_vc.length && !breve.length) {
+        if (forcar && typeof showToast === 'function') showToast('Nenhuma conta vencida ou vencendo em 3 dias.');
+        if (!forcar) localStorage.setItem(STORAGE_ALERTA_DIA, hojeStr);
+        return;
+      }
       const lojaName = (typeof getLojaAtiva === 'function' && getLojaAtiva()) ? getLojaAtiva().nome : 'Controle de Caixa';
-      await _enviar(_montarMensagem(vencidas, hoje_vc, breve, lojaName));
+      const res = await _enviar(_montarMensagem(vencidas, hoje_vc, breve, lojaName));
+      if (res && res.ok) {
+        if (!forcar) localStorage.setItem(STORAGE_ALERTA_DIA, hojeStr);
+        else if (typeof showToast === 'function') showToast('Alerta de vencimento enviado! ⚠️');
+      } else if (forcar && typeof showToast === 'function') showToast('Erro: ' + ((res && (res.description || res.error)) || 'Erro'), false);
     },
 
     enviarResumoDiario: async function(forcar) {
@@ -23998,7 +24146,7 @@ function _aplicarPerfilAtendimento() {
       const agora   = new Date();
       const hojeStr = _fmtData(agora);
       if (!forcar && localStorage.getItem(STORAGE_DIARIO) === hojeStr) return;
-      if (!forcar && agora.getHours() !== 23) return;
+      if (!forcar && !_naJanela(_horaCfg('diario_hora', '23:00'))) return;
       const dados = getData().filter(d => d.data === hojeStr);
       if (!dados.length && !forcar) return;
       const lojaName = (typeof getLojaAtiva === 'function' && getLojaAtiva()) ? getLojaAtiva().nome : 'Controle de Caixa';
@@ -24043,6 +24191,7 @@ function _aplicarPerfilAtendimento() {
       if (!token || !chatId) return;
       const agora  = new Date();
       if (!forcar && agora.getDate() !== 1) return;
+      if (!forcar && !_naJanela(_horaCfg('mensal_hora', '08:00'))) return;
       const refMes  = forcar ? agora : new Date(agora.getFullYear(), agora.getMonth() - 1, 1);
       const anoStr  = String(refMes.getFullYear());
       const mesStr  = String(refMes.getMonth() + 1).padStart(2, '0');
@@ -24104,6 +24253,10 @@ function _aplicarPerfilAtendimento() {
     if (elAlertas) elAlertas.checked = toggles.alertas !== false;
     if (elDiario)  elDiario.checked  = !!toggles.diario;
     if (elMensal)  elMensal.checked  = !!toggles.mensal;
+    const hA = document.getElementById('tg-hora-alertas'), hD = document.getElementById('tg-hora-diario'), hM = document.getElementById('tg-hora-mensal');
+    if (hA) hA.value = _horaCfg('alertas_hora', '08:00');
+    if (hD) hD.value = _horaCfg('diario_hora', '23:00');
+    if (hM) hM.value = _horaCfg('mensal_hora', '08:00');
     try {
       if (typeof _dbRef === 'function' && typeof firebase !== 'undefined') {
         const uid = firebase.auth().currentUser?.uid;
@@ -24128,20 +24281,15 @@ function _aplicarPerfilAtendimento() {
     elChat.value  = _getChatId();
   };
 
+  // Agendador: confere a cada minuto e só envia dentro do horário configurado de cada item.
+  // (v4.26: nada é enviado ao abrir o sistema; antes o alerta de vencimento saía a cada entrada.)
   document.addEventListener('DOMContentLoaded', () => {
-    setTimeout(() => _tg.verificar(), 5000);
-    setInterval(() => _tg.verificar(), 60 * 60 * 1000);
     setInterval(() => {
+      _tg.verificar();
       _tg.enviarResumoDiario();
       _tg.enviarRelatorioMensal();
     }, 60 * 1000);
   });
-
-  const _cpVerifOrig = window._cpVerificarAlertas;
-  window._cpVerificarAlertas = function() {
-    if (typeof _cpVerifOrig === 'function') _cpVerifOrig();
-    _tg.verificar();
-  };
 
   window._notif = {
     status:    () => (_getToken() && _getChatId()) ? 'granted' : 'default',

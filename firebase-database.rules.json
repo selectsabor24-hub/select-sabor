@@ -150,6 +150,9 @@
           "aceitaRetirada": {
             ".validate": "newData.isBoolean()"
           },
+          "aceitaMesa": {
+            ".validate": "newData.isBoolean()"
+          },
           "aviso": {
             ".validate": "newData.isString() && newData.val().length <= 200"
           },
