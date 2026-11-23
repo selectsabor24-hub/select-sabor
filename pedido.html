@@ -1302,7 +1302,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     var prep = (cfg && cfg.tempoEstimado) ? rotuloPreparo(cfg.tempoEstimado).replace(/^preparo:?\s*/i, '') : '';
     if (prep) info.push({ ic: '⏱', lb: 'Preparo', v: prep });
     if (MESA) { /* QR da mesa: cliente está no local, não mostra info de entrega */ }
-    else if (aceitaEntrega() && porKmAtivo()) info.push({ ic: '🛵', lb: 'Entrega desde', v: brl(menorTaxa()) });
+    else if (aceitaEntrega() && porKmAtivo()) { /* taxa por km: o cliente vê o valor ao finalizar o pedido, então não mostra "Entrega desde" no topo */ }
     else if (aceitaEntrega() && cfg && Number(cfg.taxaEntrega) > 0) info.push({ ic: '🛵', lb: 'Entrega', v: brl(cfg.taxaEntrega) });
     else if (aceitaEntrega() && cfg) info.push({ ic: '🛵', lb: 'Entrega', v: 'Grátis' });
     var hh = horarioHoje();
