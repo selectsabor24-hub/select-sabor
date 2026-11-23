@@ -213,6 +213,20 @@ button { cursor: pointer; }
 .hist-sum small { display: block; color: var(--mut); font-size: 12px; font-weight: 600; }
 .hist-sum b { font-size: 22px; }
 .hist-tit { grid-column: 1 / -1; margin: 2px 2px 8px; font-size: 14px; font-weight: 700; color: var(--mut); }
+/* Instalar o app (PWA) */
+#inst { position: fixed; left: 12px; right: 12px; bottom: calc(12px + var(--safe-b)); z-index: 50; max-width: 536px; margin: 0 auto; background: #fff; border: 1.5px solid var(--verde2); border-radius: 16px; padding: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.25); display: flex; align-items: center; gap: 10px; }
+#inst img { width: 44px; height: 44px; border-radius: 10px; flex: none; }
+#inst .t { flex: 1; min-width: 0; line-height: 1.25; }
+#inst .t b { display: block; font-size: 15px; }
+#inst .t small { color: var(--mut); font-size: 12.5px; }
+#inst .ok { border: 0; background: var(--verde); color: #fff; font-weight: 800; padding: 11px 16px; border-radius: 12px; }
+#inst .x { border: 0; background: transparent; color: var(--mut); font-size: 22px; width: 36px; height: 36px; }
+#inst-help { position: fixed; inset: 0; z-index: 90; background: rgba(0,0,0,.5); display: flex; align-items: flex-end; justify-content: center; padding: 14px; }
+#inst-help .sheet { background: #fff; width: 100%; max-width: 480px; border-radius: 18px; padding: 20px 18px calc(18px + var(--safe-b)); }
+#inst-help h3 { margin: 0 0 10px; font-size: 18px; }
+#inst-help ol { margin: 0 0 10px; padding-left: 22px; line-height: 1.5; }
+#inst-help p { margin: 0 0 12px; color: var(--mut); font-size: 13.5px; }
+#inst-help button { width: 100%; padding: 13px; border: 0; border-radius: 12px; background: var(--verde); color: #fff; font-weight: 800; font-size: 16px; }
 </style>
 </head>
 <body>
@@ -269,6 +283,21 @@ button { cursor: pointer; }
     <button type="button" class="btn-atualizar" id="bt-atualizar">✓ Atualizar status</button>
     <div class="rodape" id="rodape"></div>
   </main>
+</div>
+
+<div id="inst" class="hide" role="region" aria-label="Instalar aplicativo">
+  <img src="img/icon-192.png" alt="">
+  <div class="t"><b>Instalar o app Entregas</b><small>Abre direto da tela do celular e recebe os avisos.</small></div>
+  <button type="button" class="ok" id="inst-ok">Instalar</button>
+  <button type="button" class="x" id="inst-x" aria-label="Fechar">×</button>
+</div>
+<div id="inst-help" class="hide">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="inst-h-tit">
+    <h3 id="inst-h-tit">Instalar o app</h3>
+    <ol id="inst-h-passos"></ol>
+    <p id="inst-h-dica"></p>
+    <button type="button" id="inst-h-ok">Entendi</button>
+  </div>
 </div>
 
 <div id="alerta" class="hide" role="alert"></div>
@@ -1057,5 +1086,90 @@ button { cursor: pointer; }
   }
 })();
 </script>
+
+<script>
+/* ---------- Instalar o app (PWA) ---------- */
+(function () {
+  'use strict';
+  var $ = function (s) { return document.getElementById(s); };
+  var ua = navigator.userAgent || '';
+  var ios = /iphone|ipad|ipod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  var android = /android/i.test(ua);
+  var emApp = /FBAN|FBAV|FB_IAB|Instagram|WhatsApp|Line\/|MicroMessenger|; wv\)/i.test(ua);
+  var promptEv = null;
+  var standalone = function () { return (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true; };
+  function dispensado() { try { return Date.now() - (Number(localStorage.getItem('motoPwaDispensado')) || 0) < 864e5; } catch (e) { return false; } }
+  function esconder() { $('inst').classList.add('hide'); }
+  function avaliar() { if (standalone() || dispensado()) esconder(); else $('inst').classList.remove('hide'); }
+  function passos(tit, lista, dica) {
+    $('inst-h-tit').textContent = tit;
+    $('inst-h-passos').innerHTML = lista.map(function (t) { return '<li>' + t + '</li>'; }).join('');
+    $('inst-h-dica').textContent = dica || '';
+    $('inst-h-dica').classList.toggle('hide', !dica);
+    $('inst-help').classList.remove('hide');
+  }
+  function ajuda() {
+    if (emApp) {
+      passos('Abra no navegador', [
+        'Toque nos <strong>três pontinhos</strong> no canto da tela.',
+        'Escolha <strong>Abrir no navegador</strong> (Chrome ou Safari).',
+        'Depois toque em <strong>Instalar</strong> de novo.'
+      ], 'Dentro do WhatsApp, Instagram ou Facebook não dá para instalar o app.');
+    } else if (ios) {
+      passos('Instalar no iPhone', [
+        'Toque no botão <strong>Compartilhar</strong> (quadrado com uma seta para cima) na barra do Safari.',
+        'Role a lista e toque em <strong>Adicionar à Tela de Início</strong>.',
+        'Toque em <strong>Adicionar</strong>. O ícone aparece na sua tela.'
+      ], 'No iPhone só o Safari instala. Se abriu pelo WhatsApp, toque em “Abrir no Safari” primeiro.');
+    } else if (android) {
+      passos('Instalar no Android', [
+        'Toque nos <strong>três pontinhos ⋮</strong> no canto do Chrome.',
+        'Toque em <strong>Instalar aplicativo</strong> (ou <strong>Adicionar à tela inicial</strong>).',
+        'Confirme em <strong>Instalar</strong>. O ícone aparece na sua tela.'
+      ], 'Use o Chrome para a instalação funcionar melhor.');
+    } else {
+      passos('Instalar no computador', [
+        'Procure o ícone de <strong>instalar</strong> (monitor com uma seta) no canto direito da barra de endereço.',
+        'Clique nele e confirme em <strong>Instalar</strong>.'
+      ], 'Se não aparecer, abra o menu do navegador (⋮) e procure “Instalar”.');
+    }
+  }
+  function instalar() {
+    if (promptEv) {
+      var ev = promptEv; promptEv = null;
+      ev.prompt();
+      if (ev.userChoice) ev.userChoice.then(function (r) { if (r && r.outcome === 'accepted') esconder(); else avaliar(); });
+      esconder();
+    } else ajuda();
+  }
+  window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); promptEv = e; avaliar(); });
+  window.addEventListener('appinstalled', function () { promptEv = null; esconder(); });
+  $('inst-ok').onclick = instalar;
+  $('inst-x').onclick = function () { try { localStorage.setItem('motoPwaDispensado', String(Date.now())); } catch (e) {} esconder(); };
+  $('inst-h-ok').onclick = function () { $('inst-help').classList.add('hide'); };
+  $('inst-help').addEventListener('click', function (e) { if (e.target === this) this.classList.add('hide'); });
+  avaliar();
+})();
+</script>
+<style id="resp-universal-v1">
+/* ===== Ajuste automático de tela v1 — celular · tablet · notebook · desktop · TV =====
+   Tudo (letras, espaços, botões) cresce/encolhe junto pelo fator --z, conforme a largura da tela. */
+:root { --z: 1; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+body { zoom: var(--z); }
+@media (max-width: 359px)  { :root { --z: .94; } }   /* celulares pequenos */
+@media (max-width: 319px)  { :root { --z: .88; } }
+@media (min-width: 1680px) { :root { --z: 1.08; } }  /* monitor grande */
+@media (min-width: 1920px) { :root { --z: 1.2; } }   /* Full HD / TV */
+@media (min-width: 2560px) { :root { --z: 1.5; } }   /* QHD / TV grande */
+@media (min-width: 3200px) { :root { --z: 2; } }     /* 4K sem escala */
+@media (max-height: 500px) and (orientation: landscape) { :root { --z: 1 !important; } }
+body, .login { min-height: calc(100vh / var(--z)); }
+img, svg, canvas, video { max-width: 100%; }
+@media (max-width: 600px) {
+  .wrap { max-width: none; padding-left: calc(1.5vw / var(--z)); padding-right: calc(1.5vw / var(--z)); }
+}
+</style>
+
 </body>
 </html>

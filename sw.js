@@ -16,7 +16,7 @@
 // isso não é mais um problema para ele. Ainda assim, a cada atualização
 // grande, é boa prática mudar o número abaixo (ex.: v1 → v2) para
 // forçar a limpeza dos caches antigos no 'activate'.
-const CACHE_NAME = 'caixa-v39'; // v1.7: tela de complementos bem maior, 2 colunas → limpa os caches antigos
+const CACHE_NAME = 'caixa-v40'; // v1.8: novidades do Cardápio (fotos, ordem, busca), atualização automática → limpa os caches antigos
 
 // Recursos do shell que devem ser cacheados na instalação
 const SHELL_URLS = [
@@ -47,11 +47,11 @@ const NETWORK_ONLY_HOSTS = [
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => {
-      return cache.addAll(SHELL_URLS).catch(err => {
-        // Se algum recurso não estiver disponível na instalação (ex: offline),
-        // ignora silenciosamente — o cache será preenchido na próxima vez.
-        console.warn('[SW] Shell cache parcial:', err.message);
-      });
+      // Um arquivo por vez: se um faltar no servidor (404) ou a rede falhar, os demais ainda entram no cache
+      // (cache.addAll é "tudo ou nada" e perdia o cache inteiro por causa de um único arquivo).
+      return Promise.all(SHELL_URLS.map(url =>
+        cache.add(new Request(url, { cache: 'reload' })).catch(err => console.warn('[SW] Não cacheou', url, '-', err.message))
+      ));
     })
   );
   // Assume controle imediatamente quando o HTML mandar SKIP_WAITING
@@ -96,9 +96,9 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // 3.5) Página pública de pedidos dos clientes → nunca passa pelo cache do app
-  //      (o navegador busca sempre a versão mais recente na rede).
-  if (url.pathname.endsWith('/pedido.html')) return;
+  // 3.5) Páginas públicas/próprias (pedido.html e motoqueiro.html) têm o seu próprio Service Worker
+  //      → nunca passam pelo cache do app (o navegador busca sempre a versão mais recente na rede).
+  if (url.pathname.endsWith('/pedido.html') || url.pathname.endsWith('/motoqueiro.html')) return;
 
   // 4) Protocolo não-http (blob:, chrome-extension:, etc.) → ignora
   if (!url.protocol.startsWith('http')) return;
@@ -130,8 +130,26 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // 6) Demais recursos do shell (ícones, manifest, fontes, CDN) → Cache-first
-  //    com fallback para network — esses raramente mudam.
+  // 5.5) Arquivos do próprio app (js, css, json, manifest...) → NETWORK-FIRST, para nunca
+  //      ficar preso numa versão velha. Só imagens, fontes e CDN usam cache-first (passo 6).
+  const ehEstatico = url.origin !== self.location.origin ||
+    /\.(png|jpe?g|gif|webp|svg|ico|woff2?|ttf|otf)$/i.test(url.pathname);
+  if (!ehEstatico) {
+    event.respondWith(
+      fetch(event.request, { cache: 'no-store' })
+        .then(response => {
+          if (response.ok) {
+            const respClone = response.clone();
+            caches.open(CACHE_NAME).then(cache => cache.put(event.request, respClone));
+          }
+          return response;
+        })
+        .catch(() => caches.match(event.request).then(cached => cached || caches.match('./index.html')))
+    );
+    return;
+  }
+
+  // 6) Imagens, fontes e CDN → Cache-first com fallback para network — raramente mudam.
   event.respondWith(
     caches.match(event.request).then(cached => {
       if (cached) return cached;

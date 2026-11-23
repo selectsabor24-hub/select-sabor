@@ -13,8 +13,9 @@
 <meta name="apple-mobile-web-app-title" id="apple-title" content="Pedidos">
 <link rel="icon" href="img/icon-192.png">
 <link rel="apple-touch-icon" href="img/icon-180.png">
-<script src="https://cdn.jsdelivr.net/npm/firebase@10.12.2/firebase-app-compat.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/firebase@10.12.2/firebase-database-compat.min.js"></script>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="dns-prefetch" href="https://caixa-select-sabor-default-rtdb.firebaseio.com">
+<link rel="preload" as="image" href="img/logo.png">
 <style>
 /* ============================================================
    Página pública de pedidos — feita para qualquer tamanho de tela
@@ -380,9 +381,16 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
 .hp-dt { margin-top: 2px; font-size: 12px; color: var(--mut); }
 .hp-it { margin-top: 4px; font-size: 13px; color: var(--txt); overflow-wrap: anywhere; }
 .hp-tot { margin-top: 4px; font-size: 14px; font-weight: 800; color: var(--verde); }
+/* Esqueleto que aparece no mesmo instante, enquanto o cardápio monta */
+#boot { min-height: 100vh; background: var(--bg); }
+#boot .bt { display: flex; align-items: center; justify-content: center; height: calc(150px + var(--safe-t)); padding: var(--safe-t) 14px 0; background: linear-gradient(160deg, var(--verde), var(--verde2)); }
+#boot .bt img { width: 64px; height: 64px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 3px rgba(255,255,255,.35); }
+#boot .bg { max-width: 640px; margin: 14px auto; padding: 0 14px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+#boot .bc { display: block; height: 190px; border-radius: 14px; background: #E9ECE9; animation: ftbrilho 1.2s ease-in-out infinite; }
 </style>
 </head>
 <body>
+<div id="boot" aria-hidden="true"><div class="bt"><img src="img/logo.png" alt="" width="64" height="64"></div><div class="bg"><i class="bc"></i><i class="bc"></i><i class="bc"></i><i class="bc"></i><i class="bc"></i><i class="bc"></i></div></div>
 
 <!-- ============ TELA 1: CARDÁPIO ============ -->
 <div id="v-menu" class="hide">
@@ -628,6 +636,8 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
       recarregando = true; location.reload();
     };
     navigator.serviceWorker.addEventListener('controllerchange', function () { if (tinhaSW) recarregar(); });
+    // o service worker abre a página do cache (instantâneo) e confere a versão nova em segundo plano; se mudou, avisa aqui
+    navigator.serviceWorker.addEventListener('message', function (e) { if (e.data && e.data.tipo === 'nova-versao') recarregar(); });
     document.addEventListener('visibilitychange', function () {
       if (document.hidden) { saiuEm = Date.now(); }
       else if (saiuEm && Date.now() - saiuEm > 30 * 60 * 1000) { saiuEm = 0; recarregar(); }
@@ -644,6 +654,8 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
 })();
 </script>
 
+<script src="https://cdn.jsdelivr.net/npm/firebase@10.12.2/firebase-app-compat.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/firebase@10.12.2/firebase-database-compat.min.js"></script>
 <script>
 (function () {
   'use strict';
@@ -683,6 +695,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
   }
   function mostrar(id) {
     ['v-menu', 'v-ck', 'v-track', 'v-erro'].forEach(function (v) { $('#' + v).classList.toggle('hide', v !== id); });
+    var bt = document.getElementById('boot'); if (bt) bt.remove();
     window.scrollTo(0, 0);
   }
   function erroGeral(msg) { $('#erro-msg').textContent = msg; mostrar('v-erro'); }
@@ -774,36 +787,89 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
   /* ---------- Fotos do cardápio ----------
      O cardápio (texto) abre na hora. As fotos vêm de cardapioFotos/ e ficam salvas no celular
      (localStorage) com a versão "fotoV": nas visitas seguintes aparecem junto com o cardápio, sem rede. */
-  var FOTOS = {}, fotosBuscando = {};
-  function fotoCacheLer() { return lsGet('fotosCard_' + LOJA) || {}; }
-  function fotoCacheSalvar(c) { try { localStorage.setItem('fotosCard_' + LOJA, JSON.stringify(c)); return true; } catch (e) { return false; } }
+  var FOTOS = {}, FOTOS_V = {}, fotosBuscando = {}, _fotoGen = 0;
+  /* Exibe a foto por "blob:" (endereço curto) em vez de colar o base64 inteiro no HTML:
+     redesenhar o cardápio (a cada + / −) não recopia nem redecodifica as imagens. */
+  var _BU = {};
+  function fotoUrl(chave, d) {
+    if (!d) return '';
+    var e = _BU[chave]; if (e && e.d === d) return e.u;
+    try {
+      var p = d.indexOf(',');
+      if (p < 0 || d.slice(0, p).indexOf(';base64') < 0) return d;
+      var bin = atob(d.slice(p + 1)), n = bin.length, u8 = new Uint8Array(n);
+      for (var k = 0; k < n; k++) u8[k] = bin.charCodeAt(k);
+      var u = URL.createObjectURL(new Blob([u8], { type: d.slice(5, d.indexOf(';')) }));
+      _BU[chave] = { d: d, u: u };
+      return u;
+    } catch (x) { return d; }
+  }
+  /* Fotos salvas no aparelho: uma chave por foto (antes era tudo numa chave só, e cada foto nova
+     relia e regravava o conjunto inteiro, travando a tela). */
+  var FC = 'fc_' + LOJA + '_';
+  function fotoGet(id, v) {
+    try {
+      var r = localStorage.getItem(FC + id); if (!r) return null;
+      var c = JSON.parse(r);
+      return (c && c.v === v && typeof c.d === 'string' && c.d.indexOf('data:image/') === 0) ? c.d : null;
+    } catch (e) { return null; }
+  }
+  function fotoPut(id, v, d) { try { localStorage.setItem(FC + id, JSON.stringify({ v: v, d: d })); } catch (e) {} }
+  function fotoMigrar() { // formato antigo (tudo numa chave só): separa uma vez e apaga
+    var antigo = lsGet('fotosCard_' + LOJA);
+    try { localStorage.removeItem('fotosCard_' + LOJA); } catch (e) {}
+    if (antigo && typeof antigo === 'object') Object.keys(antigo).forEach(function (id) { var c = antigo[id]; if (c && c.v && typeof c.d === 'string') fotoPut(id, c.v, c.d); });
+  }
   function pintarFoto(id) {
     var d = FOTOS[id]; if (!d) return;
     try { if (destaqueLista().some(function (d) { return d.id === id; })) desenharAviso(); } catch (e) {}
+    var u = fotoUrl(id, d);
     Array.prototype.forEach.call(document.querySelectorAll('.ft[data-f]'), function (el) {
       if (el.getAttribute('data-f') !== id) return;
       el.classList.remove('sk');
-      el.innerHTML = '<img src="' + d + '" alt="" width="84" height="84" decoding="async">';
+      el.innerHTML = '<img src="' + u + '" alt="" width="84" height="84" decoding="async" loading="lazy">';
     });
   }
   function fotosSincronizar() {
-    var cache = fotoCacheLer(), manter = {};
+    var gen = ++_fotoGen, pend = [], ativos = {};
+    if (!fotosSincronizar.migrado) { fotosSincronizar.migrado = true; fotoMigrar(); }
     itensAtivos().forEach(function (i) {
-      if (!i.fotoV) { delete FOTOS[i.id]; return; }
-      var c = cache[i.id];
-      if (c && c.v === i.fotoV && typeof c.d === 'string' && c.d.indexOf('data:image/') === 0) { FOTOS[i.id] = c.d; manter[i.id] = c; return; }
-      delete FOTOS[i.id];
+      if (!i.fotoV) { delete FOTOS[i.id]; delete FOTOS_V[i.id]; return; }
+      ativos[i.id] = 1;
+      if (FOTOS[i.id] && FOTOS_V[i.id] === i.fotoV) return; // já está em memória na versão certa
+      delete FOTOS[i.id]; delete FOTOS_V[i.id];
+      pend.push(i);
+    });
+    function buscar(i) {
       if (fotosBuscando[i.id] === i.fotoV) return;
       fotosBuscando[i.id] = i.fotoV;
       base('cardapioFotos/' + LOJA + '/' + i.id).once('value').then(function (sn) {
         var d = sn.val();
         if (typeof d !== 'string' || d.indexOf('data:image/') !== 0) return;
-        FOTOS[i.id] = d; pintarFoto(i.id);
-        var c2 = fotoCacheLer(); c2[i.id] = { v: i.fotoV, d: d };
-        if (!fotoCacheSalvar(c2)) { var so = {}; so[i.id] = c2[i.id]; fotoCacheSalvar(so); }
+        FOTOS[i.id] = d; FOTOS_V[i.id] = i.fotoV; pintarFoto(i.id);
+        fotoPut(i.id, i.fotoV, d);
       }).catch(function () { delete fotosBuscando[i.id]; });
-    });
-    fotoCacheSalvar(manter); // descarta do celular as fotos de itens que saíram do cardápio
+    }
+    // lê as fotos do aparelho em lotes pequenos: o texto do cardápio aparece primeiro e a tela não trava
+    function lote() {
+      if (gen !== _fotoGen) return;
+      for (var n = 0; n < 3 && pend.length; n++) {
+        var i = pend.shift(), d = fotoGet(i.id, i.fotoV);
+        if (d) { FOTOS[i.id] = d; FOTOS_V[i.id] = i.fotoV; pintarFoto(i.id); } else buscar(i);
+      }
+      if (pend.length) setTimeout(lote, 0);
+    }
+    if (pend.length) setTimeout(lote, 30);
+    // descarta do aparelho as fotos de itens que saíram do cardápio (sem pressa)
+    setTimeout(function () {
+      if (gen !== _fotoGen) return;
+      try {
+        for (var k = localStorage.length - 1; k >= 0; k--) {
+          var key = localStorage.key(k);
+          if (key && key.indexOf(FC) === 0 && !ativos[key.slice(FC.length)]) localStorage.removeItem(key);
+        }
+      } catch (e) {}
+    }, 4000);
   }
   /* ---------- Complementos (grupos de opções por item: sabor, adicionais...) ----------
      Item: grupos = [{ id, nome, obrig, max, opcoes: [{ id, nome, preco, ativo }] }].
@@ -811,7 +877,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
   function listaDe(v) { return !v ? [] : (Array.isArray(v) ? v : Object.keys(v).map(function (k) { return v[k]; })); }
   function gruposDe(i) {
     return listaDe(i && i.grupos).filter(function (g) { return g && g.id && g.nome; }).map(function (g) {
-      return { id: String(g.id), nome: String(g.nome), obrig: g.obrig === true, max: (parseInt(g.max, 10) === 0 ? 999 : Math.max(1, parseInt(g.max, 10) || 1)), sem: parseInt(g.max, 10) === 0, rep: g.rep !== false,
+      return { id: String(g.id), nome: String(g.nome), obrig: g.obrig === true, max: (parseInt(g.max, 10) === 0 ? 999 : Math.max(1, parseInt(g.max, 10) || 1)), sem: parseInt(g.max, 10) === 0, rep: g.rep !== false, unid: g.unid !== false,
         opcoes: listaDe(g.opcoes).filter(function (o) { return o && o.id && o.nome; }) };
     }).filter(function (g) { return g.opcoes.length; });
   }
@@ -824,14 +890,15 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
       parte.split(',').forEach(function (p) {
         var a = p.split(':'), g = gs.find(function (x) { return x.id === a[0]; }), o = g && g.opcoes.find(function (x) { return x.id === a[1]; });
         if (!g || !o || o.ativo === false) { ok = false; return; }
-        ex.push({ g: g.id, o: o.id, gn: g.nome, on: o.nome, preco: Number(o.preco) || 0, q: g.max > 1 && g.rep });
+        ex.push({ g: g.id, o: o.id, gn: g.nome, on: o.nome, preco: Number(o.preco) || 0, q: g.max > 1 && g.rep, u: g.max > 1 && g.rep && g.unid });
       });
     }
     return { item: it, extras: ex, ok: ok };
   }
-  /* Grupos com quantidade (máx. > 1 e "pode repetir"): cada escolha conta como uma unidade e cobra o valor do item. */
+  /* Grupos com quantidade (máx. > 1, "pode repetir") E marcados "cada escolha conta como 1 unidade" (unid): cada escolha cobra o valor do item.
+     Sem essa marcação, as escolhas são só complementos e o item é cobrado uma vez (+ o valor extra de cada opção). */
   function unidadesCobradas(qtdEscolhas) { return Math.max(1, qtdEscolhas); }
-  function precoDe(key) { var f = linhaInfo(key); return f.item ? round2(precoVenda(f.item) * unidadesCobradas(f.extras.filter(function (e) { return e.q; }).length) + f.extras.reduce(function (s, e) { return s + e.preco; }, 0)) : 0; }
+  function precoDe(key) { var f = linhaInfo(key); return f.item ? round2(precoVenda(f.item) * unidadesCobradas(f.extras.filter(function (e) { return e.u; }).length) + f.extras.reduce(function (s, e) { return s + e.preco; }, 0)) : 0; }
   function qtdItem(id) { return Object.keys(cart).reduce(function (s, k) { return s + (baseId(k) === id ? cart[k] : 0); }, 0); }
   /* "2× Coca-Cola, Fanta Laranja" (agrupa opções repetidas) */
   /* Lista das opções da linha, uma por linha; nas de quantidade (q) tem ✕ para remover só aquela opção */
@@ -871,13 +938,21 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
   }
 
   function categorias() {
-    var out = CATS_PADRAO.slice();
+    var ocultas = cardapio.filter(function (i) { return i.tipo === 'cat' && i.oculta === true; })
+      .map(function (c) { return String(c.nome).toLowerCase(); });
+    var out = CATS_PADRAO.filter(function (c) { return ocultas.indexOf(c.toLowerCase()) < 0; });
     var tem = function (n) { return out.some(function (c) { return c.toLowerCase() === String(n).toLowerCase(); }); };
-    cardapio.filter(function (i) { return i.tipo === 'cat'; })
+    cardapio.filter(function (i) { return i.tipo === 'cat' && !i.oculta; })
       .sort(function (a, b) { return String(a.id).localeCompare(String(b.id)); })
       .forEach(function (c) { if (c.nome && !tem(c.nome)) out.push(c.nome); });
     itensAtivos().forEach(function (i) { var n = i.cat || 'Outros'; if (!tem(n)) out.push(n); });
-    return out;
+    /* Ordem escolhida pela loja (cardapio/{loja}/catordem); o que não está na lista fica no fim, na ordem de antes */
+    var rec = cardapio.filter(function (i) { return i && i.id === 'catordem'; })[0];
+    var ord = rec ? listaDe(rec.lista).map(function (n) { return String(n).toLowerCase(); }) : [];
+    var pos = function (n) { var k = ord.indexOf(String(n).toLowerCase()); return k < 0 ? 1e6 : k; };
+    return out.map(function (n, p) { return { n: n, p: p }; })
+      .sort(function (x, y) { return (pos(x.n) - pos(y.n)) || (x.p - y.p); })
+      .map(function (x) { return x.n; });
   }
   function aberta() { return !!(cfg && cfg.aberto === true) && horarioLojaOk(); }
   function aceitaEntrega() { return !cfg || cfg.aceitaEntrega !== false; }
@@ -1023,7 +1098,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
   function fotoOpcHtml(it, o) {
     if (!o.fotoV) return '';
     var d = FOTOS_OPC[fotoOpcChave(it, o)];
-    return '<span class="of' + (d ? '' : ' sk') + '" data-fo="' + esc(fotoOpcChave(it, o)) + '">' + (d ? '<img src="' + d + '" alt="" width="56" height="56" decoding="async">' : '') + '</span>';
+    return '<span class="of' + (d ? '' : ' sk') + '" data-fo="' + esc(fotoOpcChave(it, o)) + '">' + (d ? '<img src="' + fotoUrl('o' + fotoOpcChave(it, o), d) + '" alt="" width="56" height="56" decoding="async">' : '') + '</span>';
   }
   function fotosOpcCarregar(it, gs) {
     var cache = fotosOpcCache(), mudou = false;
@@ -1042,7 +1117,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
           var c2 = fotosOpcCache(); c2[k] = { v: o.fotoV, d: d }; fotosOpcSalvar(c2);
           Array.prototype.forEach.call(document.querySelectorAll('.opc-o .of[data-fo]'), function (el) {
             if (el.getAttribute('data-fo') !== k) return;
-            el.classList.remove('sk'); el.innerHTML = '<img src="' + d + '" alt="" width="56" height="56" decoding="async">';
+            el.classList.remove('sk'); el.innerHTML = '<img src="' + fotoUrl('o' + k, d) + '" alt="" width="56" height="56" decoding="async">';
           });
         }).catch(function () { delete fotosOpcBuscando[k]; });
       });
@@ -1055,7 +1130,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
   }
   function opcTotal() {
     var ex = 0, un = 0;
-    opc.gs.forEach(function (g) { (opc.sel[g.id] || []).forEach(function (oid) { var o = g.opcoes.find(function (x) { return x.id === oid; }); if (o) { ex += Number(o.preco) || 0; if (g.max > 1 && g.rep) un++; } }); });
+    opc.gs.forEach(function (g) { (opc.sel[g.id] || []).forEach(function (oid) { var o = g.opcoes.find(function (x) { return x.id === oid; }); if (o) { ex += Number(o.preco) || 0; if (g.max > 1 && g.rep && g.unid) un++; } }); });
     return round2((precoVenda(opc.it) * unidadesCobradas(un) + ex) * opc.q);
   }
   function opcDesenhar(erroId) {
@@ -1226,7 +1301,8 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     var info = [];
     var prep = (cfg && cfg.tempoEstimado) ? rotuloPreparo(cfg.tempoEstimado).replace(/^preparo:?\s*/i, '') : '';
     if (prep) info.push({ ic: '⏱', lb: 'Preparo', v: prep });
-    if (aceitaEntrega() && porKmAtivo()) info.push({ ic: '🛵', lb: 'Entrega desde', v: brl(menorTaxa()) });
+    if (MESA) { /* QR da mesa: cliente está no local, não mostra info de entrega */ }
+    else if (aceitaEntrega() && porKmAtivo()) info.push({ ic: '🛵', lb: 'Entrega desde', v: brl(menorTaxa()) });
     else if (aceitaEntrega() && cfg && Number(cfg.taxaEntrega) > 0) info.push({ ic: '🛵', lb: 'Entrega', v: brl(cfg.taxaEntrega) });
     else if (aceitaEntrega() && cfg) info.push({ ic: '🛵', lb: 'Entrega', v: 'Grátis' });
     var hh = horarioHoje();
@@ -1260,7 +1336,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
       h += '<h2 class="cat-titulo" id="cat-' + ix + '">' + esc(c) + '</h2>';
       porCat[c].sort(function (a, b) { return String(a.nome).localeCompare(String(b.nome), 'pt-BR'); }).forEach(function (i) {
         var q = qtdItem(i.id);
-        var ft = i.fotoV ? '<div class="ft' + (FOTOS[i.id] ? '' : ' sk') + '" data-f="' + esc(i.id) + '">' + (FOTOS[i.id] ? '<img src="' + FOTOS[i.id] + '" alt="" width="84" height="84" decoding="async">' : '') + '</div>' : '';
+        var ft = i.fotoV ? '<div class="ft' + (FOTOS[i.id] ? '' : ' sk') + '" data-f="' + esc(i.id) + '">' + (FOTOS[i.id] ? '<img src="' + fotoUrl(i.id, FOTOS[i.id]) + '" alt="" width="84" height="84" decoding="async" loading="lazy">' : '') + '</div>' : '';
         h += '<div class="item">' + ft + '<div class="info"><div class="nome">' + esc(i.nome) + '</div>' + (i.desc ? '<div class="desc">' + esc(i.desc) + '</div>' : '') + '<div class="preco">' + precoHtml(i) + '</div>' + (temHorario(i) ? '<div class="hr-dentro">🕒 Disponível ' + esc(rotuloHorario(i)) + '</div>' : '') + '</div>' +
           (q > 0
             ? '<div class="stepper"><button type="button" data-m="-1" data-id="' + esc(i.id) + '" aria-label="Diminuir">−</button><span>' + q + '</span><button type="button" data-m="1" data-id="' + esc(i.id) + '" aria-label="Aumentar">+</button></div>'
@@ -1361,7 +1437,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     $('#ck-itens').innerHTML = ids.length ? ids.map(function (id) {
       var f = linhaInfo(id), i = f.item || {};
       // Linha cuja quantidade já foi escolhida nos complementos (ex.: 2× Coca + 3× Fanta): sem o − 1 +, só "Remover"
-      var semQtd = cart[id] === 1 && f.extras.some(function (e) { return e.q; });
+      var semQtd = cart[id] === 1 && f.extras.some(function (e) { return e.u; });
       return '<div class="linha"><div class="n"><strong>' + esc(i.nome || 'Item') + '</strong>' + (f.extras.length ? '<small class="ex">' + extrasHtml(id, f.extras) + '</small>' : '') + '<small style="color:var(--mut)">' + brl(precoDe(id)) + (semQtd ? '' : ' cada') + '</small></div>' +
         (semQtd
           ? '<button type="button" data-m="-1" data-id="' + esc(id) + '" aria-label="Remover" style="background:none;border:0;color:var(--mut);font:inherit;font-size:13px;font-weight:700;text-decoration:underline;padding:8px">Remover</button></div>'
@@ -1834,10 +1910,16 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
 
   /* ---------- Carga inicial ---------- */
   cart = lsGet('cart:' + LOJA) || {};
-  var cfgPronto = false, cardPronto = false;
+  var cfgPronto = false, cardPronto = false, cfgErro = '';
   function iniciar() {
     if (!cfgPronto || !cardPronto) return;
-    if (!cfg) { erroGeral('Os pedidos online ainda não estão disponíveis para esta loja.'); return; }
+    if (!cfg) {
+      // diagnóstico: separa "regras do Firebase bloqueando" de "loja ainda sem configuração salva"
+      var motivo = cfgErro ? ' (erro ' + cfgErro + ')' : ' (sem configuração: loja "' + LOJA + '")';
+      try { console.warn('[pedido] pedidosConfig/' + LOJA + ' indisponível' + motivo); } catch (e) {}
+      erroGeral('Os pedidos online ainda não estão disponíveis para esta loja.' + motivo);
+      return;
+    }
     limparCartInvalido();
     if (PED_ID && !iniciar.feito) {
       iniciar.feito = true;
@@ -1864,12 +1946,39 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     limparCartInvalido(); salvarCart(); desenharCabecalho(); desenharMenu(); desenharAviso(); desenharBarra();
     if (!$('#v-ck').classList.contains('hide')) desenharCheckout();
   }, 20000);
-  base('pedidosConfig/' + LOJA).on('value', function (s) { cfg = s.val(); cfgPronto = true; iniciar(); },
-    function () { cfgPronto = true; cfg = null; iniciar(); });
+  /* ---------- Abertura instantânea ----------
+     Guarda no aparelho a última configuração + cardápio. Na visita seguinte a tela é desenhada na hora,
+     sem esperar a internet; o Firebase confirma em seguida e a tela só é redesenhada se algo mudou. */
+  var CC_KEY = 'cardCache_' + LOJA, ccCfg = null, ccCard = null, vivoCfg = false, vivoCard = false;
+  function ccSalvar() { if (cfg && vivoCfg && vivoCard) lsSet(CC_KEY, { ts: Date.now(), cfg: cfg, card: cardapio }); }
+  try {
+    var cc = lsGet(CC_KEY);
+    if (cc && cc.cfg && Array.isArray(cc.card) && Date.now() - (cc.ts || 0) < 12 * 3600 * 1000) {
+      cfg = cc.cfg; cardapio = cc.card;
+      ccCfg = JSON.stringify(cfg); ccCard = JSON.stringify(cardapio);
+      cfgPronto = true; cardPronto = true;
+      try { fotosSincronizar(); } catch (e) {}
+      iniciar();
+    }
+  } catch (e) {}
+  base('pedidosConfig/' + LOJA).on('value', function (s) {
+    var n = s.val(), sg = JSON.stringify(n), igual = sg === ccCfg;
+    vivoCfg = true; ccCfg = sg; cfg = n; cfgPronto = true;
+    if (!(igual && iniciar.feito)) iniciar();
+    ccSalvar();
+  }, function (err) {
+    cfgPronto = true; cfg = null; cfgErro = (err && err.code) || 'desconhecido';
+    try { localStorage.removeItem(CC_KEY); } catch (e) {}
+    iniciar();
+  });
   base('cardapio/' + LOJA).on('value', function (s) {
-    var v = s.val(); cardapio = v ? Object.keys(v).map(function (k) { var o = v[k] || {}; if (!o.id) o.id = k; return o; }) : [];
-    try { fotosSincronizar(); } catch (e) {}
-    cardPronto = true; iniciar();
+    var v = s.val(), arr = v ? Object.keys(v).map(function (k) { var o = v[k] || {}; if (!o.id) o.id = k; return o; }) : [];
+    var sg = JSON.stringify(arr), igual = sg === ccCard;
+    vivoCard = true; ccCard = sg;
+    if (!igual) { cardapio = arr; try { fotosSincronizar(); } catch (e) {} }
+    cardPronto = true;
+    if (!(igual && iniciar.feito)) iniciar();
+    ccSalvar();
   }, function () { cardPronto = true; cardapio = []; iniciar(); });
 })();
 </script>
@@ -1884,5 +1993,34 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
   ajusta();
 })();
 </script>
+<style id="resp-universal-v1">
+/* ===== Ajuste automático de tela v1 — celular · tablet · notebook · desktop · TV =====
+   Tudo (letras, espaços, botões) cresce/encolhe junto pelo fator --z, conforme a largura da tela. */
+:root { --z: 1; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+body { zoom: var(--z); }
+@media (max-width: 359px)  { :root { --z: .94; } }   /* celulares pequenos */
+@media (max-width: 319px)  { :root { --z: .88; } }
+@media (min-width: 1680px) { :root { --z: 1.08; } }  /* monitor grande */
+@media (min-width: 1920px) { :root { --z: 1.2; } }   /* Full HD / TV */
+@media (min-width: 2560px) { :root { --z: 1.5; } }   /* QHD / TV grande */
+@media (min-width: 3200px) { :root { --z: 2; } }     /* 4K sem escala */
+@media (max-height: 500px) and (orientation: landscape) { :root { --z: 1 !important; } }
+body, #boot { min-height: calc(100vh / var(--z)); }
+img, svg, canvas, video { max-width: 100%; }
+/* Celular: a tela do pedido ocupa 98% da largura (1% de folga de cada lado) */
+@media (max-width: 600px) {
+  :root { --pad-tela: calc(1vw / var(--z)); }
+  .wrap, #v-menu .wrap, #v-ck .wrap, #v-track .wrap, #v-erro .wrap,
+  .tela-topo .wrap, .top > .wrap:last-child { max-width: none !important; width: 100%; padding-left: var(--pad-tela) !important; padding-right: var(--pad-tela) !important; }
+  .cats .scroll { padding-left: var(--pad-tela) !important; padding-right: var(--pad-tela) !important; }
+  .top-cart { right: var(--pad-tela); }
+  #install, #banner-andamento { max-width: none; }
+  #menu-lista { gap: calc(2vw / var(--z)); }
+}
+/* Tablet / notebook / TV: o conteúdo acompanha a tela, sem faixa vazia nas laterais */
+@media (min-width: 601px) { #install, #banner-andamento { max-width: min(640px, 100%); } }
+</style>
+
 </body>
 </html>

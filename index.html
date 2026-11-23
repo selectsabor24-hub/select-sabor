@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <script>try{var t=localStorage.getItem("caixa-theme");if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Controle de Caixa v1.7</title>
+<title>Controle de Caixa v1.8</title>
 
 <!-- ============================================================
      PWA — Progressive Web App
@@ -45,6 +45,7 @@
   ║         · Melhoria: renderContas usa cache; seção 3.22 documentada   ║
   ║  v3.3 — Seções novas: Planilhas já lançadas (3.23), calendário       ║
   ║         visual de lançamentos com marcação de cartão                 ║
+  ║  v1.8  — Cardápio: organizar ordem das opções, copiar complementos, categorias (ordem/renomear), foto com zoom, busca fixa; atualização automática ║
   ║  v1.7  — Comanda: tela de complementos bem maior, opções em 2 colunas             ║
   ║  v1.6  — Comanda: tela de complementos maior (largura, fontes, fotos e botões)    ║
   ║  v1.5  — Comanda: foto do cartão inteira e centralizada (sem cortar)              ║
@@ -1139,9 +1140,25 @@ body.is-offline #login-screen {
 .cdp-item .cdp-c-desc textarea { width: 100%; box-sizing: border-box; resize: vertical; font-size: 13px; }
 .cdp-item .cdp-c-desc { display: flex; gap: 10px; align-items: flex-start; }
 .cdp-item .cdp-c-desc textarea { flex: 1 1 auto; width: auto; min-width: 0; }
-.cdp-foto { flex: 0 0 72px; width: 72px; }
-.cdp-foto-btn { width: 72px; height: 72px; border-radius: 12px; border: 1.5px dashed var(--border); background: var(--bg); color: var(--text2); font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 600; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 0; overflow: hidden; }
+.cdp-foto { flex: 0 0 96px; width: 96px; }
+.cdp-foto-btn { width: 96px; height: 72px; border-radius: 12px; border: 1.5px dashed var(--border); background: var(--bg); color: var(--text2); font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 600; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 0; overflow: hidden; }
 .cdp-foto-btn img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cdp-foto-info { display: block; width: 96px; margin: 4px 0 0; padding: 2px 0; border: 0; background: none; color: var(--accent, #2563EB); font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 700; line-height: 1.2; text-align: center; cursor: pointer; }
+/* Editor de foto (arrastar para centralizar + zoom) */
+.fed-ov { position:fixed; inset:0; z-index:100000; background:rgba(15,12,25,.62); display:flex; align-items:center; justify-content:center; padding:12px; -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px); }
+.fed-box { width:100%; max-width:420px; max-height:100%; overflow:auto; background:var(--card,#fff); color:var(--text,#222); border-radius:16px; padding:16px; box-shadow:0 20px 60px rgba(0,0,0,.4); font-family:'DM Sans',sans-serif; }
+.fed-tit { font-size:16px; font-weight:800; margin-bottom:4px; }
+.fed-dica { font-size:12px; color:var(--text3,#777); line-height:1.4; margin-bottom:10px; }
+.fed-rat { display:flex; gap:6px; margin-bottom:10px; }
+.fed-rat button { border:1.5px solid var(--border,#ccc); background:var(--bg,#f4f4f4); color:var(--text2,#444); border-radius:999px; padding:5px 14px; font-size:12px; font-weight:700; cursor:pointer; font-family:inherit; }
+.fed-rat button.on { background:var(--accent,#2563EB); border-color:var(--accent,#2563EB); color:#fff; }
+.fed-stage { display:flex; justify-content:center; margin-bottom:12px; }
+.fed-cv { display:block; border-radius:10px; border:1px solid var(--border,#ccc); background:#fff; cursor:grab; touch-action:none; user-select:none; -webkit-user-select:none; }
+.fed-cv:active { cursor:grabbing; }
+.fed-zoom { display:flex; align-items:center; gap:10px; margin-bottom:14px; }
+.fed-zoom button { flex:0 0 auto; width:36px; height:36px; border-radius:50%; border:1.5px solid var(--border,#ccc); background:var(--bg,#f4f4f4); color:var(--text,#222); font-size:20px; line-height:1; cursor:pointer; padding:0; }
+.fed-zoom input[type=range] { flex:1; min-width:0; accent-color:var(--accent,#2563EB); }
+.fed-acoes { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
 .cdp-row .cdp-f-hr { flex: 1 1 100%; min-width: 0; }
 .cdp-hr { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .cdp-hr input[type=time] { width: 140px; flex: 0 0 auto; }
@@ -1152,6 +1169,7 @@ body.is-offline #login-screen {
 .cdp-promo-in::placeholder { font-family:'DM Sans',sans-serif; font-size:12px; color:var(--text3); }
 .cdp-hr-x { background: none; border: 0; color: #B91C1C; font-size: 12px; font-weight: 600; cursor: pointer; padding: 0 4px; }
 .cdp-hr-tag { background: #FEF3C7; color: #92400E; border-radius: 999px; padding: 2px 9px; font-size: 11px; font-weight: 700; }
+.cdp-foto-x.cdp-foto-aj { color: var(--accent, #2563EB); margin-top: 3px; }
 .cdp-foto-x { display: block; margin: 4px auto 0; background: none; border: 0; color: #B91C1C; font-size: 11px; font-weight: 600; cursor: pointer; padding: 0; }
 @media (max-width: 600px) {
   .cdp-row .cdp-f-preco { flex: 1 1 100%; }
@@ -3252,6 +3270,19 @@ tbody tr:hover {
 #sec-lancamento .vd-acoes { margin-top:18px !important; padding-top:14px; border-top:1px solid var(--border); }
 /* Cardápio — barra de busca e lista de itens */
 .cdp-toolbar { display:flex; gap:12px; flex-wrap:wrap; align-items:center; margin-bottom:14px; }
+.cdp-toolbar.cdp-fixa { position:sticky; top:var(--cdp-top,0px); z-index:40; background:var(--bg); padding:10px 0; margin-top:-10px; box-shadow:0 8px 10px -8px rgba(0,0,0,.25); }
+#cdp-lista { scroll-margin-top:84px; }
+/* overflow-x:hidden do .main impede o sticky; 'clip' esconde igual sem virar área de rolagem (só nesta tela) */
+.main:has(#cdp-barra) { overflow-x:clip; }
+.cdp-cat-tit { cursor:pointer; user-select:none; -webkit-user-select:none; display:flex; align-items:center; justify-content:space-between; gap:8px; margin:16px 0 6px; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:var(--text3); }
+.cdp-cat-fch { width:32px; height:32px; display:inline-flex; align-items:center; justify-content:center; padding:0; border:1.5px solid var(--accent); border-radius:8px; background:var(--card, #fff); color:var(--accent); cursor:pointer; }
+.cdp-cat-fch:hover, .cdp-cat-tit:hover .cdp-cat-fch { background:var(--accent); color:#fff; }
+.cdp-cat-tit:hover { color:var(--accent); }
+.cdp-cat-fch svg { width:16px; height:16px; transition:transform .15s; }
+.cdp-cat-fch.fechada svg { transform:rotate(180deg); }
+.cdp-cat-mv { background:none; border:0; color:var(--text2); font-size:16px; font-weight:700; line-height:1; cursor:pointer; padding:0 5px; }
+.cdp-cat-mv:hover:not([disabled]) { color:var(--accent); }
+.cdp-cat-mv[disabled] { opacity:.25; cursor:default; }
 .cdp-toolbar input  { flex:1 1 260px; min-width:0; }
 .cdp-toolbar select { flex:0 1 230px; }
 .cdp-toolbar input, .cdp-toolbar select, .cdp-in {
@@ -3301,6 +3332,22 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
 .cdp-o .cdp-status { width:auto; flex:0 0 auto; }
 .cdp-o .cdp-o-mais { font-size:12px; color:var(--text3); white-space:nowrap; }
 .cdp-o.off > input { opacity:.6; }
+/* Reordenar opções do grupo (modal) */
+.ord-dica { font-size:13px; color:var(--text3); margin-bottom:12px; line-height:1.4; }
+#ord-lista { display:flex; flex-direction:column; gap:8px; }
+.ord-row { position:relative; display:flex; align-items:center; gap:12px; padding:10px 12px; background:var(--bg); border:2px solid transparent; border-radius:12px; touch-action:pan-y; }
+.ord-row .ord-n { width:46px; flex:0 0 auto; text-align:center; font-weight:700; padding:6px 2px; border:1px solid var(--border); border-radius:8px; background:var(--card, #fff); color:var(--text2); -moz-appearance:textfield; }
+.ord-row .ord-n::-webkit-outer-spin-button, .ord-row .ord-n::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
+.ord-row .ord-foto { width:40px; height:40px; flex:0 0 auto; border-radius:8px; object-fit:cover; background:var(--border); }
+.ord-row .ord-nome { flex:1; min-width:0; font-weight:700; font-size:14px; overflow-wrap:anywhere; }
+.ord-row .ord-h { flex:0 0 auto; width:40px; height:40px; display:flex; align-items:center; justify-content:center; font-size:22px; letter-spacing:-3px; color:var(--text3); cursor:grab; touch-action:none; user-select:none; -webkit-user-select:none; }
+.ord-row.drag { z-index:5; box-shadow:0 8px 22px rgba(0,0,0,.25); opacity:.95; background:var(--card, #fff); border-color:var(--accent); }
+.ord-row.ord-ref { border-top-color:var(--accent); }
+.ord-row.ord-fim { border-bottom-color:var(--accent); }
+.cdp-g-ord { white-space:nowrap; font-size:12px; padding:6px 10px; }
+.cdp-g-hint { font-size:12px; line-height:1.4; padding:7px 10px; border-radius:8px; margin:-2px 0 8px; color:var(--text2); background:rgba(0,0,0,.04); border-left:3px solid var(--border); }
+.cdp-g-hint.un { border-left-color:#16A34A; }
+.cdp-g-hint.comp { border-left-color:var(--accent); }
 .cdp-o.novo .btn { white-space:nowrap; }
 .opc-adm-fundo { position:fixed; inset:0; z-index:8600; background:rgba(0,0,0,.5); display:flex; align-items:center; justify-content:center; padding:1rem; }
 .opc-adm { background:var(--surface); border-radius:var(--radius); width:100%; max-width:1200px; min-height:70vh; max-height:96vh; display:flex; flex-direction:column; box-shadow:var(--shadow-md); }
@@ -3721,7 +3768,7 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
           <img src="img/logo.png" alt="Select Sabor" style="width:44px;height:44px;border-radius:50%;flex-shrink:0;background:#fff;box-shadow:0 0 0 2px rgba(255,255,255,0.18)">
           <div>
             <div class="logo-title">Controle de Caixa</div>
-            <div class="logo-sub">v1.7</div>
+            <div class="logo-sub">v1.8</div>
           </div>
         </div>
         <span id="status-dot" style="display:none;width:8px;height:8px;border-radius:50%;background:#4ADE80;flex-shrink:0;box-shadow:0 0 0 2px rgba(74,222,128,0.2)" title="Conectado"></span>
@@ -18371,7 +18418,7 @@ function _pedItens(p) {
     let extra = 0, un = 0;
     if (card && it.sel) {
       const gs = _cdpGrupos(card);
-      _cdpLista(it.sel).forEach(sl => { const g = gs.find(x => x.id === sl.g); const o = g && g.opcoes.find(x => x.id === sl.o); if (o) { extra += o.preco; if (_gMax(g) > 1 && g.rep) un++; } });
+      _cdpLista(it.sel).forEach(sl => { const g = gs.find(x => x.id === sl.g); const o = g && g.opcoes.find(x => x.id === sl.o); if (o) { extra += o.preco; if (_gMax(g) > 1 && g.rep && g.unid) un++; } });
     }
     const preco = fixo ? it.p : _cmdRound((card ? _cdpPrecoVenda(card) : 0) * Math.max(1, un) + extra);
     // complementos agrupados por grupo (ex.: "Sabor do Refrigerante · 11 un"), cada grupo com a sua soma
@@ -20082,13 +20129,26 @@ function _cmdHoje() {
 function _cmdLista()    { return _cache.comandas || []; }
 function _cmdCardapio() { return (_cache.cardapio || []).filter(i => i.tipo !== 'cat'); }
 /** Categorias: padrão + as cadastradas (gravadas em cardapio/{loja} com tipo:'cat') + as já usadas por itens. */
-function _cdpCatsCustom() { return (_cache.cardapio || []).filter(i => i.tipo === 'cat').sort((a, b) => String(a.id).localeCompare(String(b.id))); }
+function _cdpCatsCustom() { return (_cache.cardapio || []).filter(i => i.tipo === 'cat' && !i.oculta).sort((a, b) => String(a.id).localeCompare(String(b.id))); }
+/** Categorias padrão que foram excluídas (gravadas como tipo:'cat' + oculta:true). */
+function _cdpCatsOcultas() { return (_cache.cardapio || []).filter(i => i.tipo === 'cat' && i.oculta === true); }
+/** Ordem escolhida das categorias (gravada em cardapio/{loja}/catordem; não aparece como item nem como categoria). */
+function _cdpOrdemSalva() {
+  const r = (_cache.cardapio || []).find(i => i && i.id === 'catordem');
+  return r ? _cdpLista(r.lista).map(String) : [];
+}
+function _cdpOrdenar(cats) {
+  const ord = _cdpOrdemSalva().map(n => n.toLowerCase());
+  const pos = n => { const i = ord.indexOf(String(n).toLowerCase()); return i < 0 ? 1e6 : i; };
+  return cats.map((n, p) => ({ n, p })).sort((a, b) => (pos(a.n) - pos(b.n)) || (a.p - b.p)).map(x => x.n);
+}
 function _cdpCats() {
-  const out = CMD_CATS.slice();
+  const ocultas = _cdpCatsOcultas().map(c => String(c.nome).toLowerCase());
+  const out = CMD_CATS.filter(c => !ocultas.includes(c.toLowerCase()));
   const tem = n => out.some(c => c.toLowerCase() === String(n).toLowerCase());
   _cdpCatsCustom().forEach(c => { if (!tem(c.nome)) out.push(c.nome); });
   _cmdCardapio().forEach(i => { const n = i.cat || 'Outros'; if (!tem(n)) out.push(n); });
-  return out;
+  return _cdpOrdenar(out);
 }
 function _cmdGet(id)    { return _cmdLista().find(c => c.id === id) || null; }
 function _cmdItens(c)   { return Object.values((c && c.itens) || {}); }
@@ -20496,7 +20556,7 @@ const _gMax = g => g.max === 0 ? 999 : g.max;
 function _cdpNovoId(pref) { return pref + Math.random().toString(36).slice(2, 7) + Date.now().toString(36).slice(-3); }
 function _cdpGrupos(i) {
   return _cdpLista(i && i.grupos).filter(g => g && g.id).map(g => ({
-    id: String(g.id), nome: String(g.nome || ''), obrig: g.obrig === true, max: (parseInt(g.max) === 0 ? 0 : Math.max(1, parseInt(g.max) || 1)), rep: g.rep !== false,
+    id: String(g.id), nome: String(g.nome || ''), obrig: g.obrig === true, max: (parseInt(g.max) === 0 ? 0 : Math.max(1, parseInt(g.max) || 1)), rep: g.rep !== false, unid: g.unid !== false,
     opcoes: _cdpLista(g.opcoes).filter(o => o && o.id).map(o => ({ id: String(o.id), nome: String(o.nome || ''), preco: parseFloat(o.preco) || 0, ativo: o.ativo !== false, fotoV: Number(o.fotoV) || null }))
   }));
 }
@@ -20531,7 +20591,7 @@ function cdpOpcDescartar(id) {
 function cdpOpcToggle(id) { _cdpAbertos[id] = !_cdpAbertos[id]; _cdpRenderLista(); }
 function cdpGrupoAdd(id) {
   _cdpAbertos[id] = true;
-  _cdpGrupoEdit(id, gs => { gs.push({ id: _cdpNovoId('g'), nome: 'Complemento', obrig: true, max: 1, rep: true, opcoes: [] }); }, true);
+  _cdpGrupoEdit(id, gs => { gs.push({ id: _cdpNovoId('g'), nome: 'Complemento', obrig: true, max: 1, rep: true, unid: true, opcoes: [] }); }, true);
 }
 function cdpGrupoCampo(id, gid, campo, v) {
   let refazer = false;
@@ -20540,9 +20600,57 @@ function cdpGrupoCampo(id, gid, campo, v) {
     if (campo === 'nome') { const n = String(v || '').trim().slice(0, 40); if (!n) { showToast('O nome do grupo não pode ficar vazio', false); refazer = true; return false; } g.nome = n; }
     else if (campo === 'obrig') g.obrig = !!v;
     else if (campo === 'rep') g.rep = !!v;
+    else if (campo === 'unid') g.unid = !!v;
     else if (campo === 'max') { const n = parseInt(v); g.max = isNaN(n) ? 1 : Math.min(20, Math.max(0, n)); }
   }, false);
-  if (refazer || campo === 'max') _cdpRenderLista();
+  if (refazer || campo === 'max' || campo === 'rep' || campo === 'unid') _cdpRenderLista();
+}
+/** Reaproveitar complementos: copia os grupos (com opções, valores e fotos) de outro item para o rascunho deste.
+ *  A cópia é independente: mudar um item depois não altera o outro. Só grava ao clicar em Salvar complementos. */
+function cdpGrupoCopiar(id) {
+  const fontes = _cmdCardapio().filter(i => i.id !== id && _cdpGrupos(i).length)
+    .sort((a, b) => String(a.nome).localeCompare(String(b.nome)));
+  if (!fontes.length) { showToast('Nenhum outro item tem complementos para copiar', false); return; }
+  const opts = fontes.map(i => {
+    const gs = _cdpGrupos(i), n = gs.reduce((t, g) => t + g.opcoes.length, 0);
+    return `<option value="${escapeAttr(i.id)}">${escapeHtml(i.nome)} — ${gs.length} grupo${gs.length > 1 ? 's' : ''} · ${n} opç${n === 1 ? 'ão' : 'ões'}</option>`;
+  }).join('');
+  showModal('Copiar complementos de outro item',
+    `<div class="form-group"><label>Copiar de qual item?</label><select id="cdp-copia-src" class="cdp-in">${opts}</select></div>
+     <label style="display:flex;gap:8px;align-items:center;font-size:13px;margin-top:10px;cursor:pointer"><input type="checkbox" id="cdp-copia-sub"> Substituir os complementos que este item já tem</label>
+     <div class="txt-hint" style="margin-top:10px">A cópia é independente: mudar um item depois não altera o outro. Depois de copiar, ajuste o que precisar e clique em <strong>Salvar complementos</strong>.</div>`, [
+    { label: 'Copiar', style: 'primary', action: () => {
+        const sel = document.getElementById('cdp-copia-src'), sub = document.getElementById('cdp-copia-sub');
+        if (sel && sel.value) _cdpGrupoCopiarAplicar(id, sel.value, !!(sub && sub.checked));
+    }},
+    { label: 'Cancelar', style: 'secondary' }
+  ]);
+}
+function _cdpGrupoCopiarAplicar(id, srcId, substituir) {
+  if (_cmdSemLoja()) return;
+  const src = _cmdCardapio().find(i => i.id === srcId); if (!src) return;
+  const loja = _lojaAtiva, novasFotos = [];
+  const copia = _cdpGrupos(src).map(g => ({
+    id: _cdpNovoId('g'), nome: g.nome, obrig: g.obrig, max: g.max, rep: g.rep, unid: g.unid,
+    opcoes: g.opcoes.map(o => {
+      const no = { id: _cdpNovoId('o'), nome: o.nome, preco: o.preco, ativo: o.ativo, fotoV: null };
+      const f = o.fotoV ? _cdpFotos[srcId + '_' + o.id] : null;
+      if (f && String(f).indexOf('data:image/') === 0) {            // copia também a foto da opção
+        const chave = id + '_' + no.id;
+        no.fotoV = Date.now(); novasFotos.push(no.id);
+        if (_cdpFotosLoja === loja) _cdpFotos[chave] = f;
+        _dbRef('cardapioFotos/' + loja + '/' + chave).set(f).catch(e => { console.error(e); no.fotoV = null; });
+      }
+      return no;
+    })
+  }));
+  _cdpAbertos[id] = true;
+  _cdpGrupoEdit(id, gs => {
+    if (substituir) { _cdpFotoPendAdd(id, gs.reduce((a, g) => a.concat(g.opcoes.map(o => o.id)), [])); gs.length = 0; }
+    copia.forEach(g => gs.push(g));
+  }, true);
+  if (novasFotos.length) _cdpFotoPendAdd(id, novasFotos);
+  showToast('Complementos copiados de "' + src.nome + '". Clique em Salvar complementos para gravar.');
 }
 function cdpGrupoDel(id, gid) {
   const it = _cmdCardapio().find(i => i.id === id); const g = it && _cdpGrupos(it).find(x => x.id === gid); if (!g) return;
@@ -20584,7 +20692,7 @@ function cdpOpcaoDel(id, gid, oid) {
 function _cdpOFotoHtml(iid, gid, o) {
   const f = o.fotoV ? _cdpFotos[iid + '_' + o.id] : null;
   if (f && String(f).indexOf('data:image/') === 0)
-    return `<span class="cdp-ofoto-w"><button type="button" class="cdp-ofoto" title="Trocar foto" onclick="cdpOpcFotoEscolher('${iid}','${gid}','${o.id}')"><img src="${f}" alt=""></button><button type="button" class="cdp-ofoto-x" onclick="cdpOpcFotoRemover('${iid}','${gid}','${o.id}')">remover</button></span>`;
+    return `<span class="cdp-ofoto-w"><button type="button" class="cdp-ofoto" title="Trocar foto" onclick="cdpOpcFotoEscolher('${iid}','${gid}','${o.id}')"><img src="${f}" alt=""></button><button type="button" class="cdp-ofoto-x" style="color:var(--accent,#2563EB)" title="Centralizar / dar zoom na foto que já está salva" onclick="cdpOpcFotoAjustar('${iid}','${gid}','${o.id}')">ajustar</button><button type="button" class="cdp-ofoto-x" onclick="cdpOpcFotoRemover('${iid}','${gid}','${o.id}')">remover</button></span>`;
   return `<span class="cdp-ofoto-w"><button type="button" class="cdp-ofoto" title="Adicionar foto" onclick="cdpOpcFotoEscolher('${iid}','${gid}','${o.id}')">📷</button></span>`;
 }
 function _cdpFotoOpcLimpar(iid, oids) {
@@ -20594,7 +20702,7 @@ function cdpOpcFotoEscolher(iid, gid, oid) {
   let inp = document.getElementById('cdp-foto-input-o');
   if (!inp) { inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*'; inp.id = 'cdp-foto-input-o'; inp.style.display = 'none'; document.body.appendChild(inp); }
   inp.value = '';
-  inp.onchange = () => { const f = inp.files && inp.files[0]; if (f) _cdpOpcFotoSalvar(iid, gid, oid, f); };
+  inp.onchange = () => { const f = inp.files && inp.files[0]; if (f) _cdpFotoEditar(f, _cdpEdOpcao).then(ed => _cdpOpcFotoSalvar(iid, gid, oid, ed)).catch(_cdpFotoEdErro); };
   inp.click();
 }
 function _cdpOpcFotoSalvar(iid, gid, oid, file) {
@@ -20618,20 +20726,114 @@ function cdpOpcFotoRemover(iid, gid, oid) {
   _cdpGrupoEdit(iid, gs => { const g = gs.find(x => x.id === gid), o = g && g.opcoes.find(x => x.id === oid); if (!o) return false; o.fotoV = null; }, true);
   showToast('Foto removida (clique em Salvar complementos)');
 }
+/* ── Organizar a ordem das opções de um grupo (modal com arrastar e número) ──
+   A ordem fica no rascunho do grupo; para gravar, clique em "Salvar complementos". */
+let _ordCtx = null;
+function cdpOpcOrdenar(id, gid) {
+  const it = _cmdCardapio().find(i => i.id === id); if (!it) return;
+  const g = _cdpGruposVis(it).find(x => x.id === gid); if (!g) return;
+  if (g.opcoes.length < 2) { showToast('Cadastre pelo menos 2 opções para organizar a ordem', false); return; }
+  const info = {};
+  g.opcoes.forEach(o => { const f = o.fotoV ? _cdpFotos[id + '_' + o.id] : null; info[o.id] = { nome: o.nome, foto: (f && String(f).indexOf('data:image/') === 0) ? f : '' }; });
+  _ordCtx = { id, gid, ids: g.opcoes.map(o => o.id), orig: g.opcoes.map(o => o.id), info };
+  showModal('Reordenar opções — ' + g.nome,
+    `<div class="ord-dica">Pressione e arraste no canto direito (⋮⋮) ou digite o número à esquerda para mudar a ordem. A primeira opção é a que aparece primeiro para o cliente.</div><div id="ord-lista"></div>`,
+    [{ label: 'Salvar', style: 'primary', action: _ordSalvar }, { label: 'Cancelar', style: 'secondary', action: () => { _ordCtx = null; } }]);
+  _ordDesenhar();
+}
+function _ordDesenhar() {
+  const el = document.getElementById('ord-lista'); if (!el || !_ordCtx) return;
+  const n = _ordCtx.ids.length;
+  el.innerHTML = _ordCtx.ids.map((oid, k) => {
+    const o = _ordCtx.info[oid];
+    return `<div class="ord-row" data-oid="${escapeAttr(oid)}">
+      <input class="ord-n" type="number" min="1" max="${n}" value="${k + 1}" title="Digite a nova posição" onchange="_ordMoverPara('${escapeAttr(oid)}', this.value)" onfocus="this.select()">
+      ${o.foto ? `<img class="ord-foto" src="${o.foto}" alt="">` : ''}
+      <span class="ord-nome">${escapeHtml(o.nome)}</span>
+      <span class="ord-h" title="Arraste para reordenar" onpointerdown="_ordArrastar(event, this.parentNode)">⋮⋮</span></div>`;
+  }).join('');
+}
+function _ordMoverPara(oid, v) {
+  if (!_ordCtx) return;
+  let pos = parseInt(v); const ids = _ordCtx.ids;
+  if (isNaN(pos)) { _ordDesenhar(); return; }
+  pos = Math.min(ids.length, Math.max(1, pos));
+  ids.splice(ids.indexOf(oid), 1); ids.splice(pos - 1, 0, oid);
+  _ordDesenhar();
+}
+function _ordArrastar(ev, row) {
+  if (!_ordCtx || (ev.pointerType === 'mouse' && ev.button !== 0)) return;
+  ev.preventDefault();
+  const lista = document.getElementById('ord-lista'), corpo = document.getElementById('modal-body');
+  const h = ev.currentTarget, oid = row.dataset.oid;
+  try { h.setPointerCapture(ev.pointerId); } catch (e) {}
+  const y0 = ev.clientY, sc0 = corpo.scrollTop;
+  let lastY = y0, timer = null;
+  const outras = () => [...lista.querySelectorAll('.ord-row')].filter(r => r !== row);
+  const alvo = () => {
+    let ref = null;
+    for (const r of outras()) { const b = r.getBoundingClientRect(); if (lastY < b.top + b.height / 2) { ref = r; break; } }
+    return ref;
+  };
+  const atualizar = () => {
+    row.style.transform = 'translateY(' + (lastY - y0 + (corpo.scrollTop - sc0)) + 'px)';
+    lista.querySelectorAll('.ord-ref,.ord-fim').forEach(r => r.classList.remove('ord-ref', 'ord-fim'));
+    const ref = alvo(), o = outras();
+    if (ref) ref.classList.add('ord-ref'); else if (o.length) o[o.length - 1].classList.add('ord-fim');
+  };
+  row.classList.add('drag');
+  atualizar();
+  timer = setInterval(() => {
+    const cr = corpo.getBoundingClientRect();
+    if (lastY < cr.top + 50) { corpo.scrollTop -= 10; atualizar(); }
+    else if (lastY > cr.bottom - 50) { corpo.scrollTop += 10; atualizar(); }
+  }, 16);
+  const mover = e => { lastY = e.clientY; atualizar(); };
+  const fim = e => {
+    clearInterval(timer);
+    h.removeEventListener('pointermove', mover); h.removeEventListener('pointerup', fim); h.removeEventListener('pointercancel', fim);
+    const ref = e.type === 'pointercancel' ? undefined : alvo();
+    if (ref !== undefined && _ordCtx) {
+      const ids = _ordCtx.ids; ids.splice(ids.indexOf(oid), 1);
+      if (ref) ids.splice(ids.indexOf(ref.dataset.oid), 0, oid); else ids.push(oid);
+    }
+    _ordDesenhar();
+  };
+  h.addEventListener('pointermove', mover); h.addEventListener('pointerup', fim); h.addEventListener('pointercancel', fim);
+}
+function _ordSalvar() {
+  const c = _ordCtx; _ordCtx = null; if (!c) return;
+  if (c.ids.join('|') === c.orig.join('|')) return;
+  _cdpGrupoEdit(c.id, gs => {
+    const g = gs.find(x => x.id === c.gid); if (!g) return false;
+    const mapa = {}; g.opcoes.forEach(o => { mapa[o.id] = o; });
+    const nova = c.ids.map(oid => mapa[oid]).filter(Boolean);
+    g.opcoes.forEach(o => { if (!nova.includes(o)) nova.push(o); });   // opção criada nesse meio-tempo fica no fim
+    g.opcoes = nova;
+  }, true);
+  showToast('Ordem alterada — clique em "Salvar complementos" para gravar');
+}
 function _cdpOpcHtml(i) {
   const gs = _cdpGruposVis(i), aberto = !!_cdpAbertos[i.id];
   const nOp = gs.reduce((t, g) => t + g.opcoes.length, 0);
   let h = `<button type="button" class="cdp-opc-btn${gs.length ? ' tem' : ''}" onclick="cdpOpcToggle('${i.id}')">🧩 Complementos${gs.length ? ` (${gs.length} grupo${gs.length > 1 ? 's' : ''} · ${nOp} opç${nOp === 1 ? 'ão' : 'ões'})` : ''} ${aberto ? '▴' : '▾'}</button>`;
   if (!aberto) return h + (_cdpRasc[i.id] ? ' <span style="font-size:12px;color:var(--red-mid);font-weight:700">● não salvo</span>' : '');
   const barra = `<div class="cdp-opc-barra"><button type="button" class="btn btn-primary" onclick="cdpOpcSalvar('${i.id}')">💾 Salvar complementos</button><button type="button" class="btn btn-secondary" onclick="cdpOpcDescartar('${i.id}')">Descartar alterações</button><span id="cdp-rasc-st-${i.id}" class="cdp-opc-st">${_cdpRasc[i.id] ? '● alterações não salvas' : ''}</span></div>`;
-  h += `<div class="cdp-opc-dica">O cliente escolhe na hora do pedido (ex.: sabor do refrigerante, ponto da carne, adicionais). Cada grupo tem opções, com valor extra opcional. <strong>Clique em Salvar complementos para gravar.</strong></div>${barra}`;
+  h += `<div class="cdp-opc-dica">O cliente escolhe na hora do pedido (ex.: sabor do refrigerante, ponto da carne, adicionais). Cada grupo tem opções, com valor extra opcional. <strong>Clique em Salvar complementos para gravar.</strong></div>${(gs.length || _cdpRasc[i.id]) ? barra : ''}`;
   gs.forEach(g => {
     h += `<div class="cdp-g"><div class="cdp-g-head">
       <input class="cdp-in cdp-g-nome" type="text" maxlength="40" value="${escapeAttr(g.nome)}" placeholder="Nome do grupo (ex.: Sabor do Refrigerante)" onchange="cdpGrupoCampo('${i.id}','${g.id}','nome',this.value)">
       <label><input type="checkbox" ${g.obrig ? 'checked' : ''} onchange="cdpGrupoCampo('${i.id}','${g.id}','obrig',this.checked)"> Obrigatório</label>
       <label title="0 = sem limite (o cliente escolhe quantas quiser)">Máx. escolhas <input class="cdp-in" type="number" min="0" max="20" value="${g.max}" placeholder="0" onchange="cdpGrupoCampo('${i.id}','${g.id}','max',this.value)"></label>
       <label title="Com máx. maior que 1: o cliente escolhe a quantidade de cada opção (ex.: 2 Coca-Cola + 1 Fanta)"><input type="checkbox" ${g.rep ? 'checked' : ''} onchange="cdpGrupoCampo('${i.id}','${g.id}','rep',this.checked)"> Permitir repetir (quantidade)</label>
+      <label title="Marque só quando cada escolha é uma unidade do item (ex.: 2 Frango + 2 Catupiry = 4 coxinhas). Desmarcado: o item é cobrado uma vez e os complementos só somam o valor extra de cada opção."><input type="checkbox" ${g.unid ? 'checked' : ''} onchange="cdpGrupoCampo('${i.id}','${g.id}','unid',this.checked)"> Cada escolha = 1 item (ex.: sabor da coxinha, do refrigerante)</label>
+      <button type="button" class="btn btn-secondary cdp-g-ord" title="Escolher quem aparece primeiro para o cliente" onclick="cdpOpcOrdenar('${i.id}','${g.id}')">↕ Organizar ordem</button>
       <button type="button" class="cmd-x" title="Remover grupo" onclick="cdpGrupoDel('${i.id}','${g.id}')">×</button></div>`;
+    h += (_gMax(g) > 1 && g.rep)
+      ? `<div class="cdp-g-hint ${g.unid ? 'un' : 'comp'}">${g.unid
+          ? '🧾 <strong>Cada escolha é 1 item.</strong> O cliente escolhe 2 sabores = 2 itens (preço do item × nº de escolhas + extras das opções). Use em coxinha, refrigerante, pizza…'
+          : '🧩 <strong>Escolhas são complementos.</strong> O item é cobrado 1 vez, não importa quantas opções o cliente escolher (só soma o “+ R$” das opções). Use em açaí, lanche, adicionais…'}</div>`
+      : `<div class="cdp-g-hint comp">Para o cliente escolher várias opções, coloque <strong>Máx. escolhas</strong> maior que 1 (ou 0 = sem limite) e marque <strong>Permitir repetir</strong>.</div>`;
     g.opcoes.forEach(o => {
       h += `<div class="cdp-o${o.ativo ? '' : ' off'}">
         ${_cdpOFotoHtml(i.id, g.id, o)}<input class="cdp-in cdp-o-nome" type="text" maxlength="60" value="${escapeAttr(o.nome)}" onchange="cdpOpcaoCampo('${i.id}','${g.id}','${o.id}','nome',this.value)">
@@ -20646,7 +20848,7 @@ function _cdpOpcHtml(i) {
         <input id="cdp-op-${g.id}" class="cdp-in cdp-preco" type="number" step="0.01" min="0" placeholder="0,00" title="Valor EXTRA (soma ao preço do item). 0 = sem extra" onkeydown="if(event.key==='Enter')cdpOpcaoAdd('${i.id}','${g.id}')">
         <button type="button" class="btn btn-secondary" onclick="cdpOpcaoAdd('${i.id}','${g.id}')">+ Opção</button></div></div>`;
   });
-  h += `<button type="button" class="btn btn-secondary" style="margin-top:4px" onclick="cdpGrupoAdd('${i.id}')">+ Novo grupo de complementos</button>${barra}`;
+  h += `<button type="button" class="btn btn-secondary" style="margin-top:4px" onclick="cdpGrupoAdd('${i.id}')">+ Novo grupo de complementos</button> <button type="button" class="btn btn-secondary" style="margin-top:4px" onclick="cdpGrupoCopiar('${i.id}')">📋 Copiar de outro item</button>${(gs.length || _cdpRasc[i.id]) ? barra : ''}`;
   return h;
 }
 
@@ -20659,7 +20861,7 @@ function _opcResumo(ex) {
 let _opcAdm = null;
 function _opcAdmTotal() {
   let ex = 0, un = 0;
-  _opcAdm.gs.forEach(g => (_opcAdm.sel[g.id] || []).forEach(oid => { const o = g.opcoes.find(x => x.id === oid); if (o) { ex += o.preco; if (_gMax(g) > 1 && g.rep) un++; } }));
+  _opcAdm.gs.forEach(g => (_opcAdm.sel[g.id] || []).forEach(oid => { const o = g.opcoes.find(x => x.id === oid); if (o) { ex += o.preco; if (_gMax(g) > 1 && g.rep && g.unid) un++; } }));
   return _cmdRound(_cdpPrecoVenda(_opcAdm.it) * Math.max(1, un) + ex);
 }
 function _opcAdmDesenhar(erroId) {
@@ -20721,7 +20923,7 @@ function _opcAdmOk() {
     return;
   }
   const extras = [];
-  _opcAdm.gs.forEach(g => (_opcAdm.sel[g.id] || []).forEach(oid => { const o = g.opcoes.find(x => x.id === oid); if (o) extras.push({ g: g.id, o: o.id, gn: g.nome, on: o.nome, preco: o.preco, q: _gMax(g) > 1 && g.rep }); }));
+  _opcAdm.gs.forEach(g => (_opcAdm.sel[g.id] || []).forEach(oid => { const o = g.opcoes.find(x => x.id === oid); if (o) extras.push({ g: g.id, o: o.id, gn: g.nome, on: o.nome, preco: o.preco, q: _gMax(g) > 1 && g.rep, u: _gMax(g) > 1 && g.rep && g.unid }); }));
   const cb = _opcAdm.ok; _opcAdmFechar(); cb(extras);
 }
 
@@ -20745,11 +20947,19 @@ function renderCardapio() {
   const opts = cats.map(c => `<option value="${escapeAttr(c)}"${c === _cdpCatSel ? ' selected' : ''}>${escapeHtml(c)}</option>`).join('');
   const nIndisp = itens.filter(i => i.ativo === false).length;
 
-  let html = `<div class="card mb-5">
+  const catsOpts = ['<option value="">Todas as categorias</option>'].concat(cats.map(c => `<option value="${escapeAttr(c)}"${c === _cdpCatFiltro ? ' selected' : ''}>${escapeHtml(c)}</option>`)).join('');
+  const barraBusca = itens.length ? `<div class="cdp-toolbar cdp-fixa" id="cdp-barra">
+      <input type="search" id="cdp-busca" placeholder="🔎 Buscar item ou categoria…" value="${escapeAttr(_cdpBusca)}" oninput="cdpFiltrar()" autocomplete="off">
+      <select id="cdp-filtro-cat" onchange="cdpFiltrar()">${catsOpts}</select>
+    </div>` : '';
+  let html = barraBusca + `<div class="card mb-5">
       <div class="card-title">Categorias</div>
+      <div class="txt-hint" style="margin:-6px 0 10px">Use <strong>‹ ›</strong> para mudar a ordem e <strong>✎</strong> para renomear. A ordem vale aqui no painel e no cardápio dos clientes; ao renomear, os itens da categoria acompanham o novo nome.</div>
       <div class="cmd-chips" style="max-height:none;margin:0 0 16px">${cats.map(c => {
         const custom = _cdpCatsCustom().find(x => String(x.nome).toLowerCase() === c.toLowerCase());
-        return `<span class="cmd-chip" style="cursor:default">${escapeHtml(c)}${custom ? `<button class="cmd-x" style="margin-left:8px;width:20px;height:20px;font-size:13px" title="Remover categoria" onclick="cdpCatDel('${custom.id}')">×</button>` : ''}</span>`;
+        const idx = cats.indexOf(c);
+        const seta = (d, txt, tit, off) => `<button type="button" class="cdp-cat-mv" title="${tit}" ${off ? 'disabled' : ''} onclick="cdpCatMover(${idx},${d})">${txt}</button>`;
+        return `<span class="cmd-chip" style="cursor:default">${seta(-1, '‹', 'Mover para antes', idx === 0)}${escapeHtml(c)}<button type="button" class="cdp-cat-mv" style="font-size:13px" title="Renomear categoria" onclick="cdpCatRenomear(${idx})">✎</button>${seta(1, '›', 'Mover para depois', idx === cats.length - 1)}<button class="cmd-x" style="margin-left:6px;width:20px;height:20px;font-size:13px" title="Remover categoria" onclick="${custom ? `cdpCatDel('${custom.id}')` : `cdpCatDelPadrao('${escapeAttr(c).replace(/'/g, "\\'")}')`}">×</button></span>`;
       }).join('')}</div>
       <div class="cdp-row">
         <div class="form-group cdp-f-cadcat"><label>Nova categoria</label><input id="cdp-cat-nova" type="text" placeholder="Ex: Entradas" maxlength="30" onkeydown="if(event.key==='Enter')cdpCatAdd()"></div>
@@ -20770,7 +20980,7 @@ function renderCardapio() {
           <div class="cdp-hr"><input id="cdp-hr-ini" type="time"><span>até</span><input id="cdp-hr-fim" type="time"></div>
           <div class="cdp-hr-dica">Deixe em branco para vender o dia todo. Ex.: marmitex das 10:00 às 14:00 — fora desse horário o cliente vê o item, mas não consegue pedir.</div></div>
         <div class="form-group cdp-f-desc"><label>O que vem <span style="font-weight:400;color:var(--text3)">(opcional — aparece para o cliente)</span></label><textarea id="cdp-desc" rows="2" maxlength="300" placeholder="Ex: Arroz, feijão, bife acebolado, farofa e salada"></textarea></div>
-        <div class="form-group cdp-f-desc"><label>Foto <span style="font-weight:400;color:var(--text3)">(opcional — aparece para o cliente)</span></label><input id="cdp-foto" type="file" accept="image/*"></div>
+        <div class="form-group cdp-f-desc"><label>Foto <span style="font-weight:400;color:var(--text3)">(opcional — aparece para o cliente)</span></label><input id="cdp-foto" type="file" accept="image/*" onchange="cdpFotoPreview(this)"><div id="cdp-foto-prev" style="display:none;margin-top:8px;align-items:flex-end;gap:10px"><img id="cdp-foto-prev-img" alt="Pré-visualização da foto" style="width:120px;height:120px;object-fit:cover;border-radius:12px;border:1.5px solid var(--border);background:var(--bg)"><button type="button" class="cdp-foto-x" style="margin:0" onclick="cdpFotoPreviewLimpar()">remover foto</button></div></div>
         <button class="btn btn-primary" onclick="cmdCardapioAdd()">Adicionar ao cardápio</button>
       </div>
     </div>`;
@@ -20780,14 +20990,10 @@ function renderCardapio() {
     return;
   }
 
-  const catsOpts = ['<option value="">Todas as categorias</option>'].concat(cats.map(c => `<option value="${escapeAttr(c)}"${c === _cdpCatFiltro ? ' selected' : ''}>${escapeHtml(c)}</option>`)).join('');
   html += _cdpDestaqueCard();
-  html += `<div class="cdp-toolbar">
-      <input type="text" id="cdp-busca" placeholder="Buscar item…" value="${escapeAttr(_cdpBusca)}" oninput="cdpFiltrar()">
-      <select id="cdp-filtro-cat" onchange="cdpFiltrar()">${catsOpts}</select>
-    </div>
-    <div id="cdp-lista"></div>`;
+  html += `<div id="cdp-lista"></div>`;
   box.innerHTML = html;
+  _cdpAjustarBarra();
   _cdpRenderLista();
 }
 
@@ -20799,60 +21005,128 @@ function _cdpDestaqueIds() {
   const l = _cdpLista(c.destaqueIds);
   return l.length ? l.map(String) : (c.destaqueId ? [String(c.destaqueId)] : []);
 }
+/* Destaques: em vez de listar todos os itens, a pessoa busca, marca e vê os marcados como etiquetas.
+   _cdpDestSel guarda a seleção (na ordem em que foi marcada); só vai para o banco ao clicar em Salvar. */
+let _cdpDestSel = null, _cdpDestSujo = false, _cdpDestBusca = '';
+function _cdpDestItens() { return _cmdCardapio().filter(i => i.ativo !== false); }
+function _cdpDestChipsHtml() {
+  const todos = _cdpDestItens();
+  const chips = _cdpDestSel.map(id => todos.find(i => i.id === id)).filter(Boolean).map(i =>
+    `<span class="cmd-chip" style="cursor:default">⭐ ${escapeHtml(i.nome)}<button type="button" class="cdp-cat-mv" style="font-size:15px" title="Tirar dos destaques" aria-label="Tirar ${escapeAttr(i.nome)} dos destaques" onclick="cdpDestaqueTirar('${escapeAttr(i.id)}')">×</button></span>`).join('');
+  return chips || '<span class="txt-hint">Nenhum item marcado ainda.</span>';
+}
+function _cdpDestResHtml() {
+  const q = _cdpNorm(_cdpDestBusca);
+  if (!q) return '<div class="txt-hint" style="padding:10px 0">Digite o nome do item (ou da categoria) para buscar e marcar.</div>';
+  const todos = _cdpDestItens().filter(i => _cdpNorm(i.nome).includes(q) || _cdpNorm(i.cat || 'Outros').includes(q))
+    .sort((x, y) => String(x.nome).localeCompare(String(y.nome)));
+  if (!todos.length) return '<div class="txt-hint" style="padding:10px 0">Nenhum item encontrado.</div>';
+  const MAX = 40, vis = todos.slice(0, MAX);
+  return vis.map(i => `<label style="display:flex;align-items:center;gap:10px;padding:7px 4px;border-bottom:1px solid var(--border);cursor:pointer;font-size:14px">
+      <input type="checkbox" value="${escapeAttr(i.id)}"${_cdpDestSel.includes(i.id) ? ' checked' : ''} onchange="cdpDestaqueAlternar('${escapeAttr(i.id)}', this.checked)">
+      <span style="flex:1;min-width:0">${escapeHtml(i.nome)} <span style="color:var(--text3)">— ${fmt(i.preco)} · ${escapeHtml(i.cat || 'Outros')}</span></span>
+      <span style="font-size:12px;color:var(--text3);white-space:nowrap">${i.fotoV ? '📷 com foto' : 'sem foto'}</span></label>`).join('') +
+    (todos.length > MAX ? `<div class="txt-hint" style="padding:8px 0">Mostrando ${MAX} de ${todos.length} — digite mais para refinar.</div>` : '');
+}
 function _cdpDestaqueCard() {
-  const marcados = _cdpDestaqueIds();
-  const itens = _cmdCardapio().filter(i => i.ativo !== false).sort((a, b) => String(a.nome).localeCompare(String(b.nome)));
-  const lista = itens.map(i => `<label style="display:flex;align-items:center;gap:10px;padding:7px 4px;border-bottom:1px solid var(--border);cursor:pointer;font-size:14px">
-      <input type="checkbox" class="cdp-dest-ck" value="${escapeAttr(i.id)}"${marcados.includes(i.id) ? ' checked' : ''} onchange="cdpDestaqueContar()">
-      <span style="flex:1;min-width:0">${escapeHtml(i.nome)} <span style="color:var(--text3)">— ${fmt(i.preco)}</span></span>
-      <span style="font-size:12px;color:var(--text3);white-space:nowrap">${i.fotoV ? '📷 com foto' : 'sem foto'}</span></label>`).join('');
+  const todos = _cdpDestItens();
+  if (!_cdpDestSujo || _cdpDestSel === null) _cdpDestSel = _cdpDestaqueIds().filter(id => todos.some(i => i.id === id));
   return `<div class="card mb-5">
     <div class="card-title">⭐ Destaques do cardápio</div>
-    <div class="txt-hint" style="margin-bottom:10px">Marque um ou mais itens (até 8). Eles aparecem no topo da página de pedidos, com foto, preço e botão de adicionar, e <strong>passam sozinhos</strong> um após o outro. Com um só, ele fica fixo. Dica: escolha itens que tenham foto.</div>
-    <div style="max-height:240px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-sm);padding:2px 10px;margin-bottom:10px">${lista || '<div class="txt-hint" style="padding:10px 0">Cadastre itens no cardápio para destacar.</div>'}</div>
+    <div class="txt-hint" style="margin-bottom:10px">Busque e marque um ou mais itens (até 8). Eles aparecem no topo da página de pedidos, com foto, preço e botão de adicionar, e <strong>passam sozinhos</strong> um após o outro. Com um só, ele fica fixo. Dica: escolha itens que tenham foto.</div>
+    <div class="cmd-chips" id="cdp-dest-chips" style="max-height:none;margin:0 0 10px">${_cdpDestChipsHtml()}</div>
+    <div class="cdp-toolbar" style="margin-bottom:8px"><input type="search" id="cdp-dest-busca" placeholder="🔎 Buscar item para destacar…" value="${escapeAttr(_cdpDestBusca)}" oninput="cdpDestaqueBuscar()" autocomplete="off"></div>
+    <div id="cdp-dest-res" style="max-height:240px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-sm);padding:2px 10px;margin-bottom:10px">${_cdpDestResHtml()}</div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
       <button class="btn btn-primary" type="button" onclick="cdpDestaqueSalvar()">💾 Salvar destaques</button>
-      <span id="cdp-dest-cont" style="font-size:13px;color:var(--text3)">${marcados.length} selecionado(s)</span>
+      <span id="cdp-dest-cont" style="font-size:13px;color:var(--text3)">${_cdpDestSel.length} selecionado(s)</span>
     </div>
   </div>`;
 }
-function cdpDestaqueContar() {
-  const n = document.querySelectorAll('.cdp-dest-ck:checked').length;
-  const el = document.getElementById('cdp-dest-cont'); if (el) el.textContent = n + ' selecionado(s)' + (n > 8 ? ' — máximo 8' : '');
+function _cdpDestRedesenhar(res) {
+  const ch = document.getElementById('cdp-dest-chips'); if (ch) ch.innerHTML = _cdpDestChipsHtml();
+  if (res) { const r = document.getElementById('cdp-dest-res'); if (r) r.innerHTML = _cdpDestResHtml(); }
+  const n = _cdpDestSel.length;
+  const el = document.getElementById('cdp-dest-cont'); if (el) el.textContent = n + ' selecionado(s)' + (n >= 8 ? ' — máximo 8' : '');
+}
+function cdpDestaqueBuscar() {
+  _cdpDestBusca = (document.getElementById('cdp-dest-busca').value || '').trim();
+  _cdpDestRedesenhar(true);
+}
+function cdpDestaqueAlternar(id, on) {
+  const ja = _cdpDestSel.includes(id);
+  if (on && !ja) {
+    if (_cdpDestSel.length >= 8) { showToast('Máximo de 8 destaques. Tire um para marcar outro.', false); _cdpDestRedesenhar(true); return; }
+    _cdpDestSel.push(id);
+  } else if (!on && ja) _cdpDestSel = _cdpDestSel.filter(x => x !== id);
+  _cdpDestSujo = true;
+  _cdpDestRedesenhar(false);
+}
+function cdpDestaqueTirar(id) {
+  _cdpDestSel = _cdpDestSel.filter(x => x !== id);
+  _cdpDestSujo = true;
+  _cdpDestRedesenhar(true);
 }
 function cdpDestaqueSalvar() {
   if (_cmdSemLoja()) return;
   if (!_pedCfg()) { showToast('Configure os pedidos online antes (Pedidos online → Configurar).', false); return; }
-  const ids = Array.from(document.querySelectorAll('.cdp-dest-ck:checked')).map(e => e.value);
+  const todos = _cdpDestItens();
+  const ids = (_cdpDestSel || []).filter(id => todos.some(i => i.id === id));
   if (ids.length > 8) { showToast('Escolha no máximo 8 destaques', false); return; }
   _dbRef('pedidosConfig/' + _lojaAtiva).update({ destaqueIds: ids.length ? ids : null, destaqueId: null }).then(() => {
+    _cdpDestSujo = false;
     const semFoto = ids.some(id => { const it = _cmdCardapio().find(i => i.id === id); return it && !it.fotoV; });
     showToast(!ids.length ? 'Destaques removidos' : (semFoto ? 'Destaques salvos ✔ (algum item não tem foto — adicione para ficar mais bonito)' : 'Destaques salvos ✔'));
   }).catch(e => { console.error(e); showToast('Sem permissão para salvar. Publique as regras do Firebase.', false); });
 }
 
+/* Barra de busca fixa: desce o tamanho do aviso de contas vencidas quando ele está aparecendo */
+function _cdpAjustarBarra() {
+  const b = document.getElementById('cdp-barra'); if (!b) return;
+  const ab = document.getElementById('cp-alerta-banner');
+  b.style.setProperty('--cdp-top', (ab && ab.classList.contains('visible') ? ab.offsetHeight : 0) + 'px');
+}
+/* Compara sem acento e sem maiúscula (acai acha Açaí) */
+function _cdpNorm(t) { return String(t == null ? '' : t).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(); }
 function cdpFiltrar() {
   _cdpBusca = (document.getElementById('cdp-busca').value || '').trim();
   _cdpCatFiltro = document.getElementById('cdp-filtro-cat').value || '';
+  _cdpAjustarBarra();
   _cdpRenderLista();
+  // a lista fica abaixo do formulário: ao filtrar, leva a tela até os resultados
+  if (_cdpBusca || _cdpCatFiltro) {
+    const l = document.getElementById('cdp-lista');
+    if (l) { const t = l.getBoundingClientRect().top; if (t > window.innerHeight * 0.55 || t < 0) l.scrollIntoView({ block: 'start' }); }
+  }
 }
 
+/* Categorias recolhidas na lista do cardápio (lembra neste aparelho) */
+let _cdpCatFechadas = (() => { try { return JSON.parse(localStorage.getItem('cdpCatFechadas') || '{}') || {}; } catch (e) { return {}; } })();
+function cdpCatFechar(idx) {
+  const cat = _cdpCats()[idx]; if (cat === undefined) return;
+  if (_cdpCatFechadas[cat]) delete _cdpCatFechadas[cat]; else _cdpCatFechadas[cat] = true;
+  try { localStorage.setItem('cdpCatFechadas', JSON.stringify(_cdpCatFechadas)); } catch (e) {}
+  _cdpRenderLista();
+}
 function _cdpRenderLista() {
   const el = document.getElementById('cdp-lista');
   if (!el) return;
   _cdpFotosCarregar();
-  const q = _cdpBusca.toLowerCase();
+  const q = _cdpNorm(_cdpBusca);
   const itens = _cmdCardapio().filter(i =>
-    (!q || String(i.nome).toLowerCase().includes(q)) &&
+    (!q || _cdpNorm(i.nome).includes(q) || _cdpNorm(i.cat || 'Outros').includes(q) || _cdpNorm(i.desc).includes(q)) &&
     (!_cdpCatFiltro || (i.cat || 'Outros') === _cdpCatFiltro));
   if (!itens.length) { el.innerHTML = `<div class="empty"><div class="empty-icon">🔎</div>Nenhum item encontrado.</div>`; return; }
   const cats = _cdpCats();
   const catOpts = sel => cats.map(c => `<option value="${escapeAttr(c)}"${c === sel ? ' selected' : ''}>${escapeHtml(c)}</option>`).join('');
-  let html = '';
+  let html = (q || _cdpCatFiltro) ? `<div class="txt-hint" style="margin:0 0 4px">${itens.length} item(ns) encontrado(s)</div>` : '';
   cats.forEach(cat => {
     const doCat = itens.filter(i => (i.cat || 'Outros') === cat).sort((a, b) => String(a.nome).localeCompare(String(b.nome)));
     if (!doCat.length) return;
-    html += `<div class="cmd-sec-titulo">${escapeHtml(cat)} (${doCat.length})</div><div class="card">
+    const fechada = !!_cdpCatFechadas[cat];
+    html += `<div class="cdp-cat-tit" title="${fechada ? 'Abrir categoria' : 'Fechar categoria'}" onclick="cdpCatFechar(${cats.indexOf(cat)})"><span>${escapeHtml(cat)} (${doCat.length})</span><button type="button" class="cdp-cat-fch${fechada ? ' fechada' : ''}" aria-label="${fechada ? 'Abrir categoria' : 'Fechar categoria'}" aria-expanded="${fechada ? 'false' : 'true'}"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 10.5L8 6l4.5 4.5"/></svg></button></div>`;
+    if (fechada) return;
+    html += `<div class="card">
       <div class="cdp-cols"><span>Nome</span><span>Categoria</span><span>Preço (R$)</span><span>Promoção (R$)</span><span>Status</span><span></span></div>` +
       doCat.map(i => `<div class="cdp-item${i.ativo === false ? ' off' : ''}">
         <div class="cdp-c-nome"><input class="cdp-in" type="text" value="${escapeAttr(i.nome)}" maxlength="60" onchange="cmdCardapioNome('${i.id}', this.value)"></div>
@@ -20861,7 +21135,7 @@ function _cdpRenderLista() {
         <div><input class="cdp-in cdp-preco cdp-promo-in${_cdpEmPromo(i) ? ' on' : ''}" type="number" step="0.01" min="0" placeholder="Promoção" value="${_cdpEmPromo(i) ? parseFloat(i.promo).toFixed(2) : ''}" title="${_cdpEmPromo(i) ? 'Em promoção: de ' + fmt(parseFloat(i.preco) || 0) + ' por ' + fmt(parseFloat(i.promo)) + ' (−' + Math.round((1 - parseFloat(i.promo) / parseFloat(i.preco)) * 100) + '%). Apague para remover.' : 'Preço promocional (vazio = sem promoção). Precisa ser menor que o preço normal.'}" onchange="cmdCardapioPromo('${i.id}', this)"></div>
         <div><button class="cdp-status${i.ativo === false ? ' off' : ''}" onclick="cmdCardapioAtivo('${i.id}')">${i.ativo === false ? 'Indisponível' : 'Disponível'}</button></div>
         <div class="cdp-c-del" style="text-align:right"><button class="cmd-x" title="Remover" onclick="cmdCardapioDel('${i.id}')">×</button></div>
-        <div class="cdp-c-desc"><div class="cdp-foto">${_cdpFotoBtn(i)}</div><textarea class="cdp-in" rows="2" maxlength="300" placeholder="O que vem neste item (Ex: arroz, feijão, bife, salada…)" onchange="cmdCardapioDesc('${i.id}', this.value)">${escapeHtml(i.desc || '')}</textarea></div>
+        <div class="cdp-c-desc"><div class="cdp-foto">${_cdpFotoBtn(i)}<button type="button" class="cdp-foto-info" onclick="cdpFotoTamanho()">ⓘ Tamanho da foto</button></div><textarea class="cdp-in" rows="2" maxlength="300" placeholder="O que vem neste item (Ex: arroz, feijão, bife, salada…)" onchange="cmdCardapioDesc('${i.id}', this.value)">${escapeHtml(i.desc || '')}</textarea></div>
         <div class="cdp-c-hr">🕒 Vende das <input class="cdp-in cdp-hr-in" data-k="ini" type="time" value="${escapeAttr(i.hrIni || '')}" onchange="cmdCardapioHorario('${i.id}', this)"> até <input class="cdp-in cdp-hr-in" data-k="fim" type="time" value="${escapeAttr(i.hrFim || '')}" onchange="cmdCardapioHorario('${i.id}', this)">${(i.hrIni && i.hrFim) ? ` <span class="cdp-hr-tag">só ${escapeHtml(i.hrIni)}–${escapeHtml(i.hrFim)}</span> <button type="button" class="cdp-hr-x" onclick="cmdCardapioHorarioLimpar('${i.id}', this)">dia todo</button>` : ' <span style="font-weight:400;color:var(--text3)">(vazio = o dia todo)</span>'}</div>
         <div class="cdp-c-opc">${_cdpOpcHtml(i)}</div>
       </div>`).join('') + `</div>`;
@@ -20896,11 +21170,39 @@ function cmdCardapioAdd() {
     })
     .catch(e => { console.error(e); showToast('Erro ao salvar o item', false); });
 }
+/* Pré-visualização da foto no formulário de novo item */
+let _cdpPrevUrl = null;
+function cdpFotoPreviewLimpar() {
+  const inp = document.getElementById('cdp-foto'); if (inp) inp.value = '';
+  const box = document.getElementById('cdp-foto-prev'); if (box) box.style.display = 'none';
+  const img = document.getElementById('cdp-foto-prev-img'); if (img) img.removeAttribute('src');
+  if (_cdpPrevUrl) { URL.revokeObjectURL(_cdpPrevUrl); _cdpPrevUrl = null; }
+}
+function cdpFotoPreview(inp) {
+  const arq = inp && inp.files && inp.files[0];
+  if (!arq) { cdpFotoPreviewLimpar(); return; }
+  if (!/^image\//.test(arq.type)) { showToast('Escolha um arquivo de imagem', false); cdpFotoPreviewLimpar(); return; }
+  _cdpFotoEditar(arq, _cdpEdItem).then(ed => {
+    let final = arq;
+    try { const dt = new DataTransfer(); dt.items.add(ed); inp.files = dt.files; final = ed; } catch (e) { /* sem suporte: segue com a foto original */ }
+    if (_cdpPrevUrl) URL.revokeObjectURL(_cdpPrevUrl);
+    _cdpPrevUrl = URL.createObjectURL(final);
+    const img = document.getElementById('cdp-foto-prev-img'); if (img) img.src = _cdpPrevUrl;
+    const box = document.getElementById('cdp-foto-prev'); if (box) box.style.display = 'flex';
+  }).catch(e => { cdpFotoPreviewLimpar(); _cdpFotoEdErro(e); });
+}
 function cdpCatAdd() {
   if (_cmdSemLoja()) return;
   const nome = (document.getElementById('cdp-cat-nova').value || '').trim();
   if (!nome) { showToast('Informe o nome da categoria', false); return; }
   if (_cdpCats().some(c => c.toLowerCase() === nome.toLowerCase())) { showToast('A categoria "' + nome + '" já existe', false); return; }
+  const oculta = _cdpCatsOcultas().find(c => String(c.nome).toLowerCase() === nome.toLowerCase());
+  if (oculta) {
+    _dbRef('cardapio/' + _lojaAtiva + '/' + oculta.id).remove()
+      .then(() => { showToast('Categoria restaurada'); _cdpCatSel = oculta.nome; renderCardapio(); })
+      .catch(e => { console.error(e); showToast('Erro ao salvar a categoria', false); });
+    return;
+  }
   const id = 'cat_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
   _dbRef('cardapio/' + _lojaAtiva + '/' + id).set({ id, nome, tipo: 'cat' })
     .then(() => {
@@ -20909,6 +21211,74 @@ function cdpCatAdd() {
       renderCardapio();
     })
     .catch(e => { console.error(e); showToast('Erro ao salvar a categoria', false); });
+}
+function cdpCatRenomear(idx, valor, erro) {
+  const velho = _cdpCats()[idx]; if (velho === undefined) return;
+  showModal('Renomear categoria',
+    `<div class="form-group"><label>Novo nome para <strong>${escapeHtml(velho)}</strong></label>
+       <input id="cdp-cat-ren" type="text" maxlength="30" value="${escapeAttr(valor !== undefined ? valor : velho)}" onkeydown="if(event.key==='Enter')document.getElementById('modal-btn-0').click()"></div>` +
+    (erro ? `<div style="color:var(--red-mid);font-size:13px;font-weight:600">${escapeHtml(erro)}</div>` : ''), [
+    { label: 'Salvar', style: 'primary', action: () => {
+        const novo = ((document.getElementById('cdp-cat-ren') || {}).value || '').trim().slice(0, 30);
+        if (!novo) { cdpCatRenomear(idx, '', 'Informe o nome da categoria.'); return; }
+        if (novo === velho) return;
+        if (_cdpCats().some(c => c.toLowerCase() === novo.toLowerCase() && c.toLowerCase() !== velho.toLowerCase())) {
+          cdpCatRenomear(idx, novo, 'A categoria "' + novo + '" já existe.'); return;
+        }
+        _cdpCatRenomarAplicar(velho, novo);
+    }},
+    { label: 'Cancelar', style: 'secondary' }
+  ]);
+  setTimeout(() => { const e = document.getElementById('cdp-cat-ren'); if (e) { e.focus(); e.select(); } }, 50);
+}
+/** Renomeia a categoria em UMA gravação só: nome, itens que a usam e posição na ordem. */
+function _cdpCatRenomarAplicar(velho, novo) {
+  if (_cmdSemLoja()) return;
+  const lc = x => String(x).toLowerCase();
+  const up = {};
+  const custom = _cdpCatsCustom().find(c => lc(c.nome) === lc(velho));
+  const oculta = _cdpCatsOcultas().find(c => c.id !== 'catordem' && lc(c.nome) === lc(novo));
+  if (custom) {
+    if (oculta) up[custom.id] = null;            // o novo nome já é uma categoria padrão escondida: volta ela
+    else up[custom.id + '/nome'] = novo;
+  } else {                                       // categoria padrão: esconde a antiga e cria a nova
+    const idH = 'catoculta_' + lc(velho).replace(/[^a-z0-9]/g, '') + '_' + Date.now().toString(36);
+    up[idH] = { id: idH, nome: velho, tipo: 'cat', oculta: true };
+    if (!oculta) { const idN = 'cat_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6); up[idN] = { id: idN, nome: novo, tipo: 'cat' }; }
+  }
+  if (oculta) up[oculta.id] = null;
+  _cmdCardapio().forEach(i => { if (lc(i.cat || 'Outros') === lc(velho)) up[i.id + '/cat'] = novo; });
+  const lista = _cdpCats().map(c => lc(c) === lc(velho) ? novo : c);
+  up['catordem'] = { id: 'catordem', nome: '__ordem__', tipo: 'cat', oculta: true, lista };
+  _dbRef('cardapio/' + _lojaAtiva).update(up).then(() => {
+    if (_cdpCatSel && lc(_cdpCatSel) === lc(velho)) _cdpCatSel = novo;
+    if (_cdpCatFiltro && lc(_cdpCatFiltro) === lc(velho)) _cdpCatFiltro = novo;
+    showToast('Categoria renomeada ✔');
+    renderCardapio();
+  }).catch(e => { console.error(e); showToast('Erro ao renomear a categoria', false); });
+}
+function cdpCatMover(idx, dir) {
+  if (_cmdSemLoja()) return;
+  const cats = _cdpCats(), j = idx + dir;
+  if (idx < 0 || j < 0 || j >= cats.length) return;
+  const t = cats[idx]; cats[idx] = cats[j]; cats[j] = t;
+  _dbRef('cardapio/' + _lojaAtiva + '/catordem').set({ id: 'catordem', nome: '__ordem__', tipo: 'cat', oculta: true, lista: cats })
+    .then(() => renderCardapio())
+    .catch(e => { console.error(e); showToast('Erro ao salvar a ordem', false); });
+}
+function cdpCatDelPadrao(nome) {
+  if (_cmdSemLoja()) return;
+  const usados = _cmdCardapio().filter(i => String(i.cat || 'Outros').toLowerCase() === String(nome).toLowerCase()).length;
+  if (usados) { showToast('Não dá para remover: ' + usados + ' item(ns) usam "' + nome + '". Mude a categoria deles antes.', false); return; }
+  if (_cdpCats().length <= 1) { showToast('Mantenha pelo menos uma categoria', false); return; }
+  showModal('Remover categoria', `Remover a categoria <strong>${escapeHtml(nome)}</strong>? Você pode cadastrá-la de novo depois.`, [
+    { label: 'Remover', style: 'danger', action: () => {
+        const id = 'catoculta_' + String(nome).toLowerCase().replace(/[^a-z0-9]/g, '') + '_' + Date.now().toString(36);
+        _dbRef('cardapio/' + _lojaAtiva + '/' + id).set({ id, nome, tipo: 'cat', oculta: true })
+          .then(() => renderCardapio()).catch(e => { console.error(e); showToast('Erro ao remover', false); });
+    }},
+    { label: 'Cancelar', style: 'secondary' }
+  ]);
 }
 function cdpCatDel(id) {
   const c = _cdpCatsCustom().find(x => x.id === id); if (!c) return;
@@ -21009,7 +21379,7 @@ function _cdpFotosCarregar() {
 function _cdpFotoBtn(i) {
   const f = _cdpFotos[i.id];
   if (f && String(f).indexOf('data:image/') === 0) {
-    return `<button type="button" class="cdp-foto-btn" title="Trocar foto" onclick="cdpFotoEscolher('${i.id}')"><img src="${f}" alt=""></button><button type="button" class="cdp-foto-x" onclick="cdpFotoRemover('${i.id}')">remover</button>`;
+    return `<button type="button" class="cdp-foto-btn" title="Trocar foto" onclick="cdpFotoEscolher('${i.id}')"><img src="${f}" alt=""></button><button type="button" class="cdp-foto-x cdp-foto-aj" title="Centralizar / dar zoom na foto que já está salva" onclick="cdpFotoAjustar('${i.id}')">ajustar</button><button type="button" class="cdp-foto-x" onclick="cdpFotoRemover('${i.id}')">remover</button>`;
   }
   return `<button type="button" class="cdp-foto-btn" title="Adicionar foto" onclick="cdpFotoEscolher('${i.id}')"><span style="font-size:20px">📷</span>Foto</button>`;
 }
@@ -21039,11 +21409,160 @@ function _cdpFotoRedimensionar(file, maxLado, limite) {
     img.src = url;
   });
 }
+/* ── Editor de foto: arrastar para centralizar + zoom (aumentar/diminuir) ──
+   Abre antes de salvar a foto. Devolve um arquivo já enquadrado (ou rejeita com 'cancelado'). */
+const _cdpEdItem = { titulo: 'Ajustar foto do item', maxLado: 520, ratios: [{ k: '4:3', r: 4 / 3 }], dica: 'Esta moldura é igual à do cartão que o cliente vê no cardápio: o que você enquadrar aqui aparece assim para ele.' };
+const _cdpEdOpcao = { titulo: 'Ajustar foto da opção', maxLado: 220, ratios: [{ k: '1:1', r: 1 }], dica: 'Esta moldura é igual à da foto da opção que o cliente vê.' };
+function _cdpFotoEditar(file, opt) {
+  opt = opt || {};
+  return new Promise((resolve, reject) => {
+    if (!file || !/^image\//.test(file.type || '')) { reject(new Error('tipo')); return; }
+    const url = URL.createObjectURL(file), img = new Image();
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('imagem')); };
+    img.onload = abrir;
+    img.src = url;
+    function abrir() {
+      const iw = img.naturalWidth, ih = img.naturalHeight;
+      if (!iw || !ih) { URL.revokeObjectURL(url); reject(new Error('imagem')); return; }
+      const ratios = opt.ratios || [{ k: '4:3', r: 4 / 3 }], maxLado = opt.maxLado || 520;
+      let ratio = ratios[0].r, W = 0, H = 0, s = 1, ox = 0, oy = 0, sMin = 1, sMax = 4, sCover = 1;
+      const ov = document.createElement('div'); ov.className = 'fed-ov';
+      ov.innerHTML = `<div class="fed-box" role="dialog" aria-modal="true">
+        <div class="fed-tit">${escapeHtml(opt.titulo || 'Ajustar foto')}</div>
+        <div class="fed-dica">Arraste a foto para qualquer lado para centralizar. Use o zoom (− / + , a barra ou a rodinha do mouse) para aumentar ou diminuir.${opt.dica ? '<br><strong>' + escapeHtml(opt.dica) + '</strong>' : ''}</div>
+        ${ratios.length > 1 ? `<div class="fed-rat">${ratios.map((x, i) => `<button type="button" data-i="${i}" class="${i === 0 ? 'on' : ''}">${x.k}</button>`).join('')}</div>` : ''}
+        <div class="fed-stage"><canvas class="fed-cv"></canvas></div>
+        <div class="fed-zoom"><button type="button" data-z="-" aria-label="Diminuir">−</button><input type="range" min="0" max="100" step="1" value="0" aria-label="Zoom"><button type="button" data-z="+" aria-label="Aumentar">+</button></div>
+        <div class="fed-acoes"><button type="button" class="btn btn-secondary" data-a="reset">Centralizar</button><span style="flex:1"></span><button type="button" class="btn btn-secondary" data-a="cancel">Cancelar</button><button type="button" class="btn btn-primary" data-a="ok">Usar foto</button></div></div>`;
+      document.body.appendChild(ov);
+      const cv = ov.querySelector('canvas'), rg = ov.querySelector('input[type=range]'), ctx = cv.getContext('2d');
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+
+      function medidas() {
+        W = Math.max(160, Math.min(360, window.innerWidth - 64)); H = W / ratio;
+        const maxH = Math.max(140, window.innerHeight * 0.42);
+        if (H > maxH) { H = maxH; W = H * ratio; }
+        W = Math.round(W); H = Math.round(H);
+        cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); cv.style.width = W + 'px'; cv.style.height = H + 'px';
+        sMin = Math.min(W / iw, H / ih); sCover = Math.max(W / iw, H / ih); sMax = Math.max(sCover * 4, sMin * 1.5);
+      }
+      function limitar() {
+        // movimento livre para qualquer lado: só não deixa a foto sumir (sempre fica ao menos 20% dela dentro da moldura)
+        const w = iw * s, h = ih * s;
+        ox = Math.min(0.8 * W + w / 2, Math.max(0.2 * W - w / 2, ox));
+        oy = Math.min(0.8 * H + h / 2, Math.max(0.2 * H - h / 2, oy));
+      }
+      function t2s(t) { return sMin * Math.pow(sMax / sMin, t / 100); }
+      function s2t(v) { return Math.log(v / sMin) / Math.log(sMax / sMin) * 100; }
+      function desenhar() {
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(img, ox - iw * s / 2, oy - ih * s / 2, iw * s, ih * s);
+        ctx.save(); ctx.setLineDash([5, 5]); ctx.lineWidth = 1;   // guias do centro
+        ctx.strokeStyle = 'rgba(0,0,0,.28)'; ctx.beginPath(); ctx.moveTo(W / 2 + 1, 0); ctx.lineTo(W / 2 + 1, H); ctx.moveTo(0, H / 2 + 1); ctx.lineTo(W, H / 2 + 1); ctx.stroke();
+        ctx.strokeStyle = 'rgba(255,255,255,.75)'; ctx.beginPath(); ctx.moveTo(W / 2, 0); ctx.lineTo(W / 2, H); ctx.moveTo(0, H / 2); ctx.lineTo(W, H / 2); ctx.stroke();
+        ctx.restore();
+        rg.value = String(Math.max(0, Math.min(100, s2t(s))));
+      }
+      function zoomPara(novo, cx, cy) {
+        novo = Math.min(sMax, Math.max(sMin, novo));
+        if (cx == null) { cx = W / 2; cy = H / 2; }
+        const f = novo / s; ox = cx - (cx - ox) * f; oy = cy - (cy - oy) * f; s = novo; limitar(); desenhar();
+      }
+      function reiniciar() { s = sCover; ox = W / 2; oy = H / 2; limitar(); desenhar(); }
+
+      medidas(); reiniciar();
+
+      // arrastar (1 dedo / mouse) e pinça (2 dedos)
+      const ptrs = new Map();
+      const pos = e => { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) * (W / r.width), y: (e.clientY - r.top) * (H / r.height) }; };
+      cv.addEventListener('pointerdown', e => { cv.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, pos(e)); e.preventDefault(); });
+      cv.addEventListener('pointermove', e => {
+        if (!ptrs.has(e.pointerId)) return;
+        const ant = ptrs.get(e.pointerId), atu = pos(e);
+        if (ptrs.size === 1) { ox += atu.x - ant.x; oy += atu.y - ant.y; limitar(); desenhar(); }
+        else if (ptrs.size === 2) {
+          const outro = [...ptrs.entries()].find(([id]) => id !== e.pointerId)[1];
+          const d0 = Math.hypot(ant.x - outro.x, ant.y - outro.y) || 1, d1 = Math.hypot(atu.x - outro.x, atu.y - outro.y) || 1;
+          const mx = (atu.x + outro.x) / 2, my = (atu.y + outro.y) / 2, mx0 = (ant.x + outro.x) / 2, my0 = (ant.y + outro.y) / 2;
+          ox += mx - mx0; oy += my - my0; zoomPara(s * d1 / d0, mx, my);
+        }
+        ptrs.set(e.pointerId, atu);
+      });
+      const soltar = e => { ptrs.delete(e.pointerId); };
+      cv.addEventListener('pointerup', soltar); cv.addEventListener('pointercancel', soltar);
+      cv.addEventListener('wheel', e => { e.preventDefault(); const p = pos(e); zoomPara(s * Math.exp(-e.deltaY * 0.0015), p.x, p.y); }, { passive: false });
+      rg.addEventListener('input', () => zoomPara(t2s(parseFloat(rg.value))));
+      // botões − / +: 1 ponto da barra por clique; segurando, repete devagar
+      function passo(d) { zoomPara(t2s(Math.max(0, Math.min(100, Math.round(s2t(s)) + d)))); }
+      let _rep1 = null, _rep2 = null;
+      function paraRepetir() { clearTimeout(_rep1); clearInterval(_rep2); _rep1 = _rep2 = null; }
+      ov.querySelectorAll('.fed-zoom button').forEach(bt => {
+        const d = bt.dataset.z === '+' ? 1 : -1;
+        bt.addEventListener('pointerdown', e => { e.preventDefault(); passo(d); paraRepetir(); _rep1 = setTimeout(() => { _rep2 = setInterval(() => passo(d), 70); }, 450); });
+        ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => bt.addEventListener(ev, paraRepetir));
+      });
+
+      function fechar() { paraRepetir(); document.removeEventListener('keydown', tecla, true); ov.remove(); URL.revokeObjectURL(url); }
+      function tecla(e) { if (e.key === 'Escape') { e.stopPropagation(); fechar(); reject(new Error('cancelado')); } }
+      document.addEventListener('keydown', tecla, true);
+      ov.addEventListener('click', e => {
+        const b = e.target.closest('button'); if (!b) { return; }
+        if (b.dataset.z) { if (e.detail === 0) passo(b.dataset.z === '+' ? 1 : -1); }   // teclado (Enter/Espaço); o mouse/dedo usa o pointerdown abaixo
+        else if (b.dataset.i != null) {
+          ratio = ratios[+b.dataset.i].r; ov.querySelectorAll('.fed-rat button').forEach(x => x.classList.toggle('on', x === b));
+          medidas(); reiniciar();
+        }
+        else if (b.dataset.a === 'reset') reiniciar();
+        else if (b.dataset.a === 'cancel') { fechar(); reject(new Error('cancelado')); }
+        else if (b.dataset.a === 'ok') {
+          const ow = ratio >= 1 ? maxLado : Math.round(maxLado * ratio), oh = ratio >= 1 ? Math.round(maxLado / ratio) : maxLado, k = ow / W;
+          const oc = document.createElement('canvas'); oc.width = ow; oc.height = oh;
+          const g = oc.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, ow, oh); g.imageSmoothingQuality = 'high';
+          g.drawImage(img, (ox - iw * s / 2) * k, (oy - ih * s / 2) * k, iw * s * k, ih * s * k);
+          oc.toBlob(bl => {
+            fechar();
+            if (!bl) { reject(new Error('imagem')); return; }
+            resolve(new File([bl], 'foto.png', { type: 'image/png' }));
+          }, 'image/png');
+        }
+      });
+    }
+  });
+}
+/* Reabre o editor com a foto que já está salva (item ou opção) para reenquadrar sem escolher outro arquivo */
+function _cdpFotoSalvaParaArquivo(d) {
+  return fetch(d).then(r => r.blob()).then(b => new File([b], 'foto.png', { type: b.type || 'image/png' }));
+}
+function cdpFotoAjustar(id) {
+  const d = _cdpFotos[id]; if (!d || String(d).indexOf('data:image/') !== 0) { showToast('Foto ainda não carregou. Tente de novo.', false); return; }
+  _cdpFotoSalvaParaArquivo(d).then(f => _cdpFotoEditar(f, _cdpEdItem)).then(ed => _cdpFotoSalvar(id, ed)).catch(_cdpFotoEdErro);
+}
+function cdpOpcFotoAjustar(iid, gid, oid) {
+  const d = _cdpFotos[iid + '_' + oid]; if (!d || String(d).indexOf('data:image/') !== 0) { showToast('Foto ainda não carregou. Tente de novo.', false); return; }
+  _cdpFotoSalvaParaArquivo(d).then(f => _cdpFotoEditar(f, _cdpEdOpcao)).then(ed => _cdpOpcFotoSalvar(iid, gid, oid, ed)).catch(_cdpFotoEdErro);
+}
+function _cdpFotoEdErro(e) { if (!e || e.message !== 'cancelado') { console.error(e); showToast('Não foi possível abrir a foto', false); } }
+function cdpFotoTamanho() {
+  showModal('Tamanho da foto', `
+    <div style="font-size:14px;line-height:1.5">
+      <b>Foto do item</b> (cardápio e destaque)<br>
+      Horizontal, proporção <b>4:3</b> — ideal <b>1200 × 900 px</b>.<br>
+      Mínimo: <b>520 × 390 px</b>.
+      <div style="margin-top:12px"><b>Foto da opção</b> (complementos)<br>
+      Quadrada, proporção <b>1:1</b> — ideal <b>600 × 600 px</b>.</div>
+      <div style="margin-top:12px;font-size:12px;color:var(--text3)">
+        Pode ser JPG, PNG ou WebP. Não precisa redimensionar antes: o sistema reduz sozinho e,
+        na tela de ajuste, você arrasta e dá zoom para enquadrar. O destaque mostra a foto inteira, sem cortar.
+      </div>
+    </div>`, [{ label: 'Entendi', style: 'primary' }]);
+}
 function cdpFotoEscolher(id) {
   let inp = document.getElementById('cdp-foto-input');
   if (!inp) { inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*'; inp.id = 'cdp-foto-input'; inp.style.display = 'none'; document.body.appendChild(inp); }
   inp.value = '';
-  inp.onchange = () => { const f = inp.files && inp.files[0]; if (f) _cdpFotoSalvar(id, f); };
+  inp.onchange = () => { const f = inp.files && inp.files[0]; if (f) _cdpFotoEditar(f, _cdpEdItem).then(ed => _cdpFotoSalvar(id, ed)).catch(_cdpFotoEdErro); };
   inp.click();
 }
 function _cdpFotoSalvar(id, file) {
@@ -21289,7 +21808,7 @@ function cmdAddItem(cardId) {
       const pares = extras.map(x => x.g + ':' + x.o).sort();
       const key = pares.length ? cardId + '~' + pares.join(',') : cardId;
       const nomeSel = _opcResumo(extras);
-      const preco = _cmdRound(_cdpPrecoVenda(it) * Math.max(1, extras.filter(x => x.q).length) + extras.reduce((t, x) => t + x.preco, 0));
+      const preco = _cmdRound(_cdpPrecoVenda(it) * Math.max(1, extras.filter(x => x.u).length) + extras.reduce((t, x) => t + x.preco, 0));
       const at = (c2.itens && c2.itens[key]) ? (parseInt(c2.itens[key].qtd) || 0) : 0;
       _cmdRef(c2.id).child('itens/' + key).set({ id: key, nome: nomeSel ? it.nome + ' (' + nomeSel + ')' : it.nome, preco, qtd: at + 1 })
         .catch(e => { console.error(e); showToast('Erro ao lançar o item', false); });
@@ -23100,9 +23619,12 @@ function _aplicarPerfilAtendimento() {
             });
           });
 
-          // Verifica se há atualização periodicamente (a cada 30 min) e ao voltar o foco
-          setInterval(() => reg.update().catch(() => {}), 30 * 60 * 1000);
-          window.addEventListener('focus', () => reg.update().catch(() => {}));
+          // Verifica se há versão nova: ao abrir, ao voltar o foco/aba e a cada 5 min.
+          // Se houver, limpa o cache e recarrega sozinho (ver _pwaChecarVersao).
+          _pwaChecarVersao(true);
+          setInterval(() => { reg.update().catch(() => {}); _pwaChecarVersao(false); }, 5 * 60 * 1000);
+          window.addEventListener('focus', () => { reg.update().catch(() => {}); _pwaChecarVersao(false); });
+          document.addEventListener('visibilitychange', () => { if (!document.hidden) _pwaChecarVersao(false); });
         })
         .catch(err => console.warn('[PWA] Falha ao registrar Service Worker:', err));
     };
@@ -23131,11 +23653,52 @@ function _aplicarPerfilAtendimento() {
   }
 
   /**
-   * Mostra um aviso discreto de "nova versão disponível" com botão para atualizar.
-   * Ao clicar, pede ao novo SW para assumir o controle (skipWaiting), o que dispara
-   * o controllerchange acima e recarrega a página com a versão nova.
+   * Atualização automática e forçada.
+   * Lê a versão atual direto do sw.js no servidor (sem cache; o CACHE_NAME muda a cada versão publicada)
+   * e compara com a versão que este aparelho viu da última vez. Se mudou: apaga todos os caches do app,
+   * atualiza o service worker e recarrega a página. NÃO mexe no localStorage (lançamentos pendentes,
+   * backups e configurações ficam preservados).
+   * - Ao abrir o app: recarrega na hora (nada digitado ainda).
+   * - Com o app em uso: recarrega sozinho só se não houver lançamento pendente nem campo em edição;
+   *   caso contrário mostra o aviso "Atualizar agora" (sem a limitação de tempo do aviso antigo).
    */
-  function _pwaAvisarAtualizacao(reg) {
+  let _pwaChecando = false;
+  async function _pwaChecarVersao(aoAbrir) {
+    if (_pwaChecando || !navigator.onLine) return;
+    _pwaChecando = true;
+    try {
+      const r = await fetch('./sw.js?_v=' + Date.now(), { cache: 'no-store' });
+      if (!r.ok) return;
+      const m = /CACHE_NAME\s*=\s*'([^']+)'/.exec(await r.text());
+      if (!m) return;
+      const nova = m[1];
+      const vista = localStorage.getItem('caixa-build');
+      if (!vista) { localStorage.setItem('caixa-build', nova); return; } // 1ª vez neste aparelho
+      if (vista === nova) return;                                            // já está na última
+      if (sessionStorage.getItem('caixa-recarga') === nova) {             // anti-laço
+        localStorage.setItem('caixa-build', nova); return;
+      }
+      const el = document.activeElement;
+      const digitando = !!(el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName) && el.value);
+      let pendente = false; try { pendente = _temPendenteLocal(); } catch (e) {}
+      if (!aoAbrir && (digitando || pendente)) { _pwaBannerAtualizar(nova); return; }
+      await _pwaAplicarVersao(nova);
+    } catch (e) { /* offline ou erro de rede: tenta de novo depois */ }
+    finally { _pwaChecando = false; }
+  }
+  async function _pwaAplicarVersao(nova) {
+    try { localStorage.setItem('caixa-build', nova); } catch (e) {}
+    try { sessionStorage.setItem('caixa-recarga', nova); } catch (e) {}
+    try { if (window.caches) { const ks = await caches.keys(); await Promise.all(ks.map(k => caches.delete(k))); } } catch (e) {}
+    try {
+      if (navigator.serviceWorker) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map(r => r.update().catch(() => {})));
+      }
+    } catch (e) {}
+    window.location.reload();
+  }
+  function _pwaBannerAtualizar(nova) {
     if (document.getElementById('pwa-update-banner')) return;
     const banner = document.createElement('div');
     banner.id = 'pwa-update-banner';
@@ -23147,17 +23710,20 @@ function _aplicarPerfilAtendimento() {
     banner.innerHTML =
       '<span>🔄 Nova versão disponível.</span>' +
       '<button id="pwa-update-btn" style="background:#fff;color:var(--brand,#1A4E7F);' +
-      'border:none;padding:7px 14px;border-radius:8px;font-weight:600;cursor:pointer">Atualizar</button>';
+      'border:none;padding:7px 14px;border-radius:8px;font-weight:600;cursor:pointer">Atualizar agora</button>';
     document.body.appendChild(banner);
-    document.getElementById('pwa-update-btn').addEventListener('click', () => {
-      window.__caixaUpdatePedido = true; // autoriza o reload no controllerchange
-      const espera = reg.waiting;
-      if (espera) espera.postMessage({ type: 'SKIP_WAITING' });
-      banner.remove();
-      // Se por algum motivo não houver SW em espera, recarrega mesmo assim
-      // após um instante para pegar a versão nova via network-first.
-      setTimeout(() => { if (!navigator.serviceWorker.controller || !espera) window.location.reload(); }, 1200);
-    });
+    document.getElementById('pwa-update-btn').addEventListener('click', () => { banner.remove(); _pwaAplicarVersao(nova); });
+  }
+
+  /**
+   * O navegador acha "SW novo" sempre que QUALQUER byte do sw.js muda (ou o servidor/CDN o serve diferente),
+   * mesmo sem versão nova do app — por isso o aviso aparecia à toa. Agora o aviso só existe quando o
+   * CACHE_NAME do sw.js (a versão publicada) é diferente da que este aparelho já está usando:
+   * _pwaChecarVersao compara e, se for mesmo uma versão nova, atualiza sozinho ou mostra o aviso
+   * (só quando há lançamento pendente / campo em edição).
+   */
+  function _pwaAvisarAtualizacao(reg) {
+    _pwaChecarVersao(false);
   }
 
   /* ── 4. BANNER DE INSTALAÇÃO (Android Chrome) ───────────────
@@ -24207,6 +24773,56 @@ mark.busca-hl { background: #FEF9C3; color: #78350F; border-radius: 2px; padding
   } catch(e) {}
 })();
 </script>
+<style id="resp-universal-v1">
+/* ===== Ajuste automático de tela v1 — celular · tablet · notebook · desktop · TV =====
+   Tudo (letras, espaços, botões) cresce/encolhe junto pelo fator --z, conforme a largura da tela. */
+:root { --z: 1; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+body { zoom: var(--z); }
+@media (max-width: 359px)  { :root { --z: .94; } }   /* celulares pequenos */
+@media (max-width: 319px)  { :root { --z: .88; } }
+@media (min-width: 1680px) { :root { --z: 1.08; } }  /* monitor grande */
+@media (min-width: 1920px) { :root { --z: 1.2; } }   /* Full HD / TV */
+@media (min-width: 2560px) { :root { --z: 1.5; } }   /* QHD / TV grande */
+@media (min-width: 3200px) { :root { --z: 2; } }     /* 4K sem escala */
+@media (max-height: 500px) and (orientation: landscape) { :root { --z: 1 !important; } }
+/* alturas de tela cheia compensam o fator de escala */
+body, .app-shell { min-height: calc(100vh / var(--z)); }
+.sidebar { height: calc(100vh / var(--z)); }
+@supports (height: 100dvh) { body, .app-shell { min-height: calc(100dvh / var(--z)); } .sidebar { height: calc(100dvh / var(--z)); } }
+img, svg, canvas, video, iframe { max-width: 100%; }
+@media (max-width: 600px) { body { overflow-x: hidden; } }
+</style>
+
+<style id="cdp-mobile-v1">
+/* ===== Cardápio no celular: itens compactos e organizados ===== */
+@media (max-width: 760px) {
+  .cdp-item { position: relative; gap: 10px; padding: 14px 0; }
+  .cdp-item > div { min-width: 0; }
+  .cdp-item .cdp-in { width: 100%; max-width: 100%; min-width: 0; }
+  /* nome em linha inteira, com o × no canto */
+  .cdp-item .cdp-c-nome { grid-column: 1 / -1; padding-right: 48px; }
+  .cdp-item .cdp-c-del { position: absolute; top: 14px; right: 0; grid-column: auto; justify-self: auto; }
+  .cdp-item .cdp-c-del .cmd-x { width: 40px; height: 40px; min-height: 0; padding: 0; }
+  /* foto + descrição lado a lado, links da foto compactos */
+  .cdp-item .cdp-c-desc { grid-column: 1 / -1; display: flex; gap: 10px; align-items: stretch; }
+  .cdp-item .cdp-c-desc textarea { flex: 1 1 auto; min-height: 96px; resize: none; }
+  .cdp-foto { flex: 0 0 96px; width: 96px; display: flex; flex-wrap: wrap; justify-content: center; align-content: flex-start; gap: 0 6px; }
+  .cdp-foto-btn { flex: 0 0 100%; width: 96px; height: 72px; min-height: 0; }
+  .cdp-foto-x, .cdp-foto-x.cdp-foto-aj, .cdp-foto-info, .cdp-hr-x {
+    min-height: 0 !important; height: auto; line-height: 1.25; padding: 4px 2px; margin: 2px 0 0;
+  }
+  .cdp-foto-x, .cdp-foto-x.cdp-foto-aj { display: inline-block; width: auto; flex: 0 0 auto; }
+  .cdp-foto-info { width: 100%; font-size: 10.5px; }
+  /* horário: "Vende das [__] até [__]" numa linha só */
+  .cdp-item .cdp-c-hr { grid-column: 1 / -1; padding-left: 0; display: grid; grid-template-columns: auto minmax(0,1fr) auto minmax(0,1fr); align-items: center; gap: 8px; }
+  .cdp-item .cdp-c-hr input.cdp-hr-in { width: 100%; min-width: 0; }
+  .cdp-item .cdp-c-hr > span, .cdp-item .cdp-c-hr > button { grid-column: 1 / -1; justify-self: start; }
+  /* complementos em linha inteira */
+  .cdp-item .cdp-c-opc { grid-column: 1 / -1; padding-left: 0; }
+  .cdp-item .cdp-opc-btn { display: block; width: 100%; min-height: 42px; white-space: normal; text-align: center; line-height: 1.25; }
+}
+</style>
 
 </body>
 </html>
