@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <script>try{var t=localStorage.getItem("caixa-theme");if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Controle de Caixa v1.8</title>
+<title>Controle de Caixa v1.9</title>
 
 <!-- ============================================================
      PWA — Progressive Web App
@@ -45,6 +45,7 @@
   ║         · Melhoria: renderContas usa cache; seção 3.22 documentada   ║
   ║  v3.3 — Seções novas: Planilhas já lançadas (3.23), calendário       ║
   ║         visual de lançamentos com marcação de cartão                 ║
+  ║  v1.9  — Cardápio no celular: cada item em bloco separado                          ║
   ║  v1.8  — Cardápio: organizar ordem das opções, copiar complementos, categorias (ordem/renomear), foto com zoom, busca fixa; atualização automática ║
   ║  v1.7  — Comanda: tela de complementos bem maior, opções em 2 colunas             ║
   ║  v1.6  — Comanda: tela de complementos maior (largura, fontes, fotos e botões)    ║
@@ -3768,7 +3769,7 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
           <img src="img/logo.png" alt="Select Sabor" style="width:44px;height:44px;border-radius:50%;flex-shrink:0;background:#fff;box-shadow:0 0 0 2px rgba(255,255,255,0.18)">
           <div>
             <div class="logo-title">Controle de Caixa</div>
-            <div class="logo-sub">v1.8</div>
+            <div class="logo-sub">v1.9</div>
           </div>
         </div>
         <span id="status-dot" style="display:none;width:8px;height:8px;border-radius:50%;background:#4ADE80;flex-shrink:0;box-shadow:0 0 0 2px rgba(74,222,128,0.2)" title="Conectado"></span>
@@ -24797,12 +24798,19 @@ img, svg, canvas, video, iframe { max-width: 100%; }
 <style id="cdp-mobile-v1">
 /* ===== Cardápio no celular: itens compactos e organizados ===== */
 @media (max-width: 760px) {
-  .cdp-item { position: relative; gap: 10px; padding: 14px 0; }
+  /* cada item vira um bloco separado */
+  .cdp-item, .cdp-item:last-child {
+    position: relative; gap: 10px; padding: 14px; margin: 0 0 14px;
+    background: var(--surface2); border: 1.5px solid var(--border2); border-left: 5px solid #86EFAC;
+    border-radius: 16px; box-shadow: 0 2px 8px rgba(0,0,0,.07);
+  }
+  .cdp-item.off, .cdp-item.off:last-child { border-left-color: var(--border2); }
+  .cdp-item:last-child { margin-bottom: 4px; }
   .cdp-item > div { min-width: 0; }
   .cdp-item .cdp-in { width: 100%; max-width: 100%; min-width: 0; }
   /* nome em linha inteira, com o × no canto */
   .cdp-item .cdp-c-nome { grid-column: 1 / -1; padding-right: 48px; }
-  .cdp-item .cdp-c-del { position: absolute; top: 14px; right: 0; grid-column: auto; justify-self: auto; }
+  .cdp-item .cdp-c-del { position: absolute; top: 14px; right: 14px; grid-column: auto; justify-self: auto; }
   .cdp-item .cdp-c-del .cmd-x { width: 40px; height: 40px; min-height: 0; padding: 0; }
   /* foto + descrição lado a lado, links da foto compactos */
   .cdp-item .cdp-c-desc { grid-column: 1 / -1; display: flex; gap: 10px; align-items: stretch; }

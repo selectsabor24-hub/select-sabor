@@ -16,7 +16,7 @@
 // isso não é mais um problema para ele. Ainda assim, a cada atualização
 // grande, é boa prática mudar o número abaixo (ex.: v1 → v2) para
 // forçar a limpeza dos caches antigos no 'activate'.
-const CACHE_NAME = 'caixa-v40'; // v1.8: novidades do Cardápio (fotos, ordem, busca), atualização automática → limpa os caches antigos
+const CACHE_NAME = 'caixa-v41'; // v1.9: Cardápio em blocos no celular (v1.8: fotos, ordem, busca, atualização automática) → limpa os caches antigos
 
 // Recursos do shell que devem ser cacheados na instalação
 const SHELL_URLS = [
