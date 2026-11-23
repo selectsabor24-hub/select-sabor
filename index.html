@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <script>try{var t=localStorage.getItem("caixa-theme");if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Controle de Caixa v1.10</title>
+<title>Controle de Caixa v1.11</title>
 
 <!-- ============================================================
      PWA — Progressive Web App
@@ -45,6 +45,7 @@
   ║         · Melhoria: renderContas usa cache; seção 3.22 documentada   ║
   ║  v3.3 — Seções novas: Planilhas já lançadas (3.23), calendário       ║
   ║         visual de lançamentos com marcação de cartão                 ║
+  ║  v1.11 — Campainha personalizada (enviar áudio) e para de tocar ao aceitar pedido                      ║
   ║  v1.10 — QR das mesas (nome e frase), Config. pedidos em menu próprio, canais aceitos, Telegram por horário ║
   ║  v1.9  — Cardápio no celular: cada item em bloco separado                          ║
   ║  v1.8  — Cardápio: organizar ordem das opções, copiar complementos, categorias (ordem/renomear), foto com zoom, busca fixa; atualização automática ║
@@ -3778,7 +3779,7 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
           <img src="img/logo.png" alt="Select Sabor" style="width:44px;height:44px;border-radius:50%;flex-shrink:0;background:#fff;box-shadow:0 0 0 2px rgba(255,255,255,0.18)">
           <div>
             <div class="logo-title">Controle de Caixa</div>
-            <div class="logo-sub">v1.10</div>
+            <div class="logo-sub">v1.11</div>
           </div>
         </div>
         <span id="status-dot" style="display:none;width:8px;height:8px;border-radius:50%;background:#4ADE80;flex-shrink:0;box-shadow:0 0 0 2px rgba(74,222,128,0.2)" title="Conectado"></span>
@@ -5113,11 +5114,11 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
       <div class="card mb-5">
         <div class="card-title">🔔 Som de novo pedido <span style="font-weight:400;font-size:12px;color:var(--text-muted,#6b7280)">(vale só neste aparelho, salva sozinho)</span></div>
         <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin:8px 0 12px">
-          <select id="ps-tipo" class="input-base" style="width:auto" onchange="pedSomCfgSalvar()"><option value="1">Campainha</option><option value="2">Alerta (bipes)</option><option value="3">Sirene</option></select>
+          <select id="ps-tipo" class="input-base" style="width:auto" onchange="pedSomCfgSalvar()"><option value="1">Campainha</option><option value="2">Alerta (bipes)</option><option value="3">Sirene</option><option value="4">Campainha personalizada (áudio)</option></select>
           <label style="display:flex;align-items:center;gap:6px;font-size:13px">Volume <input id="ps-vol" type="range" min="20" max="100" step="10" value="80" oninput="pedSomCfgSalvar()"></label>
           <label style="display:flex;align-items:center;gap:6px;font-size:13px"><input id="ps-rep" type="checkbox" checked onchange="pedSomCfgSalvar()"> Repetir até aceitar o pedido</label>
           <label style="display:flex;align-items:center;gap:6px;font-size:13px"><input id="ps-vib" type="checkbox" checked onchange="pedSomCfgSalvar()"> 📳 Vibrar ao receber pedido</label>
-          <button class="btn btn-secondary btn-md" type="button" onclick="pedSomTestar()">▶ Testar som</button>
+          <button class="btn btn-secondary btn-md" type="button" onclick="document.getElementById('ps-arq').click()">📁 Enviar áudio da campainha</button><input id="ps-arq" type="file" accept="audio/*,.mp3,.wav,.ogg,.m4a" style="display:none" onchange="pedSomNuvemEnviar(this)"><button class="btn btn-secondary btn-md" type="button" onclick="pedSomNuvemRemover()">↩ Voltar ao áudio padrão</button><button class="btn btn-secondary btn-md" type="button" onclick="pedSomTestar()">▶ Testar som</button><span id="ps-origem" style="font-size:12px;color:var(--text-muted,#6b7280)"></span>
         </div>
       </div>
       <div class="card mb-5">
@@ -18569,6 +18570,7 @@ function _pedDetectarNovos() {
   novos.forEach(p => _pedVistos.add(p.id));
   const reais = novos.filter(p => p.status === 'novo');
   if (reais.length) _pedAlertar(reais);
+  else if ((_pedLoopTimer || _pedMp3Loop) && !_pedTemNovoPendente()) _pedLoopParar(); // pedido aceito/cancelado: para a campainha na hora
 }
 function _pedAlertar(novos) {
   const p = novos[0];
@@ -18580,7 +18582,7 @@ function _pedAlertar(novos) {
 /* ---------- Som de novo pedido: toque escolhido, volume e repetição ---------- */
 function _pedSomCfg() {
   let c = {}; try { c = JSON.parse(localStorage.getItem('pedSomCfg') || '{}') || {}; } catch (e) {}
-  return { tipo: [1, 2, 3].includes(c.tipo) ? c.tipo : 1, vol: (c.vol >= 0.2 && c.vol <= 1) ? c.vol : 0.8, repetir: c.repetir !== false, vib: c.vib !== false };
+  return { tipo: [1, 2, 3, 4].includes(c.tipo) ? c.tipo : 1, vol: (c.vol >= 0.2 && c.vol <= 1) ? c.vol : 0.8, repetir: c.repetir !== false, vib: c.vib !== false };
 }
 function pedSomCfgSalvar() {
   const tipo = parseInt(document.getElementById('ps-tipo').value, 10) || 1;
@@ -18588,10 +18590,12 @@ function pedSomCfgSalvar() {
   const repetir = document.getElementById('ps-rep').checked;
   const vibEl = document.getElementById('ps-vib');
   const vib = vibEl ? vibEl.checked : true;
-  try { localStorage.setItem('pedSomCfg', JSON.stringify({ tipo, vol, repetir, vib })); } catch (e) {}
+  try { localStorage.setItem('pedSomCfg', JSON.stringify({ v: 2, tipo, vol, repetir, vib })); } catch (e) {}
+  if (!repetir) _pedLoopParar();
 }
 function pedSomCfgAbrir() {
   const c = _pedSomCfg();
+  _pedMp3Carregar().catch(() => {}); _pedSomOrigemAtualizar();
   const t = document.getElementById('ps-tipo'), v = document.getElementById('ps-vol'), r = document.getElementById('ps-rep'), vb = document.getElementById('ps-vib');
   if (t) t.value = String(c.tipo); if (v) v.value = String(Math.round(c.vol * 100)); if (r) r.checked = c.repetir; if (vb) vb.checked = c.vib;
 }
@@ -18600,13 +18604,118 @@ function pedSomTestar() { pedSomCfgSalvar(); _pedSomPedido(true); _pedVibrar(); 
 function _pedVibrar(padrao) {
   try { if (_pedSomCfg().vib && navigator.vibrate) navigator.vibrate(padrao || [400, 150, 400, 150, 400]); } catch (e) {}
 }
+/* Campainha personalizada: arquivo som-pedido.mp3 (decodificado uma vez e tocado pelo mesmo AudioContext) */
+let _pedMp3Buf = null, _pedMp3Prom = null, _pedMp3Src = null, _pedMp3Fim = 0, _pedMp3Loja = '', _pedMp3Loop = false;
+/* O áudio enviado pela loja fica no Firebase (pedidosSom/<loja>) — assim acompanha o sistema em qualquer
+   aparelho/instalação e entra no backup. Se não houver, usa o arquivo padrão som-pedido.mp3. */
+let _pedSomNuvem = undefined, _pedSomNuvemLoja = '';
+function _pedSomNuvemLer() {
+  const loja = _lojaAtiva;
+  if (!loja) return Promise.resolve(null);
+  if (_pedSomNuvemLoja === loja && _pedSomNuvem !== undefined) return Promise.resolve(_pedSomNuvem);
+  return _dbRef('pedidosSom/' + loja).once('value').then(sn => {
+    const v = sn.val();
+    const ok = (v && typeof v.dados === 'string' && v.dados.indexOf('data:audio/') === 0) ? v : null;
+    if (loja === _lojaAtiva) { _pedSomNuvem = ok; _pedSomNuvemLoja = loja; }
+    return ok;
+  }).catch(e => { console.warn('[som] sem acesso ao áudio da loja (publique as regras do Firebase):', e && e.message); return null; });
+}
+function _pedDataUrlBuf(d) {
+  const bin = atob(d.slice(d.indexOf(',') + 1)), u = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+  return u.buffer;
+}
+function _pedMp3Carregar() {
+  const loja = _lojaAtiva || '';
+  if (_pedMp3Buf && _pedMp3Loja === loja) return Promise.resolve(_pedMp3Buf);
+  if (_pedMp3Prom && _pedMp3Loja === loja) return _pedMp3Prom;
+  const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return Promise.reject(new Error('sem AudioContext'));
+  _pedAudio = _pedAudio || new AC();
+  _pedMp3Loja = loja; _pedMp3Buf = null;
+  const dec = ab => new Promise((ok, err) => _pedAudio.decodeAudioData(ab, ok, err));
+  const padrao = () => fetch('./som-pedido.mp3').then(r => { if (!r.ok) throw new Error('mp3 ' + r.status); return r.arrayBuffer(); }).then(dec);
+  const p = _pedSomNuvemLer()
+    .then(n => n ? dec(_pedDataUrlBuf(n.dados)).catch(() => padrao()) : padrao())
+    .then(buf => { if (_pedMp3Loja === loja) _pedMp3Buf = buf; return buf; })
+    .catch(e => { if (_pedMp3Prom === p) _pedMp3Prom = null; throw e; });
+  _pedMp3Prom = p;
+  return p;
+}
+function _pedSomOrigemAtualizar() {
+  const el = document.getElementById('ps-origem'); if (!el) return;
+  _pedSomNuvemLer().then(n => { el.textContent = n ? '☁️ Áudio da loja: ' + (n.nome || 'enviado') : 'Usando o áudio padrão do sistema'; });
+}
+function pedSomNuvemEnviar(inp) {
+  const f = inp.files && inp.files[0]; inp.value = '';
+  if (!f || !_lojaAtiva) return;
+  if (!/^audio\//.test(f.type || '') && !/\.(mp3|wav|ogg|m4a|aac)$/i.test(f.name)) { showToast('Escolha um arquivo de áudio (mp3, wav, ogg ou m4a)', false); return; }
+  if (f.size > 1.5 * 1024 * 1024) { showToast('Áudio grande demais (máx. 1,5 MB). Use um arquivo mais curto ou com menos qualidade.', false); return; }
+  const loja = _lojaAtiva, r = new FileReader();
+  r.onerror = () => showToast('Não consegui ler o arquivo', false);
+  r.onload = () => {
+    let d = String(r.result);
+    if (d.indexOf('data:audio/') !== 0) d = 'data:audio/mpeg;base64,' + d.slice(d.indexOf(',') + 1);
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) { showToast('Este navegador não toca áudio', false); return; }
+    _pedAudio = _pedAudio || new AC();
+    new Promise((ok, err) => _pedAudio.decodeAudioData(_pedDataUrlBuf(d), ok, err))
+      .then(() => _dbRef('pedidosSom/' + loja).set({ dados: d, nome: f.name.slice(0, 80), ts: Date.now() }))
+      .then(() => {
+        _pedSomNuvem = { dados: d, nome: f.name.slice(0, 80) }; _pedSomNuvemLoja = loja;
+        _pedMp3Buf = null; _pedMp3Prom = null;
+        showToast('Áudio da campainha salvo ✔');
+        _pedSomOrigemAtualizar();
+        const t = document.getElementById('ps-tipo'); if (t) { t.value = '4'; pedSomCfgSalvar(); }
+        pedSomTestar();
+      })
+      .catch(e => { console.error(e); showToast('Não consegui salvar o áudio (arquivo inválido ou sem permissão no Firebase — veja as regras de pedidosSom)', false); });
+  };
+  r.readAsDataURL(f);
+}
+function pedSomNuvemRemover() {
+  if (!_lojaAtiva) return;
+  const loja = _lojaAtiva;
+  _dbRef('pedidosSom/' + loja).remove().then(() => {
+    _pedSomNuvem = null; _pedSomNuvemLoja = loja; _pedMp3Buf = null; _pedMp3Prom = null;
+    showToast('Voltou ao áudio padrão ✔'); _pedSomOrigemAtualizar();
+  }).catch(e => { console.error(e); showToast('Sem permissão para remover o áudio', false); });
+}
+function _pedMp3Parar() {
+  try { if (_pedMp3Src) { _pedMp3Src.onended = null; _pedMp3Src.stop(); } } catch (e) {}
+  _pedMp3Src = null; _pedMp3Fim = 0; _pedMp3Loop = false;
+}
+function _pedMp3Tocar(vol, forcar, repetir) {
+  // não sobrepõe: se o áudio anterior ainda está tocando, espera ele terminar
+  if (!forcar && _pedAudio && _pedAudio.currentTime < _pedMp3Fim) return Promise.resolve();
+  return _pedMp3Carregar().then(buf => {
+    if (_pedAudio.state === 'suspended') _pedAudio.resume();
+    _pedMp3Parar();
+    const src = _pedAudio.createBufferSource(), g = _pedAudio.createGain();
+    src.buffer = buf; g.gain.value = vol;
+    src.loop = !!repetir; // repetindo: o próprio áudio emenda sem depender de temporizador (não é pausado com a aba em segundo plano)
+    src.connect(g); g.connect(_pedAudio.destination);
+    _pedMp3Src = src; _pedMp3Loop = !!repetir; _pedMp3Fim = repetir ? Infinity : _pedAudio.currentTime + buf.duration;
+    src.onended = () => { if (_pedMp3Src === src) { _pedMp3Src = null; _pedMp3Fim = 0; _pedMp3Loop = false; } };
+    src.start();
+  });
+}
 function _pedSomPedido(forcar) {
   if (!_pedSom && !forcar) return;
   try {
     const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
     _pedAudio = _pedAudio || new AC();
     if (_pedAudio.state === 'suspended') _pedAudio.resume();
-    const c = _pedSomCfg(), t0 = _pedAudio.currentTime + 0.02;
+    const c = _pedSomCfg();
+    if (c.tipo === 4) {
+      _pedMp3Tocar(c.vol, forcar, c.repetir && !forcar).catch(() => _pedSomSintetico(1, c)); // se o mp3 falhar, toca a campainha antiga
+      return;
+    }
+    _pedSomSintetico(c.tipo, c);
+  } catch (e) {}
+}
+function _pedSomSintetico(tipo, c) {
+  try {
+    const t0 = _pedAudio.currentTime + 0.02;
     const nota = (freq, ini, dur, onda, ganho) => {
       const o = _pedAudio.createOscillator(), g = _pedAudio.createGain();
       o.type = onda; o.frequency.value = freq;
@@ -18616,9 +18725,9 @@ function _pedSomPedido(forcar) {
       o.connect(g); g.connect(_pedAudio.destination);
       o.start(t0 + ini); o.stop(t0 + ini + dur + 0.02);
     };
-    if (c.tipo === 1) { // campainha "ding-dong", duas vezes
+    if (tipo === 1) { // campainha "ding-dong", duas vezes
       [0, 0.9].forEach(b => { nota(880, b, 0.55, 'triangle', 0.6); nota(659, b + 0.35, 0.7, 'triangle', 0.6); });
-    } else if (c.tipo === 2) { // alerta: bipes rápidos
+    } else if (tipo === 2) { // alerta: bipes rápidos
       for (let i = 0; i < 6; i++) nota(i % 2 ? 1175 : 1046, i * 0.16, 0.12, 'square', 0.35);
     } else { // sirene: sobe e desce
       for (let i = 0; i < 4; i++) { nota(660, i * 0.45, 0.22, 'sawtooth', 0.3); nota(880, i * 0.45 + 0.22, 0.22, 'sawtooth', 0.3); }
@@ -18636,7 +18745,7 @@ function _pedLoopIniciar() {
     _pedVibrar();
   }, 6000);
 }
-function _pedLoopParar() { if (_pedLoopTimer) { clearInterval(_pedLoopTimer); _pedLoopTimer = null; } }
+function _pedLoopParar() { if (_pedLoopTimer) { clearInterval(_pedLoopTimer); _pedLoopTimer = null; } _pedMp3Parar(); }
 function _pedBeep() {
   if (!_pedSom) return;
   try {
@@ -18658,7 +18767,8 @@ function _pedBeep() {
 function pedSomToggle() {
   _pedSom = !_pedSom;
   try { localStorage.setItem('pedSom', _pedSom ? '1' : '0'); } catch (e) {}
-  if (_pedSom) _pedBeep(); // também "destrava" o áudio do navegador
+  if (!_pedSom) _pedMp3Parar();
+  if (_pedSom) { _pedBeep(); _pedMp3Carregar().catch(() => {}); } // também "destrava" o áudio do navegador
   _pedAtualizarSomBtn();
 }
 function _pedAtualizarSomBtn() {
