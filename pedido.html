@@ -744,12 +744,38 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
   /* Horário por dia da semana: cfg.horarioDia === true e cfg.horarios[0..6] = { on, abre, fecha } (0 = domingo) */
   var DIAS_N = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
   function diaBR() { return new Date(Date.now() + HORA_OFFSET - 10800000).getUTCDay(); }
+
+  /* ── Feriados (nacionais + Betim/MG), calculados automaticamente para qualquer ano ── */
+  function _feNomes(ano) {
+    var m = {'01-01':'Ano Novo','04-21':'Tiradentes','05-01':'Dia do Trabalho','09-07':'Independência','10-12':'N. Sra. Aparecida','11-02':'Finados','11-15':'Proclamação da República','11-20':'Consciência Negra','12-25':'Natal','08-15':'Assunção de N. Sra. (MG)','12-08':'Imaculada Conceição (MG)','12-17':'Aniversário de Betim'};
+    var a = ano % 19, b = Math.floor(ano / 100), c = ano % 100, d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3),
+        h = (19 * a + b - d - g + 15) % 30, i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7, mm = Math.floor((a + 11 * h + 22 * l) / 451),
+        mes = Math.floor((h + l - 7 * mm + 114) / 31), dia = ((h + l - 7 * mm + 114) % 31) + 1, p = Date.UTC(ano, mes - 1, dia);
+    function add(n) { var x = new Date(p + n * 86400000); return ('0' + (x.getUTCMonth() + 1)).slice(-2) + '-' + ('0' + x.getUTCDate()).slice(-2); }
+    m[add(0)] = 'Páscoa'; m[add(-48)] = 'Segunda de Carnaval'; m[add(-47)] = 'Terça de Carnaval'; m[add(-2)] = 'Sexta-feira Santa'; m[add(60)] = 'Corpus Christi';
+    return m;
+  }
+  var _feCache = {};
+  /* 'YYYY-MM-DD' -> nome do feriado ('' se não for feriado) */
+  function nomeFeriado(ymd) {
+    var ano = +String(ymd).slice(0, 4); if (!ano) return '';
+    return (_feCache[ano] || (_feCache[ano] = _feNomes(ano)))[String(ymd).slice(5)] || '';
+  }
+  function ymdBR(i) { return new Date(Date.now() + HORA_OFFSET - 10800000 + (i || 0) * 86400000).toISOString().slice(0, 10); }
+  /* Horário do dia (hoje + i dias). Com cfg.feriadoOn, feriado = fechado, a menos que o dono tenha marcado "vou trabalhar" (cfg.feriadosTrab[ymd] = {abre, fecha}) */
+  function horData(i) {
+    if (cfg && cfg.feriadoOn === true) {
+      var y = ymdBR(i);
+      if (nomeFeriado(y)) { var t = cfg.feriadosTrab && cfg.feriadosTrab[y]; return (t && typeof t.abre === 'number' && typeof t.fecha === 'number' && t.abre < t.fecha) ? t : null; }
+    }
+    return horDia((diaBR() + (i || 0)) % 7);
+  }
   function horDia(d) { var h = cfg && cfg.horarios && cfg.horarios[d]; return h && h.on === true && typeof h.abre === 'number' && typeof h.fecha === 'number' && h.abre < h.fecha ? h : null; }
   function proxAbre() {
     if (!(cfg && cfg.horarioDia === true)) return 'Abrimos às ' + fmtMin(cfg.abreMin);
     var d = diaBR(), n = agoraMin();
-    for (var i = 0; i <= 7; i++) {
-      var k = (d + i) % 7, h = horDia(k);
+    for (var i = 0; i <= 14; i++) {
+      var k = (d + i) % 7, h = horData(i);
       if (!h || (i === 0 && n >= h.abre)) continue;
       return 'Abrimos ' + (i === 0 ? 'hoje' : i === 1 ? 'amanhã' : (k === 0 || k === 6 ? 'no ' : 'na ') + DIAS_N[k]) + ' às ' + fmtMin(h.abre);
     }
@@ -762,7 +788,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
   /* Horário de funcionamento da loja (cfg.horarioOn / abreMin / fechaMin): fora dele ninguém consegue pedir. */
   function horarioLojaOk() {
     if (!cfg || cfg.horarioOn !== true) return true;
-    if (cfg.horarioDia === true) { var hj = horDia(diaBR()), nn = agoraMin(); return !!hj && nn >= hj.abre && nn < hj.fecha; }
+    if (cfg.horarioDia === true) { var hj = horData(0), nn = agoraMin(); return !!hj && nn >= hj.abre && nn < hj.fecha; }
     var a = cfg.abreMin, f = cfg.fechaMin;
     if (typeof a !== 'number' || typeof f !== 'number' || a === f) return false;
     var n = agoraMin();
@@ -1294,7 +1320,7 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
   /* Horário de hoje para mostrar no cabeçalho (só quando a loja usa horário de funcionamento) */
   function horarioHoje() {
     if (!cfg || cfg.horarioOn !== true) return '';
-    if (cfg.horarioDia === true) { var h = horDia(diaBR()); return h ? 'Hoje: ' + fmtMin(h.abre) + ' às ' + fmtMin(h.fecha) : 'Hoje: fechado'; }
+    if (cfg.horarioDia === true) { var h = horData(0), fn = (cfg.feriadoOn === true) ? nomeFeriado(ymdBR(0)) : ''; return h ? 'Hoje' + (fn ? ' (' + fn + ')' : '') + ': ' + fmtMin(h.abre) + ' às ' + fmtMin(h.fecha) : (fn ? 'Hoje: fechado (' + fn + ')' : 'Hoje: fechado'); }
     if (typeof cfg.abreMin === 'number' && typeof cfg.fechaMin === 'number') return 'Hoje: ' + fmtMin(cfg.abreMin) + ' às ' + fmtMin(cfg.fechaMin);
     return '';
   }

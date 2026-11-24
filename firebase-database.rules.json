@@ -504,6 +504,13 @@
             ".validate": "newData.val() === null || (newData.isString() && newData.val().beginsWith('data:image/') && newData.val().length <= 70000)"
           }
         }
+      },
+      "pedidosSom": {
+        "$lojaId": {
+          ".read": "auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true)",
+          ".write": "auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true)",
+          ".validate": "newData.val() === null || (newData.hasChildren(['dados']) && newData.child('dados').isString() && newData.child('dados').val().beginsWith('data:audio/') && newData.child('dados').val().length <= 2200000)"
+        }
       }
     }
   }

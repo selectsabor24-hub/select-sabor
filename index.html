@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <script>try{var t=localStorage.getItem("caixa-theme");if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Controle de Caixa v1.11</title>
+<title>Controle de Caixa v1.12</title>
 
 <!-- ============================================================
      PWA — Progressive Web App
@@ -45,6 +45,7 @@
   ║         · Melhoria: renderContas usa cache; seção 3.22 documentada   ║
   ║  v3.3 — Seções novas: Planilhas já lançadas (3.23), calendário       ║
   ║         visual de lançamentos com marcação de cartão                 ║
+  ║  v1.12 — Pedidos de mesa (QR) no painel das Mesas + pagamento, cupom em tabela com CNPJ, feriados, Cardápio em blocos ║
   ║  v1.11 — Campainha personalizada (enviar áudio) e para de tocar ao aceitar pedido                      ║
   ║  v1.10 — QR das mesas (nome e frase), Config. pedidos em menu próprio, canais aceitos, Telegram por horário ║
   ║  v1.9  — Cardápio no celular: cada item em bloco separado                          ║
@@ -864,6 +865,13 @@ body.is-offline #login-screen {
   overflow: hidden;
 }
 .metric-card:hover { box-shadow: var(--shadow-md); }
+/* Mesas / QRcode: cards de resumo menores, com mais respiro por dentro */
+#cmd-metricas, #ped-metricas, #mot-metricas { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; max-width: none !important; width: 100% !important; gap: 10px !important; margin-bottom: 14px !important; }
+#cdp-metricas { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; max-width: none !important; width: 100% !important; gap: 10px !important; margin-bottom: 14px !important; }
+#cmd-metricas .metric-card, #ped-metricas .metric-card, #mot-metricas .metric-card, #cdp-metricas .metric-card { padding: 10px 16px !important; min-height: 0 !important; border-radius: 12px !important; }
+#cmd-metricas .metric-label, #ped-metricas .metric-label, #mot-metricas .metric-label, #cdp-metricas .metric-label { font-size: 10.5px; margin-bottom: 4px !important; letter-spacing: .6px; }
+#cmd-metricas .metric-value, #ped-metricas .metric-value, #mot-metricas .metric-value, #cdp-metricas .metric-value { font-size: clamp(13px, 1.2vw, 15px) !important; font-weight: 500 !important; letter-spacing: -0.2px !important; color: var(--text2); }
+@media (max-width: 760px) { #cmd-metricas, #ped-metricas, #mot-metricas { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; max-width: none !important; } }
 .metric-label  { font-size: var(--text-xs); color: var(--text2); font-weight: 600; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* Valor: encolhe para caber inteiro no card (não corta mais com "...").
    O tamanho final é ajustado por JS (_ajustarFonteValores) para caber sempre. */
@@ -3283,6 +3291,85 @@ tbody tr:hover {
 .cdp-cat-tit:hover { color:var(--accent); }
 .cdp-cat-fch svg { width:16px; height:16px; transition:transform .15s; }
 .cdp-cat-fch.fechada svg { transform:rotate(180deg); }
+/* Configurações dos pedidos online > Dados da loja: 3 campos aproveitando a largura toda, alinhados na mesma linha */
+#sec-pedidoscfg .pc-grid-dados { display:grid !important; grid-template-columns: minmax(0,1.6fr) minmax(0,1fr) minmax(0,1fr) !important; gap:12px 16px !important; align-items:end; }
+#sec-pedidoscfg .pc-grid-dados .form-group { min-width:0; margin:0; }
+#sec-pedidoscfg .pc-grid-dados label { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+#sec-pedidoscfg .pc-grid-dados input { width:100%; box-sizing:border-box; }
+@media (max-width: 760px) { #sec-pedidoscfg .pc-grid-dados { grid-template-columns: minmax(0,1fr) minmax(0,1fr) !important; } #sec-pedidoscfg .pc-grid-dados .form-group:first-child { grid-column: 1 / -1; } }
+@media (max-width: 480px) { #sec-pedidoscfg .pc-grid-dados { grid-template-columns: minmax(0,1fr) !important; } }
+/* Configurações dos pedidos online > Pedidos e taxas: 2 campos aproveitando a largura toda, alinhados na mesma linha */
+#sec-pedidoscfg .pc-grid-2 { display:grid !important; grid-template-columns: repeat(2, minmax(0,1fr)) !important; gap:12px 16px !important; align-items:end; }
+#sec-pedidoscfg .pc-grid-2 .form-group { min-width:0; margin:0; }
+#sec-pedidoscfg .pc-grid-2 label { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+#sec-pedidoscfg .pc-grid-2 input { width:100%; box-sizing:border-box; }
+@media (max-width: 480px) { #sec-pedidoscfg .pc-grid-2 { grid-template-columns: minmax(0,1fr) !important; } }
+#cdp-sec-itens .card { box-shadow:none !important; border:1px solid var(--border) !important; border-radius:12px !important; }
+#cdp-sec-itens > .cdp-sec-tit { background:var(--accent-bg); border-radius:12px; padding:10px 14px; margin-bottom:8px !important; border-bottom:0; }
+#cdp-sec-itens.fechada > .cdp-sec-tit { margin-bottom:0 !important; }
+#cdp-sec-itens > .cdp-sec-tit::before { box-shadow:none; }
+#cdp-sec-itens #cdp-lista > .cdp-cat-tit:first-child { margin-top:10px; }
+/* Pedidos online: título e status lado a lado, num bloco só, com letras menores */
+#sec-pedidos .page-header { flex-wrap: nowrap; gap: 16px !important; padding: 12px 18px !important; }
+#sec-pedidos .page-header > div:first-child { order: 1; flex: 0 1 auto; min-width: 0; }
+#sec-pedidos .ped-topo-inline { order: 2; flex: 1 1 0; min-width: 0; width:auto; border-top:0; border-left:1px solid var(--border); padding:0 0 0 18px; margin:0; }
+#sec-pedidos .page-header > div:nth-child(2) { order: 3; flex: 0 0 auto; }
+#sec-pedidos .ped-topo-inline:empty { display:none; }
+#sec-pedidos .ped-topo-inline .card { box-shadow:none !important; border:0 !important; background:transparent !important; padding:0 !important; margin:0 !important; }
+#sec-pedidos .page-title { font-size: 20px !important; line-height:1.15; }
+#sec-pedidos .page-sub { font-size: 11.5px !important; margin-top:2px; }
+#sec-pedidos .ped-status { font-size: 13px; }
+#sec-pedidos .ped-sub { font-size: 11px; }
+#sec-pedidos .ped-topo-linha { flex-wrap: nowrap; gap: 10px; }
+#sec-pedidos .ped-topo-linha .btn, #sec-pedidos #ped-som-btn { font-size: 12px; padding: 7px 12px; white-space: nowrap; }
+@media (max-width: 1100px) {
+  #sec-pedidos .page-header { flex-wrap: wrap; }
+  #sec-pedidos .ped-topo-inline { order: 4; flex: 1 0 100%; border-left:0; border-top:1px solid var(--border); padding:12px 0 0; }
+  #sec-pedidos .ped-topo-linha { flex-wrap: wrap; }
+}
+/* Motoqueiro: título e abas lado a lado, num bloco só, com letras menores */
+#sec-motoqueiro .page-header { flex-wrap: nowrap; gap: 16px !important; padding: 12px 18px !important; }
+#sec-motoqueiro .page-header > div:first-child { order: 1; flex: 0 1 auto; min-width: 0; }
+#sec-motoqueiro .mot-tabs-inline { order: 2; flex: 1 1 0; min-width: 0; margin: 0; padding: 0 0 0 18px; border-left: 1px solid var(--border); gap: 6px; }
+#sec-motoqueiro .mot-topo { order: 3; flex: 0 0 auto; flex-wrap: nowrap; }
+#sec-motoqueiro .mot-topo input { flex: 0 1 150px; }
+#sec-motoqueiro .page-title { font-size: 20px !important; line-height:1.15; }
+#sec-motoqueiro .page-sub { font-size: 11.5px !important; margin-top:2px; }
+#sec-motoqueiro .mot-tabs-inline button { padding: 6px 12px; font-size: 12px; white-space: nowrap; }
+#sec-motoqueiro .mot-topo .btn, #sec-motoqueiro .mot-topo select, #sec-motoqueiro .mot-topo input { font-size: 12px; padding: 7px 12px; white-space: nowrap; }
+@media (max-width: 1100px) {
+  #sec-motoqueiro .page-header { flex-wrap: wrap; }
+  #sec-motoqueiro .mot-tabs-inline { order: 4; flex: 1 0 100%; border-left:0; border-top:1px solid var(--border); padding:12px 0 0; }
+}
+/* Celular: a barra fixa fica no topo (60px). Garante o espaço para o cabeçalho de todas as telas não ficar cortado. */
+@media (max-width: 600px) {
+  html body .main { padding-top: calc(60px + env(safe-area-inset-top, 0px) + 14px) !important; padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 24px) !important; }
+  html body .cdp-toolbar.cdp-fixa { top: calc(60px + env(safe-area-inset-top, 0px) + var(--cdp-top, 0px)); }
+}
+/* Celular: botão do menu em estilo hambúrguer (três linhas), à esquerda da barra do topo */
+@media (max-width: 600px) {
+  html body #bn-mais { flex: 0 0 auto; margin-right: auto; min-width: 72px; padding: 6px 16px; }
+  html body #bn-mais svg { width: 24px; height: 24px; stroke-width: 2.4; }
+}
+/* Mesas / QRcode: título e abas lado a lado, num bloco só, com letras menores */
+#sec-comandas .page-header { flex-wrap: nowrap; gap: 12px !important; padding: 10px 14px !important; }
+#sec-comandas .page-header > div:first-child { order: 1; flex: 0 1 280px; min-width: 0; }
+#sec-comandas .cmd-tabs-inline { order: 2; flex: 1 1 0; min-width: 0; margin: 0; padding: 0 0 0 12px; border-left: 1px solid var(--border); gap: 4px; flex-wrap: nowrap; }
+#sec-comandas .cmd-topo { order: 3; flex: 0 0 auto; flex-wrap: nowrap !important; gap: 6px !important; }
+#sec-comandas .page-title { font-size: 18px !important; line-height:1.15; }
+#sec-comandas .page-sub { font-size: 11px !important; margin-top:2px; line-height:1.3; }
+#sec-comandas .cmd-tabs-inline button { padding: 5px 9px; font-size: 11px; white-space: nowrap; border-radius: 8px; }
+#sec-comandas .cmd-topo .btn, #sec-comandas .cmd-topo input { font-size: 11px !important; padding: 5px 9px !important; height: auto !important; min-height: 0 !important; white-space: nowrap; border-radius: 8px; }
+#sec-comandas .cmd-topo input[type="date"] { width: 118px; }
+@media (max-width: 1100px) {
+  #sec-comandas .page-header { flex-wrap: wrap; }
+  #sec-comandas .cmd-tabs-inline { order: 4; flex: 1 0 100%; border-left:0; border-top:1px solid var(--border); padding:10px 0 0; flex-wrap: wrap; }
+}
+.cdp-sec-tit { cursor:pointer; user-select:none; -webkit-user-select:none; }
+.cdp-sec-tit .cdp-cat-fch { margin-left:auto; }
+.cdp-sec-tit:hover .cdp-cat-fch { background:var(--accent); color:#fff; }
+.cdp-sec.fechada > :not(.cdp-sec-tit) { display:none !important; }
+.cdp-sec.fechada > .cdp-sec-tit { margin-bottom:0 !important; }
 .cdp-cat-mv { background:none; border:0; color:var(--text2); font-size:16px; font-weight:700; line-height:1; cursor:pointer; padding:0 5px; }
 .cdp-cat-mv:hover:not([disabled]) { color:var(--accent); }
 .cdp-cat-mv[disabled] { opacity:.25; cursor:default; }
@@ -3382,6 +3469,10 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
 .cmd-ident .cmd-num  { font-family:'DM Mono',monospace; font-size:11px; font-weight:700; color:var(--accent); background:var(--accent-bg); border-radius:6px; padding:1px 7px; }
 .cmd-ident .cmd-vez  { font-size:11px; font-weight:700; color:#B45309; background:#FEF3C7; border-radius:6px; padding:1px 7px; }
 .cmd-modal-head { padding: 18px 22px 14px; border-bottom: 1px solid var(--border); display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+.cmd-head-esq { display:flex; align-items:flex-start; gap:14px; flex-wrap:wrap; min-width:0; }
+.cmd-voltar { white-space:nowrap; font-weight:700; }
+.cmd-voltar-col { display:inline-flex; align-items:center; margin:0 0 6px; }
+.cmd-fechar-conta { display:block; width:100%; margin:16px 0 8px; padding:14px 18px; font-size:16px; font-weight:800; }
 .cmd-modal-body { padding: 16px 22px; }
 .cmd-modal-foot { padding: 14px 22px 18px; border-top: 1px solid var(--border); display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap; }
 .cmd-itens { width:100%; border-collapse: collapse; font-size: 14px; }
@@ -3486,6 +3577,19 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
 .ped-link input { flex: 1 1 220px; min-width: 0; }
 .pc-hd-status { display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; padding:12px 14px; border:1px solid var(--border,#e5e5e5); border-radius:12px; margin:8px 0 12px; }
 .pc-hd-status small { font-size:11px; font-weight:800; letter-spacing:.6px; opacity:.65; }
+/* QR Code das mesas (Config. pedidos): campos organizados */
+#qr-mesas-card .qr-intro { margin: 10px 0 12px; font-size: 13px; line-height: 1.5; color: var(--text2); }
+#qr-mesas-card .qr-link { margin: 0 0 16px; padding: 8px 12px; border: 1px dashed var(--border); border-radius: 12px; font-size: 12px; color: var(--text3); overflow-wrap: anywhere; }
+#qr-mesas-card .qr-form { display: grid; grid-template-columns: 170px minmax(0, 1fr); gap: 16px 18px; align-items: start; }
+#qr-mesas-card .qr-campo { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+#qr-mesas-card .qr-campo.full { grid-column: 1 / -1; }
+#qr-mesas-card .qr-campo > label { font-size: 13px; font-weight: 700; }
+#qr-mesas-card .qr-campo > label small { display: block; margin-top: 2px; font-size: 11.5px; font-weight: 400; opacity: .7; }
+#qr-mesas-card .qr-campo .input-sm { width: 100%; box-sizing: border-box; }
+#qr-mesas-card textarea.input-sm { height: auto !important; min-height: 118px; padding: 10px 12px; line-height: 1.45; font-weight: 500 !important; resize: vertical; }
+#qr-mesas-card .qr-rodape { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 11.5px; opacity: .65; }
+#qr-mesas-card .qr-acoes { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
+@media (max-width: 600px) { #qr-mesas-card .qr-form { grid-template-columns: minmax(0, 1fr); } }
 /* Config. pedidos: blocos que abrem e fecham */
 .pc-col > .card-title { cursor:pointer; user-select:none; }
 .pc-tog { margin-left:auto; flex-shrink:0; width:38px; height:38px; padding:0; display:inline-flex; align-items:center; justify-content:center; border:1.5px solid var(--accent); border-radius:10px; background:transparent; color:var(--accent); cursor:pointer; }
@@ -3494,6 +3598,18 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
 .pc-col.fechado > .card-title { margin-bottom:0 !important; }
 .pc-col.fechado .pc-tog svg { transform:none; }
 .pc-col.fechado > .pc-corpo { display:none; }
+.pc-fe-lista { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:10px; margin-top:8px; }
+.pc-fe { border:1px solid var(--border,#ddd); border-radius:12px; padding:10px 12px; background:#fff; box-sizing:border-box; min-width:0; }
+.pc-fe.trab { border-color:#16a34a; background:#f0fdf4; }
+.pc-fe-top { display:flex; justify-content:space-between; align-items:center; gap:8px; }
+.pc-fe-top b { font-size:14px; } .pc-fe-top small { display:block; font-size:11px; opacity:.65; font-weight:700; }
+.pc-fe-top label { display:flex; align-items:center; gap:6px; font-size:12px; font-weight:700; white-space:nowrap; cursor:pointer; }
+.pc-fe-t { display:none; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px; }
+.pc-fe.trab .pc-fe-t { display:grid; }
+.pc-fe-t input { width:100%; min-width:0; box-sizing:border-box; padding:6px 8px; border:1px solid var(--border,#ddd); border-radius:8px; font:inherit; font-weight:700; background:#fff; }
+.pc-fe-fechado { font-size:11px; font-weight:700; color:#b91c1c; margin-top:4px; }
+.pc-fe.trab .pc-fe-fechado { display:none; }
+[data-theme="dark"] .pc-fe { background:#1e1e24; } [data-theme="dark"] .pc-fe.trab { background:#0f2a1a; } [data-theme="dark"] .pc-fe-t input { background:#111; color:inherit; }
 .pc-hd-chave { display:flex; align-items:center; gap:8px; font-weight:700; font-size:14px; }
 .pc-hd-atalhos { display:flex; gap:8px; flex-wrap:wrap; margin:10px 0; }
 .pc-hd-atalhos button { border:1px solid var(--border,#ddd); background:#fff; border-radius:10px; padding:7px 11px; font-size:12px; font-weight:700; cursor:pointer; }
@@ -3524,6 +3640,15 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
 .ped-warn { color: var(--red-mid, #DC2626); font-size: 12px; }
 .ped-itens li { align-items: flex-start; }
 .ped-it-p { flex: none; white-space: nowrap; font-weight: 700; }
+.ped-tab { width: 100%; border-collapse: collapse; margin: 10px 0 0; font-size: 13px; }
+.ped-tab th { text-align: left; font-weight: 700; font-size: 12px; padding: 6px 4px; border-bottom: 1px solid var(--border); color: var(--text); }
+.ped-tab td { padding: 5px 4px; vertical-align: top; }
+.ped-tab .q { width: 1%; white-space: nowrap; color: var(--text3); }
+.ped-tab .v { text-align: right; white-space: nowrap; }
+.ped-tab tr.it td { padding-top: 7px; color: var(--text); }
+.ped-tab tr.it .q { color: var(--text2); }
+.ped-tab tr.cp td { color: var(--text3); padding-top: 1px; padding-bottom: 1px; }
+.ped-tab tr.cp small { font-weight: 600; }
 .ped-itens li.ped-it-comext { flex-direction: column; align-items: stretch; gap: 2px; }
 .ped-itens li.ped-it-comext .ped-it-p { align-self: flex-end; }
 .ped-gr { margin-top: 8px; }
@@ -3549,6 +3674,19 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
 .pv-novos { border: 2px solid #2563EB; border-radius: 18px; padding: 12px 14px 4px; margin-bottom: 14px; background: var(--surface); }
 .pv-novos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 0 14px; align-items: start; }
 .pv-quadros { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; align-items: start; }
+.pv-quadros.pv-quadros-qr { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+/* Quadro compacto dos pedidos de mesa (Mesas / QRcode) */
+.pv-quadros-qr .pv-sec { min-height: 0; padding: 8px 10px; border-radius: 14px; }
+.pv-quadros-qr .pv-sec-h { padding: 0 2px 6px; font-size: 12px; }
+.pv-quadros-qr .pv-vazio { padding: 10px 8px; font-size: 12px; }
+.pv-quadros-qr .pv-vazio-ic { font-size: 20px; margin-bottom: 2px; }
+.pv-quadros-qr .pv-mini { padding: 6px 10px; margin-bottom: 6px; border-radius: 10px; }
+.pv-quadros-qr .pv-cod { font-size: 15px; }
+.pv-quadros-qr .pv-nome { font-size: 12px; }
+.pv-quadros-qr .pv-mais { font-size: 11px; }
+.pv-quadros-qr .pv-mini-meta { font-size: 11px; margin-top: 2px; }
+.pv-quadros-qr .pv-mini-acoes { margin-top: 5px; }
+.pv-quadros-qr .pv-fim-chip { font-size: 11px; padding: 3px 8px; }
 .pv-exp { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 12px; align-items: start; }
 .pv-exp-dir { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .pv-monitor { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: start; }
@@ -3571,9 +3709,9 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
 .pv-mini-acoes .btn { width: 100%; justify-content: center; }
 .pv-fim-chip { display: block; text-align: center; background: var(--surface2); border-radius: 99px; padding: 5px 8px; margin-top: 8px; font-size: 12px; font-weight: 700; }
 .pv-mini .card.ped-card { border: 0 !important; border-top: 1px dashed var(--border) !important; border-radius: 0 !important; box-shadow: none !important; background: transparent !important; padding: 10px 0 0 !important; margin: 10px 0 0 !important; animation: none !important; }
-@media (max-width: 1100px) { .pv-quadros { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 1100px) { .pv-quadros, .pv-quadros.pv-quadros-qr { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 760px) {
-  .pv-quadros, .pv-exp, .pv-monitor { grid-template-columns: minmax(0, 1fr); }
+  .pv-quadros, .pv-quadros.pv-quadros-qr, .pv-exp, .pv-monitor { grid-template-columns: minmax(0, 1fr); }
   .pv-toolbar select { flex: 1 1 100%; }
   .pv-quadros .pv-sec { min-height: 0; }
 }
@@ -3779,7 +3917,7 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
           <img src="img/logo.png" alt="Select Sabor" style="width:44px;height:44px;border-radius:50%;flex-shrink:0;background:#fff;box-shadow:0 0 0 2px rgba(255,255,255,0.18)">
           <div>
             <div class="logo-title">Controle de Caixa</div>
-            <div class="logo-sub">v1.11</div>
+            <div class="logo-sub">v1.12</div>
           </div>
         </div>
         <span id="status-dot" style="display:none;width:8px;height:8px;border-radius:50%;background:#4ADE80;flex-shrink:0;box-shadow:0 0 0 2px rgba(74,222,128,0.2)" title="Conectado"></span>
@@ -3842,6 +3980,7 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
     </button>
     <button class="nav-item" id="nav-comandas" onclick="showSection('comandas', this)">
       <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"/></svg></span> Comandas / Mesas
+      <span class="ped-badge" id="qr-badge-nav"></span>
     </button>
 
     <div class="nav-section-label">Cadastros</div>
@@ -4947,39 +5086,24 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
           <div class="page-title">🍽 Comandas / Mesas</div>
           <div class="page-sub">Abra a mesa, lance os pedidos e feche a conta. As vendas pagas alimentam o caixa do dia.</div>
         </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <div class="cmd-topo" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
           <input type="date" id="cmd-rel-data" class="input-sm" title="Data do relatório (vazio = hoje)">
           <button class="btn btn-secondary btn-md" onclick="imprimirRelatorioComandas()">🖨 Imprimir / PDF</button>
           <button class="btn btn-primary btn-md" onclick="cmdNova()">+ Nova comanda</button>
         </div>
+        <div class="cmd-tabs cmd-tabs-inline" id="cmd-tabs">
+          <button id="cmd-tab-abertas"   onclick="cmdSetTab('abertas')">Mesas abertas</button>
+          <button id="cmd-tab-fechadas"  onclick="cmdSetTab('fechadas')">Fechadas hoje</button>
+          <button id="cmd-tab-cardapio"  onclick="showSection('cardapio', document.getElementById('nav-cardapio'))">Cardápio ↗</button>
+        </div>
       </div>
+
+      <div id="cmd-qr-pedidos"></div>
 
       <div class="metrics-grid" id="cmd-metricas"></div>
 
-      <div class="cmd-tabs" id="cmd-tabs">
-        <button id="cmd-tab-abertas"   onclick="cmdSetTab('abertas')">Mesas abertas</button>
-        <button id="cmd-tab-fechadas"  onclick="cmdSetTab('fechadas')">Fechadas hoje</button>
-        <button id="cmd-tab-cardapio"  onclick="showSection('cardapio', document.getElementById('nav-cardapio'))">Cardápio ↗</button>
-      </div>
+      <div id="cmd-qr-quadro"></div>
 
-      <details class="card" id="qr-mesas-card" ontoggle="qrMesasIniciar()" style="margin:0 0 14px;padding:14px 16px">
-        <summary style="cursor:pointer;font-weight:800;font-size:15px">📱 QR Code das Mesas</summary>
-        <p style="margin:10px 0 4px;font-size:13px;opacity:.8">O cliente escaneia o QR da mesa, faz o pedido pelo celular e ele chega em <b>Pedidos online</b> marcado como <b>Mesa N</b>.</p>
-        <p style="margin:0 0 10px;font-size:12px;opacity:.7;overflow-wrap:anywhere">🔗 Link usado: <span id="qr-mesas-link"></span></p>
-        <label style="display:flex;align-items:center;gap:8px;font-weight:700;font-size:13px">🪑 Número de mesas
-          <input type="number" id="qr-mesas-n" class="input-sm" min="1" max="100" value="5" style="width:90px"></label>
-        <label style="display:block;margin-top:12px;font-weight:700;font-size:13px">🏪 Nome da loja <span style="font-weight:400;opacity:.7">(opcional — sai centralizado no topo, antes da frase)</span>
-          <input type="text" id="qr-mesas-loja" class="input-sm" maxlength="40" placeholder="Ex.: 🍓 FRUTAÇAÍ 💜" oninput="qrMesasFraseSalvar()" style="display:block;width:100%;margin-top:6px;box-sizing:border-box;text-align:center;font-weight:800"></label>
-        <label style="display:block;margin-top:12px;font-weight:700;font-size:13px">💬 Frase em cima do QR Code <span style="font-weight:400;opacity:.7">(opcional — sai impressa acima do QR)</span>
-          <textarea id="qr-mesas-frase" class="input-sm" rows="4" maxlength="200" placeholder="Ex.:&#10;🍓 *FRUTAÇAÍ* 💜&#10;&#10;📲 Peça pelo QR Code e aproveite!&#10;Mais agilidade e zero filas!" oninput="qrMesasFraseSalvar()" style="display:block;width:100%;height:auto;margin-top:6px;resize:vertical;box-sizing:border-box"></textarea>
-          <span id="qr-mesas-frase-cont" style="font-weight:400;font-size:11px;opacity:.6">0/200</span>
-          <span style="display:block;font-weight:400;font-size:11px;opacity:.6">Dica: use *texto* para negrito e Enter para pular linha.</span></label>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
-          <button class="btn btn-primary btn-md" onclick="qrMesasGerar()">🔄 Gerar QR Codes</button>
-          <button class="btn btn-secondary btn-md" onclick="qrMesasImprimir()">🖨 Imprimir todos</button>
-        </div>
-        <div id="qr-mesas-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-top:14px"></div>
-      </details>
 
       <div id="cmd-conteudo"></div>
     </div>
@@ -4995,9 +5119,8 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
           <button class="btn btn-secondary btn-md" id="ped-som-btn" onclick="pedSomToggle()">🔔 Som ligado</button>
           <button class="btn btn-secondary btn-md" onclick="pedConfigAbrir()">⚙ Configurar</button>
         </div>
+        <div id="ped-topo" class="ped-topo-inline"></div>
       </div>
-
-      <div id="ped-topo"></div>
 
       <div class="metrics-grid" id="ped-metricas"></div>
 
@@ -5032,7 +5155,7 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
       <div id="ped-cfg-aba-geral">
       <div class="card mb-5">
         <div class="card-title">🏪 Dados do restaurante</div>
-        <div class="form-grid">
+        <div class="form-grid pc-grid-dados">
           <div class="form-group"><label>Nome que o cliente vê</label><input id="pc-nome" class="input-base" maxlength="80" placeholder="Ex.: Select Sabor"></div>
           <div class="form-group"><label>Tempo de preparo</label><input id="pc-tempo" class="input-base" maxlength="40" placeholder="Ex.: 15-30 min"></div>
           <div class="form-group"><label>WhatsApp da loja (com DDD)</label><input id="pc-whats" class="input-base" inputmode="tel" maxlength="16" placeholder="(31) 99999-0000" oninput="this.value=_maskFone(this.value)"></div>
@@ -5041,7 +5164,7 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
       </div>
       <div class="card mb-5">
         <div class="card-title">🛒 Pedidos e taxas</div>
-        <div class="form-grid">
+        <div class="form-grid pc-grid-2">
           <div class="form-group"><label>Taxa padrão de entrega (R$)</label><input id="pc-taxa" class="input-base" inputmode="decimal" placeholder="0,00"></div>
           <div class="form-group"><label>Pedido mínimo (R$)</label><input id="pc-min" class="input-base" inputmode="decimal" placeholder="0,00"></div>
         </div>
@@ -5060,6 +5183,32 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
         </div>
         <div style="font-size:12px;opacity:.75;margin-top:8px;line-height:1.5"><b>Marcado</b> = você aceita esse tipo de pedido. <b>Desmarcado</b> = não aceita. Pode marcar uma, duas ou as três. <b>QR Code das mesas:</b> pedidos de quem está na loja. <b>Entrega Motoqueiro:</b> pedidos do link do cardápio entregues pelo motoqueiro. <b>Retirada na loja:</b> pedidos do link que o cliente vem buscar. Se deixar as duas do link desmarcadas, o link fica só para consulta. Salvam na hora.</div>
       </div>
+      <div class="card mb-5" id="qr-mesas-card">
+        <div class="card-title">📱 QR Code das Mesas</div>
+        <p class="qr-intro">O cliente escaneia o QR da mesa, faz o pedido pelo celular e ele chega em <b>Mesas / QRcode</b>, marcado como <b>Mesa N</b>. Pedidos de entrega continuam em <b>Pedidos online</b>.</p>
+        <div class="qr-link">🔗 Link usado: <span id="qr-mesas-link"></span></div>
+        <div class="qr-form">
+          <div class="qr-campo">
+            <label for="qr-mesas-n">🪑 Número de mesas</label>
+            <input type="number" id="qr-mesas-n" class="input-sm" min="1" max="100" value="5" style="text-align:center">
+          </div>
+          <div class="qr-campo">
+            <label for="qr-mesas-loja">🏪 Nome da loja <small>opcional · sai centralizado no topo, antes da frase</small></label>
+            <input type="text" id="qr-mesas-loja" class="input-sm" maxlength="40" placeholder="Ex.: 🍓 FRUTAÇAÍ 💜" oninput="qrMesasFraseSalvar()" style="text-align:center;font-weight:800">
+          </div>
+          <div class="qr-campo full">
+            <label for="qr-mesas-frase">💬 Frase em cima do QR Code <small>opcional · sai impressa acima do QR</small></label>
+            <textarea id="qr-mesas-frase" class="input-sm" rows="4" maxlength="200" placeholder="Ex.:&#10;🍓 *FRUTAÇAÍ* 💜&#10;&#10;📲 Peça pelo QR Code e aproveite!&#10;Mais agilidade e zero filas!" oninput="qrMesasFraseSalvar()"></textarea>
+            <div class="qr-rodape"><span>Dica: use *texto* para negrito e Enter para pular linha.</span><span id="qr-mesas-frase-cont">0/200</span></div>
+          </div>
+        </div>
+        <div class="qr-acoes">
+          <button class="btn btn-primary btn-md" onclick="qrMesasSalvar()">💾 Salvar textos</button>
+          <button class="btn btn-secondary btn-md" onclick="qrMesasGerar()">🔄 Gerar QR Codes</button>
+          <button class="btn btn-secondary btn-md" onclick="qrMesasImprimir()">🖨 Imprimir todos</button>
+        </div>
+        <div id="qr-mesas-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-top:18px"></div>
+      </div>
       <div class="card mb-5">
         <div class="card-title">🕒 Horário de funcionamento</div>
         <div class="pc-hd-status"><div><small>STATUS DA LOJA AGORA</small><div id="pc-hd-stat" style="font-size:18px;font-weight:800"></div></div><label class="pc-hd-chave"><input type="checkbox" id="pc-aberto-chave" onchange="pedHdChave(this.checked)"> Receber pedidos</label></div>
@@ -5074,12 +5223,25 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
           <button type="button" onclick="pedHdAtalho('0722')">🕖 Todos 07–22</button>
         </div>
         <div class="pc-hd-grid" id="pc-hd-grid"></div>
+        <div style="font-weight:800;font-size:12px;letter-spacing:.5px;margin-top:16px">🎉 FERIADOS <span style="font-weight:600;opacity:.7">· feriados do mês (nacionais + Betim/MG), atualizados automaticamente</span></div>
+        <div class="ped-checks"><label><input type="checkbox" id="pc-fer-on" onchange="pedFeAtualiza()"> Fechar nos feriados (marque abaixo os que você vai trabalhar)</label></div>
+        <div class="pc-fe-lista" id="pc-fer-lista"></div>
+        <div style="font-size:12px;color:var(--text3);margin-top:6px">Vale só com "Usar horário de funcionamento" ligado. Feriado sem "Vou trabalhar" marcado fica fechado para pedidos; o horário do feriado começa igual ao do dia da semana e pode ser ajustado.</div>
         <div style="font-size:12px;color:var(--text3);margin-top:6px">Fora do horário o cliente ainda vê o cardápio, mas não consegue enviar pedido (o bloqueio vale também no servidor). Cada dia vai da hora de abrir até a de fechar (no mesmo dia).</div>
         <div class="form-actions" style="margin-top:12px"><button class="btn btn-primary btn-md" type="button" onclick="pedConfigSalvarSecao('horario')">💾 Salvar horário de funcionamento</button></div>
       </div>
       <div class="card mb-5">
-        <div class="card-title">📍 Endereço do restaurante</div>
-        <p style="font-size:13px;color:var(--text-muted,#6b7280);margin:0 0 10px">Usado para calcular a distância até o cliente.</p>
+        <div class="card-title">🏪 Dados e endereço do restaurante</div>
+        <div style="font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--text2);margin:0 0 4px">🧾 Dados da empresa</div>
+        <p style="font-size:12px;color:var(--text-muted,#6b7280);margin:0 0 10px">Opcionais. Saem no topo do cupom impresso.</p>
+        <div class="form-grid" style="grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr))">
+          <div class="form-group" style="grid-column:1/-1"><label>Razão social</label><input id="pc-razao" class="input-base" maxlength="80" placeholder="Ex.: FRUTAÇAÍ COMERCIO DE ALIMENTOS LTDA"></div>
+          <div class="form-group"><label>CNPJ</label><input id="pc-cnpj" class="input-base" inputmode="numeric" maxlength="18" placeholder="00.000.000/0000-00" oninput="pedConfigCnpj(this)"></div>
+          <div class="form-group"><label>Inscrição estadual</label><input id="pc-ie" class="input-base" maxlength="20" placeholder="Número ou ISENTO"></div>
+        </div>
+        <div style="border-top:1px dashed var(--border);margin:16px 0 12px"></div>
+        <div style="font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--text2);margin:0 0 4px">📍 Localização da loja</div>
+        <p style="font-size:12px;color:var(--text-muted,#6b7280);margin:0 0 10px">Usada para calcular a distância até o cliente.</p>
         <div class="form-grid">
           <div class="form-group"><label>CEP</label><input id="pc-cep" class="input-base" inputmode="numeric" maxlength="9" placeholder="00000-000" oninput="pedConfigCep(this)"></div>
           <div class="form-group"><label>Número</label><input id="pc-num" class="input-base" maxlength="20" placeholder="Ex.: 8"></div>
@@ -5161,17 +5323,16 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
           <select id="mot-sel" class="input-base" style="display:none" onchange="_motNomeSalvar(this.value)" aria-label="Quem é você?"></select>
           <button class="btn btn-secondary btn-md" id="mot-som-btn" onclick="pedSomToggle(); renderMotoqueiro()">🔔 Som ligado</button>
         </div>
+        <div class="cmd-tabs mot-tabs-inline" id="mot-tabs">
+          <button id="mot-tab-sair"   onclick="motSetTab('sair')">Para sair</button>
+          <button id="mot-tab-rua"    onclick="motSetTab('rua')">Na rua</button>
+          <button id="mot-tab-feitas" onclick="motSetTab('feitas')">Entregues hoje</button>
+          <button id="mot-tab-pagar" onclick="motSetTab('pagar')">💰 A pagar</button>
+          <button id="mot-tab-cadastro" onclick="motSetTab('cadastro')">👤 Cadastro</button>
+        </div>
       </div>
 
       <div class="metrics-grid" id="mot-metricas"></div>
-
-      <div class="cmd-tabs" id="mot-tabs">
-        <button id="mot-tab-sair"   onclick="motSetTab('sair')">Para sair</button>
-        <button id="mot-tab-rua"    onclick="motSetTab('rua')">Na rua</button>
-        <button id="mot-tab-feitas" onclick="motSetTab('feitas')">Entregues hoje</button>
-        <button id="mot-tab-pagar" onclick="motSetTab('pagar')">💰 A pagar</button>
-        <button id="mot-tab-cadastro" onclick="motSetTab('cadastro')">👤 Cadastro</button>
-      </div>
 
       <div id="mot-lista"></div>
     </div>
@@ -6092,8 +6253,8 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
     CMV
   </button>
   <button class="bottom-nav-item" id="bn-mais" onclick="toggleDrawer()">
-    <svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1" fill="currentColor"/><circle cx="12" cy="12" r="1" fill="currentColor"/><circle cx="12" cy="19" r="1" fill="currentColor"/></svg>
-    Mais
+    <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    Menu
   </button>
 </nav>
 
@@ -6148,6 +6309,7 @@ input.cdp-preco { text-align:right; font-family:'DM Mono',monospace; }
     </button>
     <button class="drawer-item" id="di-comandas" onclick="drawerNav('comandas', this)">
       <span class="drawer-item-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"/></svg></span>Comandas
+      <span class="ped-badge" id="qr-badge-di"></span>
     </button>
     <button class="drawer-item" id="di-pedidos" onclick="drawerNav('pedidos', this)">
       <span class="drawer-item-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg></span>Pedidos online
@@ -7048,7 +7210,7 @@ function setLojaAtiva(id) {
     _cache.comandas = snap.val() ? Object.values(snap.val()) : [];
     _comandasCarregadas = true;
     try { _pedMesaSincronizar(); } catch (e) { console.error(e); }
-    if (_currentSection === 'comandas') _refreshCurrentSection();
+    if (_currentSection === 'comandas' || _currentSection === 'pedidos') _refreshCurrentSection();
   });
   _listenersLoja.push(refComandas);
 
@@ -7097,7 +7259,7 @@ function setLojaAtiva(id) {
     _motDetectar();
     _motAtualizarBadge();
     if (_chatAberto) _chatRender();
-    if (_currentSection === 'pedidos' || _currentSection === 'motoqueiro') _refreshCurrentSection();
+    if (_currentSection === 'pedidos' || _currentSection === 'motoqueiro' || _currentSection === 'comandas') _refreshCurrentSection();
   }, e => console.warn('[pedidos] sem acesso:', e && e.message));
   _listenersLoja.push(refPedidos);
   const refPedCfg = _dbRef('pedidosConfig/' + id);
@@ -18476,13 +18638,13 @@ function _pedItens(p) {
         let e = mapa[g.id];
         if (!e) { e = mapa[g.id] = { gi, nome: g.nome, qtd: _gMax(g) > 1 && g.rep, total: 0, ops: [], idx: {} }; grupos.push(e); }
         e.total++;
-        if (e.idx[o.id] === undefined) { e.idx[o.id] = e.ops.length; e.ops.push({ n: o.nome, c: 0 }); }
+        if (e.idx[o.id] === undefined) { e.idx[o.id] = e.ops.length; e.ops.push({ n: o.nome, c: 0, p: parseFloat(o.preco) || 0 }); }
         e.ops[e.idx[o.id]].c++;
       });
       if (ok !== lista.length) grupos = [];   // alguma opção saiu do cardápio: usa a lista simples
       grupos.sort((a, b) => a.gi - b.gi);
     }
-    return { id: k, q: parseInt(it.q) || 0, n: it.n || (card && card.nome) || 'Item', preco, fixo, noCardapio: !!card, un, grupos, temSel: !!(it.sel && _cdpLista(it.sel).length) };
+    return { id: k, q: parseInt(it.q) || 0, n: it.n || (card && card.nome) || 'Item', preco, extra, fixo, noCardapio: !!card, un, grupos, temSel: !!(it.sel && _cdpLista(it.sel).length) };
   });
 }
 /* ---------- Taxa por distância (km) ---------- */
@@ -18506,6 +18668,18 @@ function _pedMapaLink() {
   else a.style.display = 'none';
 }
 let _pcCepUlt = '';
+function pedConfigCnpj(el) {
+  let d = String(el.value || '').replace(/\D/g, '').slice(0, 14);
+  d = d.replace(/^(\d{2})(\d)/, '$1.$2').replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3').replace(/\.(\d{3})(\d)/, '.$1/$2').replace(/(\d{4})(\d)/, '$1-$2');
+  el.value = d;
+}
+/** Confere os dois dígitos verificadores do CNPJ. */
+function _pedCnpjValido(c) {
+  const d = String(c || '').replace(/\D/g, '');
+  if (d.length !== 14 || /^(\d)\1+$/.test(d)) return false;
+  const dv = n => { let soma = 0, pos = n - 7; for (let i = n; i >= 1; i--) { soma += parseInt(d.charAt(n - i), 10) * pos--; if (pos < 2) pos = 9; } const r = soma % 11; return r < 2 ? 0 : 11 - r; };
+  return dv(12) === parseInt(d.charAt(12), 10) && dv(13) === parseInt(d.charAt(13), 10);
+}
 function pedConfigCep(el) {
   const d = (el.value || '').replace(/\D/g, '').slice(0, 8);
   el.value = d.length > 5 ? d.slice(0, 5) + '-' + d.slice(5) : d;
@@ -18573,8 +18747,11 @@ function _pedDetectarNovos() {
   else if ((_pedLoopTimer || _pedMp3Loop) && !_pedTemNovoPendente()) _pedLoopParar(); // pedido aceito/cancelado: para a campainha na hora
 }
 function _pedAlertar(novos) {
-  const p = novos[0];
-  showToast('🛵 Novo pedido online ' + (p.codigo || '') + (novos.length > 1 ? ' (+' + (novos.length - 1) + ')' : ''));
+  const mesas = novos.filter(_pedEhMesa), outros = novos.filter(p => !_pedEhMesa(p));
+  const msgs = [];
+  if (mesas.length) msgs.push('🍽 Novo pedido QR Code — Mesa ' + mesas[0].mesa + ' #' + (mesas[0].codigo || '') + (mesas.length > 1 ? ' (+' + (mesas.length - 1) + ')' : '') + ' · veja em Mesas / QRcode');
+  if (outros.length) msgs.push('🛵 Novo pedido online ' + (outros[0].codigo || '') + (outros.length > 1 ? ' (+' + (outros.length - 1) + ')' : ''));
+  showToast(msgs.join(' | '));
   _pedSomPedido();
   _pedLoopIniciar();
   _pedVibrar();
@@ -18776,13 +18953,16 @@ function _pedAtualizarSomBtn() {
   if (b) b.textContent = _pedSom ? '🔔 Som ligado' : '🔕 Som desligado';
 }
 function _pedAtualizarBadge() {
-  const n = _pedLista().filter(p => p.status === 'novo').length + _chatNaoLidosTotal();
-  ['ped-badge-nav', 'ped-badge-di'].forEach(id => {
+  const novosAll = _pedLista().filter(p => p.status === 'novo');
+  const nQr = novosAll.filter(_pedEhMesa).length;                 // pedidos de mesa (QR) → Mesas / QRcode
+  const n = (novosAll.length - nQr) + _chatNaoLidosTotal();       // entrega/retirada + chat → Pedidos online
+  [['ped-badge-nav', n], ['ped-badge-di', n], ['qr-badge-nav', nQr], ['qr-badge-di', nQr]].forEach(([id, v]) => {
     const el = document.getElementById(id); if (!el) return;
-    el.textContent = n; el.style.display = n ? 'inline-flex' : 'none';
+    el.textContent = v; el.style.display = v ? 'inline-flex' : 'none';
   });
   if (_pedTituloOrig === null) _pedTituloOrig = document.title.replace(/^\(\d+\)\s*/, '');
-  document.title = (n ? '(' + n + ') ' : '') + _pedTituloOrig;
+  const nTit = n + nQr;
+  document.title = (nTit ? '(' + nTit + ') ' : '') + _pedTituloOrig;
 }
 
 /* ---------- Tela ---------- */
@@ -18796,7 +18976,7 @@ function pedBuscar(v) { _pedBusca = String(v || '').trim().toLowerCase(); render
 function pedToggleCard(id) {
   if (!/^[-A-Za-z0-9_]{8,40}$/.test(String(id))) return;
   if (_pedExp.has(id)) _pedExp.delete(id); else _pedExp.add(id);
-  renderPedidos();
+  renderPedidos(); if (_currentSection === 'comandas') renderComandas();
 }
 function pedToggleSecao(k) {
   if (['preparo', 'pronto', 'saiu', 'fim'].indexOf(k) < 0) return;
@@ -18815,13 +18995,13 @@ function _pedMiniHtml(p) {
   const nome = p.cliente && p.cliente.nome ? escapeHtml(p.cliente.nome) : '';
   let prox = null;
   if (p.status === 'preparo') prox = ['pronto', '✅ Pedido pronto'];
-  else if (p.status === 'pronto') prox = ent ? ['saiu', '🛵 Saiu para entrega'] : (p.mesa ? ['entregue', '✅ Entregue na mesa'] : ['entregue', '✅ Cliente retirou']);
+  else if (p.status === 'pronto') prox = ent ? ['saiu', '🛵 Saiu para entrega'] : (p.mesa ? (p.pago ? ['entregue', '✅ Entregue na mesa'] : ['pagar', '💰 Confirmar pagamento']) : ['entregue', '✅ Cliente retirou']);
   else if (p.status === 'saiu') prox = ['entregue', '✅ Entregue'];
   else if (p.status === 'entregue' && !p.lancado) prox = _pedEhMesa(p) ? ['caixa', '🧾 Enviar para a comanda'] : ['caixa', '💰 Lançar no caixa'];
   let rodape = '';
   if (prox) rodape = `<div class="pv-mini-acoes"><button class="btn btn-primary btn-md" data-ped="${id}" onclick="pedAcao('${prox[0]}', this.dataset.ped)">${prox[1]}</button></div>`;
   else if (p.status === 'entregue') rodape = _pedEhMesa(p)
-    ? '<span class="pv-fim-chip" style="color:#15803d">✓ Na comanda da mesa · pago no caixa</span>'
+    ? '<span class="pv-fim-chip" style="color:#15803d">' + (((_pedMesaComanda(p) || {}).status === 'fechada') ? '✓ Pago · mesa fechada' : (p.pago ? '✓ Pago · na comanda da mesa' : '✓ Na comanda da mesa')) + '</span>'
     : '<span class="pv-fim-chip" style="color:#15803d">✓ Concluído · lançado no caixa</span>';
   else if (p.status === 'cancelado') rodape = '<span class="pv-fim-chip" style="color:#b91c1c">✖ Cancelado</span>';
   return `<div class="pv-mini" style="--ped-cor:${st.cor}">
@@ -18829,19 +19009,19 @@ function _pedMiniHtml(p) {
       <span class="pv-cod">#${escapeHtml(p.codigo || '')}</span><span class="pv-nome">${nome}</span>
       <span class="pv-mais">${aberto ? 'Fechar ⌃' : 'Detalhes ⌄'}</span>
     </div>
-    <div class="pv-mini-meta">${ent ? '🛵 Entrega' : (p.mesa ? '🍽 Mesa ' + escapeHtml(String(p.mesa)) : '🏪 Retirada')} · ${_pedHora(p.ts)} · ${fmt(t.total)}</div>
+    <div class="pv-mini-meta">${ent ? '🛵 Entrega' : (p.mesa ? '🍽 Mesa ' + escapeHtml(String(p.mesa)) : '🏪 Retirada')} · ${_pedHora(p.ts)} · ${fmt(t.total)}${_pedEhMesa(p) && p.pago ? ' · <strong style="color:#15803d">' + escapeHtml(_pedPagoTxt(p)) + '</strong>' : ''}</div>
     ${rodape}
     ${aberto ? _pedCardHtml(p) : ''}
   </div>`;
 }
 
-function _pedSecHtml(k, titulo, arr, icone, vazio, colapsavel) {
+function _pedSecHtml(k, titulo, arr, icone, vazio, colapsavel, fnCard) {
   const fechada = colapsavel && _pedSecFechada.has(k);
   const cab = colapsavel
     ? `<div class="pv-sec-h pv-click" data-sec="${k}" onclick="pedToggleSecao(this.dataset.sec)"><span>${titulo}</span><span class="pv-badge">${arr.length}</span><span class="pv-chev">${fechada ? '⌄' : '⌃'}</span></div>`
     : `<div class="pv-sec-h"><span>${titulo}</span><span class="pv-badge">${arr.length}</span></div>`;
   const corpo = fechada ? '' : (arr.length
-    ? arr.map(_pedMiniHtml).join('')
+    ? arr.map(fnCard || _pedMiniHtml).join('')
     : `<div class="pv-vazio"><div class="pv-vazio-ic">${icone}</div>${vazio}</div>`);
   return `<section class="pv-sec pv-sec-${k}">${cab}${corpo}</section>`;
 }
@@ -18869,17 +19049,15 @@ function renderPedidos() {
   document.getElementById('ped-tabs').style.display = '';
   const selV = document.getElementById('ped-visao'); if (selV && selV.value !== _pedVisao) selV.value = _pedVisao;
   const aberto = cfg.aberto === true;
-  topo.innerHTML = `<div class="card ped-topo">
-    <div class="ped-topo-linha">
+  topo.innerHTML = `<div class="ped-topo-linha">
       <div>
         <div class="ped-status ${_pedStatusInfo(cfg).on ? 'on' : 'off'}" id="ped-status-el">${_pedStatusInfo(cfg).txt}</div>
         <div class="ped-sub">${escapeHtml(cfg.nome || '')}${cfg.tempoEstimado ? ' · ⏱ Preparo ' + escapeHtml(cfg.tempoEstimado) : ''}${(cfg.horarioOn === true && _pedMinHM(cfg.abreMin) && _pedMinHM(cfg.fechaMin)) ? ' · 🕒 ' + _pedMinHM(cfg.abreMin) + ' às ' + _pedMinHM(cfg.fechaMin) : ''} · Entrega ${(parseFloat(cfg.taxaEntrega) || 0) > 0 ? fmt(cfg.taxaEntrega) : 'grátis'}${cfg.aceitaMesa === false ? ' · 🏪 QR Code não aceita' : ''}${cfg.aceitaEntrega === false ? ' · 🛵 Entrega não aceita' : ''}${cfg.aceitaRetirada === false ? ' · 🛍 Retirada não aceita' : ''}</div>
       </div>
       <button class="btn ${aberto ? 'btn-secondary' : 'btn-primary'} btn-md" onclick="pedToggleAberto()">${aberto ? '⏸ Pausar pedidos' : '▶ Abrir para pedidos'}</button>
-    </div>
     </div>`;
 
-  const todos = _pedLista();
+  const todos = _pedLista().filter(p => !_pedEhMesa(p)); // pedidos de mesa (QR) ficam em Mesas / QRcode
   const novos = todos.filter(p => p.status === 'novo');
   const and   = todos.filter(p => ['preparo', 'pronto', 'saiu'].indexOf(p.status) >= 0);
   const fim   = todos.filter(p => (p.status === 'entregue' || p.status === 'cancelado') && _pedEhHoje(p.ts));
@@ -18934,6 +19112,21 @@ function _pedSepNome(i) {
   return { nome: n, extras: [] };
 }
 
+/** Linhas de itens no estilo tabela: item (valor base) + uma linha por complemento. Soma = preço do item × quantidade. */
+function _pedLinhasItens(t) {
+  const out = [];
+  t.itens.forEach(i => {
+    const sp = _pedSepNome(i);
+    const base = Math.max(0, _pedRound(i.preco - (i.extra || 0)));
+    out.push({ q: i.q, nome: sp.nome, un: base, sub: _pedRound(base * i.q), item: true, aviso: (!i.noCardapio && !i.fixo) });
+    if (i.grupos && i.grupos.length) {
+      i.grupos.forEach(g => g.ops.forEach(o => out.push({ q: o.c * i.q, nome: o.n, grupo: g.nome || '', un: o.p || 0, sub: _pedRound((o.p || 0) * o.c * i.q) })));
+    } else {
+      sp.extras.forEach(x => out.push({ q: i.q, nome: x, un: 0, sub: 0 }));
+    }
+  });
+  return out;
+}
 function _pedCardHtml(p) {
   const st = PED_ST[p.status] || PED_ST.novo;
   const t = _pedTotais(p);
@@ -18946,29 +19139,19 @@ function _pedCardHtml(p) {
   const btn = (a, rot, cls) => `<button class="btn ${cls || 'btn-secondary'} btn-md" data-ped="${id}" onclick="pedAcao('${a}', this.dataset.ped)">${rot}</button>`;
   let acoes = '';
   if (p.status === 'novo')          acoes = btn('aceitar', '✅ Aceitar pedido', 'btn-primary') + btn('cancelar', '✖ Recusar');
-  else if (p.status === 'preparo')  acoes = btn('pronto', '✅ Pedido pronto', 'btn-primary') + btn('cancelar', '✖ Cancelar');
-  else if (p.status === 'pronto')   acoes = (ent ? btn('saiu', '🛵 Saiu para entrega', 'btn-primary') : btn('entregue', p.mesa ? '✅ Entregue na mesa' : '✅ Cliente retirou', 'btn-primary')) + btn('cancelar', '✖ Cancelar');
+  else if (p.status === 'preparo')  acoes = btn('pronto', '✅ Pedido pronto', 'btn-primary') + (_pedEhMesa(p) && !p.pago ? btn('pagar', '💰 Confirmar pagamento') : '') + btn('cancelar', '✖ Cancelar');
+  else if (p.status === 'pronto')   acoes = (ent ? btn('saiu', '🛵 Saiu para entrega', 'btn-primary') : (_pedEhMesa(p) && !p.pago ? btn('pagar', '💰 Confirmar pagamento', 'btn-primary') : btn('entregue', p.mesa ? '✅ Entregue na mesa' : '✅ Cliente retirou', 'btn-primary'))) + btn('cancelar', '✖ Cancelar');
   else if (p.status === 'saiu')     acoes = btn('entregue', '✅ Entregue', 'btn-primary') + btn('cancelar', '✖ Cancelar');
   else if (p.status === 'entregue') acoes = _pedEhMesa(p)
-    ? (p.lancado ? '<span class="ped-ok">✓ Na comanda da mesa ' + escapeHtml(String(p.mesa)) + '</span>' : btn('caixa', '🧾 Enviar para a comanda', 'btn-primary'))
+    ? (p.lancado ? '<span class="ped-ok">' + (((_pedMesaComanda(p) || {}).status === 'fechada') ? '✓ Mesa ' + escapeHtml(String(p.mesa)) + ' fechada · pago no caixa' : '✓ Na comanda da mesa ' + escapeHtml(String(p.mesa))) + '</span>' : btn('caixa', '🧾 Enviar para a comanda', 'btn-primary'))
     : (p.lancado ? '<span class="ped-ok">✓ Lançado no caixa</span>' : btn('caixa', '💰 Lançar no caixa', 'btn-primary'));
   const nChat = _chatNaoLidas(p), totChat = _chatMsgs(p).length;
   acoes += btn('chat', '💬 Chat' + (nChat ? ' (' + nChat + ' nova' + (nChat > 1 ? 's' : '') + ')' : (totChat ? ' (' + totChat + ')' : '')), nChat ? 'btn-primary' : 'btn-secondary');
   acoes += btn('whats', '💬 WhatsApp') + btn('imprimir', '🖨 Imprimir');
   acoes += `<button class="btn btn-secondary btn-md" style="color:var(--red)" data-ped="${id}" onclick="pedAcao('excluir', this.dataset.ped)">🗑 Excluir</button>`;
-  const itens = t.itens.map(i => {
-    const sp = _pedSepNome(i);
-    const aviso = (!i.noCardapio && !i.fixo) ? ' <em class="ped-warn">(fora do cardápio)</em>' : '';
-    let ext = '', temExt = false;
-    if (i.grupos && i.grupos.length) {
-      temExt = true;
-      ext = i.grupos.map(g => `<div class="ped-gr"><div class="ped-gr-t">${escapeHtml(g.nome || 'Complementos')}${g.qtd ? ' · ' + g.total + ' un' : ''}</div><ul class="ped-ext">${g.ops.map(o => `<li>${(g.qtd || o.c > 1) ? o.c + '× ' : ''}${escapeHtml(o.n)}</li>`).join('')}</ul></div>`).join('');
-    } else if (sp.extras.length) {
-      temExt = true;
-      ext = `<ul class="ped-ext">${sp.extras.map(x => `<li>${escapeHtml(x)}</li>`).join('')}</ul>`;
-    }
-    return `<li${temExt ? ' class="ped-it-comext"' : ''}><span class="ped-it-n"><strong>${i.q}× ${escapeHtml(sp.nome)}</strong>${aviso}${ext}</span>${temExt ? '' : `<span class="ped-it-p">${fmt(i.preco * i.q)}</span>`}</li>`;
-  }).join('');
+  const itens = `<table class="ped-tab"><thead><tr><th>Qtd.</th><th>Item</th><th class="v">Valor unitário</th><th class="v">Subtotal</th></tr></thead><tbody>`
+    + _pedLinhasItens(t).map(l => `<tr class="${l.item ? 'it' : 'cp'}"><td class="q">${l.q}x</td><td class="n">${l.item ? '<strong>' + escapeHtml(l.nome) + '</strong>' + (l.aviso ? ' <em class="ped-warn">(fora do cardápio)</em>' : '') : (l.grupo ? '<small>' + escapeHtml(l.grupo) + ' · </small>' : '') + escapeHtml(l.nome)}</td><td class="v">${fmt(l.un)}</td><td class="v">${fmt(l.sub)}</td></tr>`).join('')
+    + `</tbody></table>`;
   return `<div class="card ped-card" style="--ped-cor:${st.cor}">
     <div class="ped-head">
       <span class="ped-cod">#${escapeHtml(p.codigo || '')}</span><span class="ped-nome" style="font-weight:700;font-size:15px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.cliente && p.cliente.nome ? '· ' + escapeHtml(p.cliente.nome) : ''}</span>
@@ -18979,14 +19162,14 @@ function _pedCardHtml(p) {
     <div class="ped-cli"><strong>${escapeHtml(cli.nome || '')}</strong> · <a href="tel:${escapeHtml(String(cli.telefone || '').replace(/[^\d+]/g, ''))}">${escapeHtml(cli.telefone || '')}</a></div>
     ${ent ? `<div class="ped-end">📍 ${escapeHtml((e.rua || '') + ', ' + (e.numero || '') + ' — ' + (e.bairro || '') + (e.cep ? ' · CEP ' + e.cep : ''))}${_pedKmTxt(e)}${e.complemento ? ' · ' + escapeHtml(e.complemento) : ''}${e.referencia ? ' · ref.: ' + escapeHtml(e.referencia) : ''}</div>` : ''}
     ${_pedCodEntregaHtml(p)}
-    <ul class="ped-itens">${itens}</ul>
+    ${itens}
     ${p.obs ? `<div class="ped-obs">📝 ${escapeHtml(p.obs)}</div>` : ''}
     ${p.status === 'cancelado' && p.motivo ? `<div class="ped-obs">Motivo: ${escapeHtml(p.motivo)}</div>` : ''}
     <div class="ped-tot">
       <span>Subtotal ${fmt(t.sub)}${ent ? ' · Entrega ' + (t.taxa > 0 ? fmt(t.taxa) : 'grátis') : ''}</span>
       <strong>Total ${fmt(t.total)}${t.confirmado ? '' : ' <small>(estimado)</small>'}</strong>
     </div>
-    <div class="ped-pag">${_pedEhMesa(p) ? '🧾 Conta da mesa — pagamento no caixa, ao fechar a comanda' : (PED_PAG[p.pagamento] || '') + escapeHtml(trocoTxt) + ' · paga ' + (p.mesa ? 'na mesa' : 'na ' + (ent ? 'entrega' : 'retirada'))}</div>
+    <div class="ped-pag">${_pedEhMesa(p) ? _pedMesaPagHtml(p) : (PED_PAG[p.pagamento] || '') + escapeHtml(trocoTxt) + ' · paga ' + (p.mesa ? 'na mesa' : 'na ' + (ent ? 'entrega' : 'retirada'))}</div>
     <div class="ped-acoes">${acoes}</div>
   </div>`;
 }
@@ -18997,6 +19180,7 @@ function pedAcao(a, id) {
     case 'aceitar':  return pedAceitar(id);
     case 'pronto':   return pedMudar(id, 'pronto');
     case 'saiu':     return pedMudar(id, 'saiu');
+    case 'pagar':    return pedConfirmarPagamento(id);
     case 'entregue': return pedEntregar(id);
     case 'cancelar': return pedCancelar(id);
     case 'whats':    return pedWhats(id);
@@ -19125,6 +19309,7 @@ function pedAceitar(id) {
   if (cfg.tempoEstimado) upd.previsao = String(cfg.tempoEstimado).slice(0, 40);
   const confirmar = () => pedMudar(id, 'preparo', upd).then(() => {
     showToast('Pedido ' + (p.codigo || '') + ' aceito: ' + fmt(upd.total));
+    try { pedModalImpressao(id, { taxa: upd.taxa, total: upd.total }); } catch (e) { console.error(e); }
   });
   if (faltando.length) {
     showModal('Itens fora do cardápio',
@@ -19150,8 +19335,60 @@ function pedCancelar(id) {
     }}, { label: 'Voltar', style: 'secondary' }]);
 }
 
+/** Texto do selo de pago: "✓ Pago · Pix". */
+function _pedPagoTxt(p) {
+  if (!p || !p.pago) return '';
+  const f = PED_PAG[p.pagoForma];
+  return '✓ Pago' + (f ? ' · ' + f.replace(/^\S+\s/, '') : '');
+}
+/** Comanda da mesa onde os itens do pedido foram somados (ou null). */
+function _pedMesaComanda(p) {
+  if (!_pedEhMesa(p)) return null;
+  const pref = 'ped_' + p.id + '_';
+  return _cmdLista().find(x => x.itens && Object.keys(x.itens).some(k => k.indexOf(pref) === 0)) || null;
+}
+/** Texto de pagamento do pedido de mesa, conforme a situação real do pedido e da comanda. */
+function _pedMesaPagHtml(p) {
+  const c = _pedMesaComanda(p);
+  const verde = t => '<strong style="color:#15803d">' + escapeHtml(t) + '</strong>';
+  if (c && c.status === 'fechada') {
+    const pg = c.pagamentos || {}, nomes = [];
+    if (pg.dinheiro > 0) nomes.push('Dinheiro');
+    if (pg.pix > 0) nomes.push('Pix');
+    if (pg.cartao > 0) nomes.push('Cartão');
+    return verde('✓ Pago · mesa ' + (p.mesa ? String(p.mesa) + ' ' : '') + 'fechada') + (nomes.length ? ' · ' + escapeHtml(nomes.join(' + ')) : '');
+  }
+  if (p.pago) return verde(_pedPagoTxt(p)) + ' · ' + (c ? 'conta da mesa em aberto' : 'conta da mesa');
+  if (p.status === 'cancelado') return '';
+  if (p.status === 'entregue') return '🧾 Na comanda da mesa — pagamento ao fechar a conta';
+  if (p.status === 'preparo' || p.status === 'pronto') return '⏳ Aguardando confirmação do pagamento — a entrega só é liberada depois';
+  return '🧾 Conta da mesa — o pagamento é confirmado antes da entrega';
+}
+/** Pedido de mesa (QR Code): confirma que o cliente pagou. Só depois disso a entrega fica liberada. */
+function pedConfirmarPagamento(id) {
+  const p = _pedGet(id); if (!p || p.pago) return;
+  const t = _pedTotais(p);
+  const marca = forma => () => {
+    _pedRef(id).update({ pago: true, pagoForma: forma, pagoEm: firebase.database.ServerValue.TIMESTAMP })
+      .then(() => showToast('Pedido ' + (p.codigo || '') + ' pago. Entrega liberada!'))
+      .catch(e => {
+        console.error(e);
+        showToast(e && /permission/i.test(e.message || e.code || '')
+          ? 'Sem permissão para gravar o pagamento. Publique as regras do Firebase com os campos pago, pagoForma e pagoEm.'
+          : 'Erro ao confirmar o pagamento', false);
+      });
+  };
+  showModal('Confirmar pagamento — #' + (p.codigo || ''),
+    (p.mesa ? 'Mesa <strong>' + escapeHtml(String(p.mesa)) + '</strong> · ' : '') + 'Total <strong>' + fmt(t.total) + '</strong><br><br>Como o cliente pagou? A entrega só é liberada depois desta confirmação.',
+    [{ label: '💵 Dinheiro', style: 'primary', action: marca('dinheiro') },
+     { label: '📲 Pix', style: 'primary', action: marca('pix') },
+     { label: '💳 Cartão', style: 'primary', action: marca('cartao') },
+     { label: 'Voltar', style: 'secondary' }]);
+}
+
 function pedEntregar(id) {
   const p = _pedGet(id); if (!p) return;
+  if (_pedEhMesa(p) && !p.pago) { showToast('Confirme o pagamento antes de entregar', false); return pedConfirmarPagamento(id); }
   // O lançamento no caixa é automático: assim que o status vira "entregue" (aqui ou no app do
   // motoqueiro), _pedAutoLancar() (chamado pelo listener de pedidos) lança o valor no caixa do dia.
   pedMudar(id, 'entregue');
@@ -19384,30 +19621,81 @@ function pedWhats(id) {
   const fone = _pedFone((p.cliente || {}).telefone);
   window.open('https://wa.me/' + fone + '?text=' + encodeURIComponent(texto), '_blank', 'noopener');
 }
-function pedImprimir(id) {
-  const p = _pedGet(id); if (!p) return;
+/* Impressão pelo navegador: abre uma janela com o cupom e chama a impressão (também usada pelo modal "Imprimir pedido"). */
+function _caixaImprimir(win, orientacao) { try { win.focus(); } catch (e) {} win.print(); }
+function _imprimirHtml(html, orientacao, janelaOpts) {
+  const w = window.open('', '_blank', janelaOpts || '');
+  if (!w) return false;
+  w.document.open(); w.document.write(html); w.document.close();
+  setTimeout(() => { try { _caixaImprimir(w, orientacao); } catch (e) {} }, 400);
+  return true;
+}
+function _pedMontarCupom(p) {
   const t = _pedTotais(p), cfg = _pedCfg() || {}, cli = p.cliente || {}, e = p.endereco || {};
-  const linhas = t.itens.map(i => `<tr><td>${i.q}× ${escapeHtml(i.n)}</td><td style="text-align:right">${fmt(i.preco * i.q)}</td></tr>`).join('');
+  const nv = v => fmt(v).replace(/R\$\s*/, '');
+  const linhas = '<tr class="th"><td class="q">Qtd</td><td>Item</td><td class="r">Unit.</td><td class="r">Subt.</td></tr>'
+    + _pedLinhasItens(t).map(l => `<tr${l.item ? '' : ' class="cp"'}><td class="q">${l.q}x</td><td>${l.item ? '<b>' + escapeHtml(l.nome) + '</b>' : (l.grupo ? escapeHtml(l.grupo) + ': ' : '') + escapeHtml(l.nome)}</td><td class="r nw">${nv(l.un)}</td><td class="r nw">${nv(l.sub)}</td></tr>`).join('');
   const html = `<!doctype html><html><head><meta charset="utf-8"><title>Pedido ${escapeHtml(p.codigo || '')}</title>
-    <style>body{font:13px/1.35 monospace;margin:0;padding:8px;width:72mm}h1{font-size:16px;margin:0 0 4px;text-align:center}
+    <style>body{font:13px/1.35 monospace;margin:0;padding:8px;width:72mm}h1{font-size:16px;margin:0 0 4px;text-align:center;line-height:1.25}
     hr{border:0;border-top:1px dashed #000;margin:6px 0}table{width:100%;border-collapse:collapse}td{padding:2px 0;vertical-align:top}
-    .c{text-align:center}.b{font-weight:bold}</style></head><body>
-    <h1>${escapeHtml(cfg.nome || 'Pedido online')}</h1>
+    .c{text-align:center}.b{font-weight:bold}.r{text-align:right}.nw{white-space:nowrap}table.tb{table-layout:fixed;font-size:11px}table.tb td{padding:2px 3px;overflow-wrap:anywhere}table.tb td.q{width:9mm;white-space:nowrap}table.tb td.r{width:12mm;text-align:right;white-space:nowrap}table.tb tr.th td{font-weight:bold;border-bottom:1px solid #000}table.tb tr.cp td{font-size:10px;padding-top:0}table.tb tr.cp td:nth-child(2){padding-left:8px}</style></head><body>
+    <h1>${String(cfg.nome || 'Pedido online').split(/\s+[-–—]\s+/).map(escapeHtml).join('<br>')}</h1>
+    ${cfg.lojaRazao && cfg.lojaRazao !== cfg.nome ? '<div class="c" style="font-size:11px">' + escapeHtml(cfg.lojaRazao) + '</div>' : ''}
+    ${cfg.lojaCnpj ? '<div class="c" style="font-size:11px">CNPJ: ' + escapeHtml(cfg.lojaCnpj) + (cfg.lojaIe ? ' · IE: ' + escapeHtml(cfg.lojaIe) : '') + '</div>' : (cfg.lojaIe ? '<div class="c" style="font-size:11px">IE: ' + escapeHtml(cfg.lojaIe) + '</div>' : '')}
+    ${cfg.lojaRua ? '<div class="c" style="font-size:11px">' + escapeHtml([[cfg.lojaRua, cfg.lojaNumero].filter(Boolean).join(', '), cfg.lojaBairro, [cfg.lojaCidade, cfg.lojaUf].filter(Boolean).join(' - '), cfg.lojaCep ? 'CEP ' + cfg.lojaCep : ''].filter(Boolean).join(' · ')) + '</div>' : ''}
+    ${cfg.lojaCnpj ? '<div class="c" style="font-size:10px;opacity:.8">Documento sem valor fiscal</div>' : ''}
     <div class="c b" style="font-size:20px">#${escapeHtml(p.codigo || '')}</div>
     <div class="c">${new Date(p.ts || Date.now()).toLocaleString('pt-BR')}</div><hr>
-    <div class="b">${p.tipo === 'entrega' ? 'ENTREGA' : 'RETIRADA NA LOJA'}</div>
-    <div>${escapeHtml(cli.nome || '')} — ${escapeHtml(cli.telefone || '')}</div>
+    <div class="c b">${p.tipo === 'entrega' ? 'ENTREGA' : (p.mesa ? 'MESA ' + escapeHtml(String(p.mesa)) : 'RETIRADA NA LOJA')}</div>
     ${p.tipo === 'entrega' ? `<div>${escapeHtml((e.rua || '') + ', ' + (e.numero || '') + ' - ' + (e.bairro || '') + (e.cep ? ' - CEP ' + e.cep : ''))}</div>${_pedKmTxt(e) ? '<div>' + _pedKmTxt(e).replace(' · ', '') + '</div>' : ''}${e.complemento ? '<div>' + escapeHtml(e.complemento) + '</div>' : ''}${e.referencia ? '<div>Ref.: ' + escapeHtml(e.referencia) + '</div>' : ''}` : ''}
-    <hr><table>${linhas}</table><hr>
+    <hr><table class="tb">${linhas}</table><hr>
     <table><tr><td>Subtotal</td><td style="text-align:right">${fmt(t.sub)}</td></tr>
     ${p.tipo === 'entrega' ? `<tr><td>Taxa de entrega</td><td style="text-align:right">${fmt(t.taxa)}</td></tr>` : ''}
     <tr class="b"><td>TOTAL</td><td style="text-align:right">${fmt(t.total)}</td></tr></table>
     <div>Pagamento: ${escapeHtml((PED_PAG[p.pagamento] || '').replace(/^\S+\s/, ''))}${p.pagamento === 'dinheiro' && p.troco ? ' (troco p/ ' + fmt(p.troco) + ')' : ''}</div>
     ${p.obs ? '<hr><div class="b">OBS: ' + escapeHtml(p.obs) + '</div>' : ''}
-    <script>window.onload=function(){setTimeout(function(){window.print()},250)}<\/script></body></html>`;
-  const w = window.open('', '_blank', 'width=380,height=640');
-  if (!w) { showToast('Permita pop-ups para imprimir o pedido', false); return; }
-  w.document.open(); w.document.write(html); w.document.close();
+    </body></html>`;
+  return html;
+}
+function pedImprimir(id) {
+  const p = _pedGet(id); if (!p) return;
+  if (!_imprimirHtml(_pedMontarCupom(p), 'portrait', 'width=380,height=640')) showToast('Permita pop-ups para imprimir o pedido', false);
+}
+
+/** Modal de impressão (abre ao aceitar o pedido): prévia do cupom + botão Imprimir.
+ *  O botão abre o diálogo de impressão do sistema, onde aparecem as impressoras instaladas no PC. */
+function pedModalImpressao(id, extra) {
+  const orig = _pedGet(id); if (!orig) return;
+  const p = Object.assign({}, orig, extra || {});
+  const html = _pedMontarCupom(p);
+  let ov = document.getElementById('ped-print-ov');
+  if (ov) ov.remove();
+  ov = document.createElement('div');
+  ov.id = 'ped-print-ov';
+  ov.className = 'modal-overlay open';
+  ov.style.zIndex = '9400';
+  ov.innerHTML = `<div class="modal-box" style="max-width:420px;width:96vw;max-height:94vh;display:flex;flex-direction:column;padding:0">
+    <div style="padding:16px 20px 10px;border-bottom:1px solid var(--border)">
+      <div style="font-size:18px;font-weight:800">🖨 Imprimir pedido #${escapeHtml(p.codigo || '')}</div>
+      <div style="font-size:12px;color:var(--text3);margin-top:3px">Pedido aceito. Clique em Imprimir e escolha a impressora do seu computador.</div>
+    </div>
+    <div style="padding:10px 20px;flex:1;min-height:0;overflow:auto;background:var(--bg)"><iframe id="ped-print-frame" style="width:100%;height:380px;border:1px solid var(--border);background:#fff;border-radius:8px"></iframe></div>
+    <div style="padding:12px 20px 16px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">
+      <button type="button" class="btn btn-secondary" id="ped-print-fechar">Fechar</button>
+      <button type="button" class="btn btn-primary" id="ped-print-ok">🖨 Imprimir</button>
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
+  const fr = document.getElementById('ped-print-frame');
+  const d = fr.contentDocument || fr.contentWindow.document;
+  d.open(); d.write(html); d.close();
+  const fechar = () => { try { ov.remove(); } catch (e) {} document.removeEventListener('keydown', esc); };
+  const esc = ev => { if (ev.key === 'Escape') fechar(); };
+  document.addEventListener('keydown', esc);
+  ov.addEventListener('click', ev => { if (ev.target === ov) fechar(); });
+  document.getElementById('ped-print-fechar').onclick = fechar;
+  document.getElementById('ped-print-ok').onclick = () => { try { _caixaImprimir(fr.contentWindow, 'portrait'); } catch (e) { console.error(e); showToast('Não foi possível abrir a impressão', false); } };
+  setTimeout(() => { const b = document.getElementById('ped-print-ok'); if (b) b.focus(); }, 80);
 }
 
 /* ---------- Link e configuração ---------- */
@@ -19467,12 +19755,12 @@ function pedConfigBlocos() {
   document.querySelectorAll('#sec-pedidoscfg .card').forEach(card => {
     if (card.dataset.pcCol) return;
     const t = card.querySelector(':scope > .card-title'); if (!t) return;
-    card.dataset.pcCol = '1'; card.classList.add('pc-col');
+    card.dataset.pcCol = '1'; card.classList.add('pc-col', 'fechado'); // começa fechado
     const corpo = document.createElement('div'); corpo.className = 'pc-corpo';
     while (t.nextSibling) corpo.appendChild(t.nextSibling);
     card.appendChild(corpo);
     const b = document.createElement('button');
-    b.type = 'button'; b.className = 'pc-tog'; b.setAttribute('aria-expanded', 'true'); b.setAttribute('aria-label', 'Fechar bloco');
+    b.type = 'button'; b.className = 'pc-tog'; b.setAttribute('aria-expanded', 'false'); b.setAttribute('aria-label', 'Abrir bloco');
     b.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>';
     t.appendChild(b);
     t.addEventListener('click', () => {
@@ -19484,6 +19772,7 @@ function pedConfigBlocos() {
 }
 function _pedConfigPreencher() {
   pedConfigBlocos();
+  qrMesasIniciar();
   if (!_lojaAtiva) { showToast('Aguarde o carregamento do restaurante', false); return; }
   const c = _pedCfg() || {};
   const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
@@ -19494,6 +19783,7 @@ function _pedConfigPreencher() {
   set('pc-taxa', money(c.taxaEntrega));
   set('pc-min', money(c.pedidoMinimo));
   set('pc-whats', _maskFone(c.whatsapp || ''));
+  set('pc-razao', c.lojaRazao || ''); set('pc-cnpj', c.lojaCnpj || ''); set('pc-ie', c.lojaIe || '');
   set('pc-cep', c.lojaCep || ''); set('pc-num', c.lojaNumero || ''); set('pc-rua', c.lojaRua || '');
   set('pc-bairro', c.lojaBairro || ''); set('pc-cidade', c.lojaCidade || ''); set('pc-uf', c.lojaUf || '');
   set('pc-lat', c.lojaLat != null ? String(c.lojaLat) : '');
@@ -19521,6 +19811,64 @@ function pedConfigAbrir() {
 /* ── Horário por dia da semana (horarios/0..6 = domingo..sábado: {on, abre, fecha} em minutos; horarioDia:true) ── */
 const _HD_NOMES = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
 const _HD_ABR = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB'];
+
+/* ── Feriados (nacionais + Betim/MG), calculados automaticamente para qualquer ano ── */
+function _feNomes(ano) {
+  var m = {'01-01':'Ano Novo','04-21':'Tiradentes','05-01':'Dia do Trabalho','09-07':'Independência','10-12':'N. Sra. Aparecida','11-02':'Finados','11-15':'Proclamação da República','11-20':'Consciência Negra','12-25':'Natal','08-15':'Assunção de N. Sra. (MG)','12-08':'Imaculada Conceição (MG)','12-17':'Aniversário de Betim'};
+  var a = ano % 19, b = Math.floor(ano / 100), c = ano % 100, d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3),
+      h = (19 * a + b - d - g + 15) % 30, i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7, mm = Math.floor((a + 11 * h + 22 * l) / 451),
+      mes = Math.floor((h + l - 7 * mm + 114) / 31), dia = ((h + l - 7 * mm + 114) % 31) + 1, p = Date.UTC(ano, mes - 1, dia);
+  function add(n) { var x = new Date(p + n * 86400000); return ('0' + (x.getUTCMonth() + 1)).slice(-2) + '-' + ('0' + x.getUTCDate()).slice(-2); }
+  m[add(0)] = 'Páscoa'; m[add(-48)] = 'Segunda de Carnaval'; m[add(-47)] = 'Terça de Carnaval'; m[add(-2)] = 'Sexta-feira Santa'; m[add(60)] = 'Corpus Christi';
+  return m;
+}
+var _feCache = {};
+/* 'YYYY-MM-DD' -> nome do feriado ('' se não for feriado) */
+function nomeFeriado(ymd) {
+  var ano = +String(ymd).slice(0, 4); if (!ano) return '';
+  return (_feCache[ano] || (_feCache[ano] = _feNomes(ano)))[String(ymd).slice(5)] || '';
+}
+
+/* Lista dos feriados dos próximos 12 meses com a marcação "Vou trabalhar" (cfg.feriadoOn, cfg.feriadosTrab[ymd] = {abre, fecha}) */
+function pedFeMontar(c) {
+  c = c || {};
+  const on = document.getElementById('pc-fer-on'), box = document.getElementById('pc-fer-lista'); if (!on || !box) return;
+  on.checked = c.feriadoOn === true;
+  const br = new Date(Date.now() - 10800000), ini = Date.UTC(br.getUTCFullYear(), br.getUTCMonth(), br.getUTCDate()), fim = Date.UTC(br.getUTCFullYear(), br.getUTCMonth() + 1, 1) - 86400000;
+  const lista = [], nomes = _feNomes(br.getUTCFullYear());
+  /* Mesma fonte do calendário de "Planilhas já lançadas": isFeriadoNacional() e isFeriadoBetim() */
+  for (let t = ini; t <= fim; t += 86400000) {
+    const ymd = new Date(t).toISOString().slice(0, 10);
+    if (isFeriadoNacional(ymd) || isFeriadoBetim(ymd)) lista.push({ t, ymd, nome: nomes[ymd.slice(5)] || 'Feriado' });
+  }
+  const trab = c.feriadosTrab || {};
+  const MESES = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+  if (!lista.length) { box.innerHTML = '<div style="font-size:13px;opacity:.7;padding:6px 2px">Nenhum feriado de hoje até o fim de ' + MESES[br.getUTCMonth()] + '. Em ' + MESES[(br.getUTCMonth() + 1) % 12] + ' a lista mostra os feriados do mês.</div>'; return; }
+  box.innerHTML = lista.map(f => {
+    const dt = new Date(f.t), dow = dt.getUTCDay(), x = trab[f.ymd], marcado = !!x;
+    const hs = c.horarios && c.horarios[dow], padrao = hs && hs.on ? hs : { abre: 480, fecha: 1080 };
+    const a = marcado ? x.abre : padrao.abre, fm = marcado ? x.fecha : padrao.fecha;
+    const dd = ('0' + dt.getUTCDate()).slice(-2) + '/' + ('0' + (dt.getUTCMonth() + 1)).slice(-2) + '/' + dt.getUTCFullYear() + (f.t === ini ? ' · HOJE' : '');
+    return '<div class="pc-fe' + (marcado ? ' trab' : '') + '" id="pc-fe-' + f.ymd + '" data-ymd="' + f.ymd + '"><div class="pc-fe-top"><div><b>' + escapeHtml(f.nome) + '</b><small>' + dd + ' · ' + _HD_NOMES[dow] + '</small></div>' +
+      '<label><input type="checkbox" id="pc-fe-' + f.ymd + '-on"' + (marcado ? ' checked' : '') + ' onchange="pedFeAtualiza()"> Vou trabalhar</label></div>' +
+      '<div class="pc-fe-fechado">🔒 Loja fechada neste dia</div>' +
+      '<div class="pc-fe-t"><div><small>ABRE</small><input type="time" id="pc-fe-' + f.ymd + '-a" value="' + _pedMinHM(a) + '"></div><div><small>FECHA</small><input type="time" id="pc-fe-' + f.ymd + '-f" value="' + _pedMinHM(fm) + '"></div></div></div>';
+  }).join('');
+}
+function pedFeAtualiza() {
+  document.querySelectorAll('#pc-fer-lista .pc-fe').forEach(el => { el.classList.toggle('trab', document.getElementById('pc-fe-' + el.dataset.ymd + '-on').checked); });
+  const on = document.getElementById('pc-fer-on'); document.getElementById('pc-fer-lista').style.opacity = on && on.checked ? '' : '.55';
+}
+/* Horário de hoje considerando feriado: devolve {x: {abre,fecha}|null, fer: nome do feriado ou ''} */
+function _pedHorarioHoje(c) {
+  const br = new Date(Date.now() - 10800000), d = br.getUTCDay(), ymd = br.toISOString().slice(0, 10);
+  if (c.feriadoOn === true) {
+    const fer = _feNomes(br.getUTCFullYear())[ymd.slice(5)] || '';
+    if (fer) { const t = c.feriadosTrab && c.feriadosTrab[ymd]; return { x: (t && t.abre < t.fecha) ? t : null, fer }; }
+  }
+  const x = c.horarios && c.horarios[d];
+  return { x: (x && x.on === true) ? x : null, fer: '' };
+}
 function pedHdMontar(c) {
   c = c || {};
   const hs = c.horarios || null, leg = c.horarioOn === true;
@@ -19535,6 +19883,7 @@ function pedHdMontar(c) {
   }
   document.getElementById('pc-hd-grid').innerHTML = h;
   pedHdAtualiza();
+  pedFeMontar(c);
 }
 function pedHdAtualiza() {
   for (let d = 0; d < 7; d++) {
@@ -19557,13 +19906,13 @@ function pedHdStatus(c) {
   const chave = document.getElementById('pc-aberto-chave'); if (chave) chave.checked = c.aberto === true;
   const el = document.getElementById('pc-hd-stat'); if (!el) return;
   const br = new Date(Date.now() - 10800000), d = br.getUTCDay(), n = br.getUTCHours() * 60 + br.getUTCMinutes();
-  let dentro = true;
+  let dentro = true, fer = '';
   if (c.horarioOn === true) {
-    if (c.horarioDia === true) { const x = c.horarios && c.horarios[d]; dentro = !!(x && x.on === true && n >= x.abre && n < x.fecha); }
+    if (c.horarioDia === true) { const hh = _pedHorarioHoje(c), x = hh.x; dentro = !!(x && n >= x.abre && n < x.fecha); if (!dentro && hh.fer) fer = hh.fer; }
     else if (typeof c.abreMin === 'number' && typeof c.fechaMin === 'number') dentro = c.abreMin < c.fechaMin ? (n >= c.abreMin && n < c.fechaMin) : (n >= c.abreMin || n < c.fechaMin);
   }
   const ab = c.aberto === true && dentro;
-  el.textContent = (ab ? '🟢 Loja aberta' : '🔴 Loja fechada') + (c.aberto === true && !dentro ? ' (fora do horário)' : '');
+  el.textContent = (ab ? '🟢 Loja aberta' : '🔴 Loja fechada') + (c.aberto === true && !dentro ? (fer ? ' (feriado: ' + fer + ')' : ' (fora do horário)') : '');
 }
 function pedHdChave(v) {
   if (!_lojaAtiva) return;
@@ -19625,11 +19974,31 @@ function pedConfigSalvarSecao(secao) {
       hs[d] = { on: dOn, abre: a === null ? 480 : a, fecha: f === null ? 1080 : f };
     }
     if (on && !Object.keys(hs).some(k => hs[k].on)) { showToast('Ative pelo menos um dia da semana', false); return; }
+    const fOn = document.getElementById('pc-fer-on').checked, ft = {};
+    // mantém os feriados futuros já marcados que não estão na lista do mês atual (a lista só mostra o mês atual)
+    const hojeYmd = new Date(Date.now() - 10800000).toISOString().slice(0, 10), antigos = (_pedCfg() || {}).feriadosTrab || {};
+    Object.keys(antigos).forEach(y => { if (y >= hojeYmd && !document.getElementById('pc-fe-' + y) && antigos[y] && antigos[y].abre < antigos[y].fecha) ft[y] = { abre: antigos[y].abre, fecha: antigos[y].fecha }; });
+    let erroFe = '';
+    document.querySelectorAll('#pc-fer-lista .pc-fe').forEach(el => {
+      const y = el.dataset.ymd; if (erroFe || !document.getElementById('pc-fe-' + y + '-on').checked) return;
+      const a = _pedHMMin(document.getElementById('pc-fe-' + y + '-a').value), f = _pedHMMin(document.getElementById('pc-fe-' + y + '-f').value);
+      const nm = el.querySelector('b').textContent;
+      if (a === null || f === null) erroFe = nm + ': informe a hora que abre e a que fecha';
+      else if (a >= f) erroFe = nm + ': a hora de fechar precisa ser depois da de abrir';
+      else ft[y] = { abre: a, fecha: f };
+    });
+    if (erroFe) { showToast(erroFe, false); return; }
     upd.horarioOn = on; upd.horarioDia = true; upd.horarios = hs;
+    upd.feriadoOn = fOn; upd.feriadosTrab = Object.keys(ft).length ? ft : null;
   } else if (secao === 'endereco') {
     nome = 'Endereço';
     const cep = v('pc-cep'), uf = v('pc-uf');
     if (cep && !/^\d{5}-\d{3}$/.test(cep)) { showToast('CEP do restaurante inválido (use 00000-000)', false); return; }
+    const cnpj = v('pc-cnpj');
+    if (cnpj && !_pedCnpjValido(cnpj)) { showToast('CNPJ inválido. Confira os números (00.000.000/0000-00).', false); return; }
+    vazioNulo('lojaCnpj', cnpj);
+    vazioNulo('lojaRazao', v('pc-razao').slice(0, 80));
+    vazioNulo('lojaIe', v('pc-ie').slice(0, 20));
     vazioNulo('lojaCep', cep);
     vazioNulo('lojaRua', v('pc-rua').slice(0, 120));
     vazioNulo('lojaNumero', v('pc-num').slice(0, 20));
@@ -20451,6 +20820,19 @@ function qrMesasFraseSalvar() {
   document.querySelectorAll('#qr-mesas-grid .qr-loja').forEach(el => { el.textContent = _lj; el.style.display = _lj ? '' : 'none'; });
   document.querySelectorAll('#qr-mesas-grid .qr-frase').forEach(el => { el.innerHTML = _qrFraseHtml(txt); el.style.display = txt ? '' : 'none'; });
 }
+// Botão "Salvar textos": guarda nº de mesas, nome da loja e frase neste aparelho e avisa que salvou
+function qrMesasSalvar() {
+  const n = parseInt(document.getElementById('qr-mesas-n').value, 10);
+  if (!(n >= 1 && n <= 100)) { showToast('Informe de 1 a 100 mesas', false); return false; }
+  try {
+    localStorage.setItem('qrMesasN', String(n));
+    localStorage.setItem('qrMesasLoja', document.getElementById('qr-mesas-loja').value);
+    localStorage.setItem('qrMesasFrase', document.getElementById('qr-mesas-frase').value);
+  } catch (e) { showToast('Não consegui salvar neste aparelho', false); return false; }
+  qrMesasFraseSalvar();
+  showToast('Textos do QR Code salvos ✔');
+  return true;
+}
 async function qrMesasGerar() {
   const n = parseInt(document.getElementById('qr-mesas-n').value, 10);
   if (!(n >= 1 && n <= 100)) { showToast('Informe de 1 a 100 mesas', false); return false; }
@@ -20530,7 +20912,42 @@ function renderComandas() {
     if (_cmdTab === 'abertas')       box.innerHTML = _cmdHtmlAbertas(abertas);
     else                             box.innerHTML = _cmdHtmlFechadas(fechHoje);
   }
+  _cmdRenderPedidosQr();
   _cmdAtualizarModal();
+}
+
+/** Cartão enxuto de pedido de mesa finalizado: só o número do pedido e o valor total (toque para ver os detalhes). */
+function _cmdQrFimHtml(p) {
+  const id = escapeHtml(p.id), cancel = p.status === 'cancelado';
+  const cor = cancel ? '#b91c1c' : '#15803d';
+  return `<div class="pv-mini pv-mini-fim" style="--ped-cor:${cor}">
+    <div class="pv-mini-top" data-ped="${id}" onclick="pedToggleCard(this.dataset.ped)" title="Ver detalhes">
+      <span class="pv-cod"${cancel ? ' style="text-decoration:line-through;opacity:.6"' : ''}>#${escapeHtml(p.codigo || '')}</span>
+      <span class="pv-mais" style="margin-left:auto;font-weight:800;font-size:13px;color:${cor}">${cancel ? 'Cancelado' : fmt(_pedTotais(p).total)}</span>
+    </div>
+    ${_pedExp.has(p.id) ? _pedCardHtml(p) : ''}
+  </div>`;
+}
+
+/** Pedidos feitos pelo QR Code das mesas: novos (Aceitar/Recusar) + quadro de status (Em preparo / Pronto / Finalizados) — sempre no topo de Mesas / QRcode. */
+function _cmdRenderPedidosQr() {
+  const box = document.getElementById('cmd-qr-pedidos'); if (!box) return;
+  const quadro = document.getElementById('cmd-qr-quadro');
+  const qr = _pedLista().filter(_pedEhMesa);
+  const asc = (a, b) => (a.ts || 0) - (b.ts || 0);
+  const novos = qr.filter(p => p.status === 'novo').sort(asc);
+  const prep = qr.filter(p => p.status === 'preparo').sort(asc);
+  const pronto = qr.filter(p => p.status === 'pronto').sort(asc);
+  const fim = qr.filter(p => (p.status === 'entregue' || p.status === 'cancelado') && _pedEhHoje(p.ts)).sort((a, b) => (b.ts || 0) - (a.ts || 0));
+  const novosHtml = novos.length
+    ? `<div class="pv-novos" style="margin-bottom:14px"><div class="pv-sec-h" style="font-size:14px;color:var(--text)"><span>🔔 Novos pedidos QR Code</span><span class="pv-badge" style="background:#2563EB">${novos.length}</span></div><div class="pv-novos-grid">${novos.map(_pedCardHtml).join('')}</div></div>`
+    : '';
+  box.innerHTML = novosHtml;
+  if (quadro) quadro.innerHTML = `<div class="pv-quadros pv-quadros-qr" style="margin-bottom:14px">`
+    + _pedSecHtml('preparo', 'Em preparo', prep, '🍳', 'Aqui ficam os pedidos das mesas que estão sendo preparados', false)
+    + _pedSecHtml('pronto', 'Pronto', pronto, '🛍️', 'Aqui ficam os pedidos das mesas prontos para entregar', false)
+    + _pedSecHtml('fim', 'Finalizados', fim, '✅', 'Nenhum pedido de mesa finalizado hoje.', false, _cmdQrFimHtml)
+    + `</div>`;
 }
 
 /**
@@ -21180,8 +21597,12 @@ function renderCardapio() {
       <input type="search" id="cdp-busca" placeholder="🔎 Buscar item ou categoria…" value="${escapeAttr(_cdpBusca)}" oninput="cdpFiltrar()" autocomplete="off">
       <select id="cdp-filtro-cat" onchange="cdpFiltrar()">${catsOpts}</select>
     </div>` : '';
-  let html = barraBusca + `<div class="card mb-5">
-      <div class="card-title">Categorias</div>
+  const metricasHtml = `<div class="metrics-grid" id="cdp-metricas">
+      <div class="metric-card"><div class="metric-label">Itens cadastrados</div><div class="metric-value">${itens.length}</div></div>
+      <div class="metric-card"><div class="metric-label">Indisponíveis</div><div class="metric-value">${nIndisp}</div></div>
+    </div>`;
+  let html = barraBusca + metricasHtml + `<div class="card mb-5 cdp-sec${_cdpSecFch('cat') ? ' fechada' : ''}" id="cdp-sec-cat">
+      <div class="card-title cdp-sec-tit" title="${_cdpSecFch('cat') ? 'Abrir' : 'Fechar'}" onclick="cdpSecFechar('cat')">Categorias<button type="button" class="cdp-cat-fch${_cdpSecFch('cat') ? ' fechada' : ''}" aria-label="Abrir ou fechar" aria-expanded="${_cdpSecFch('cat') ? 'false' : 'true'}"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 10.5L8 6l4.5 4.5"/></svg></button></div>
       <div class="txt-hint" style="margin:-6px 0 10px">Use <strong>‹ ›</strong> para mudar a ordem e <strong>✎</strong> para renomear. A ordem vale aqui no painel e no cardápio dos clientes; ao renomear, os itens da categoria acompanham o novo nome.</div>
       <div class="cmd-chips" style="max-height:none;margin:0 0 16px">${cats.map(c => {
         const custom = _cdpCatsCustom().find(x => String(x.nome).toLowerCase() === c.toLowerCase());
@@ -21194,12 +21615,8 @@ function renderCardapio() {
         <button class="btn btn-secondary" onclick="cdpCatAdd()">+ Cadastrar categoria</button>
       </div>
     </div>
-    <div class="metrics-grid">
-      <div class="metric-card"><div class="metric-label">Itens cadastrados</div><div class="metric-value">${itens.length}</div></div>
-      <div class="metric-card"><div class="metric-label">Indisponíveis</div><div class="metric-value">${nIndisp}</div></div>
-    </div>
-    <div class="card mb-5">
-      <div class="card-title">Novo item do cardápio</div>
+    <div class="card mb-5 cdp-sec${_cdpSecFch('novo') ? ' fechada' : ''}" id="cdp-sec-novo">
+      <div class="card-title cdp-sec-tit" title="${_cdpSecFch('novo') ? 'Abrir' : 'Fechar'}" onclick="cdpSecFechar('novo')">Novo item do cardápio<button type="button" class="cdp-cat-fch${_cdpSecFch('novo') ? ' fechada' : ''}" aria-label="Abrir ou fechar" aria-expanded="${_cdpSecFch('novo') ? 'false' : 'true'}"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 10.5L8 6l4.5 4.5"/></svg></button></div>
       <div class="cdp-row">
         <div class="form-group cdp-f-nome"><label>Nome</label><input id="cdp-nome" type="text" placeholder="Ex: Prato feito" maxlength="60" onkeydown="if(event.key==='Enter')cmdCardapioAdd()"></div>
         <div class="form-group cdp-f-preco"><label>Preço (R$)</label><input id="cdp-preco" type="number" step="0.01" min="0" placeholder="0,00" onkeydown="if(event.key==='Enter')cmdCardapioAdd()"></div>
@@ -21219,7 +21636,10 @@ function renderCardapio() {
   }
 
   html += _cdpDestaqueCard();
-  html += `<div id="cdp-lista"></div>`;
+  html += `<div class="card mb-5 cdp-sec${_cdpSecFch('itens') ? ' fechada' : ''}" id="cdp-sec-itens">
+    <div class="card-title cdp-sec-tit" title="${_cdpSecFch('itens') ? 'Abrir' : 'Fechar'}" onclick="cdpSecFechar('itens')">📋 Itens do cardápio<button type="button" class="cdp-cat-fch${_cdpSecFch('itens') ? ' fechada' : ''}" aria-label="Abrir ou fechar" aria-expanded="${_cdpSecFch('itens') ? 'false' : 'true'}"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 10.5L8 6l4.5 4.5"/></svg></button></div>
+    <div id="cdp-lista"></div>
+  </div>`;
   box.innerHTML = html;
   _cdpAjustarBarra();
   _cdpRenderLista();
@@ -21259,8 +21679,8 @@ function _cdpDestResHtml() {
 function _cdpDestaqueCard() {
   const todos = _cdpDestItens();
   if (!_cdpDestSujo || _cdpDestSel === null) _cdpDestSel = _cdpDestaqueIds().filter(id => todos.some(i => i.id === id));
-  return `<div class="card mb-5">
-    <div class="card-title">⭐ Destaques do cardápio</div>
+  return `<div class="card mb-5 cdp-sec${_cdpSecFch('dest') ? ' fechada' : ''}" id="cdp-sec-dest">
+    <div class="card-title cdp-sec-tit" title="${_cdpSecFch('dest') ? 'Abrir' : 'Fechar'}" onclick="cdpSecFechar('dest')">⭐ Destaques do cardápio<button type="button" class="cdp-cat-fch${_cdpSecFch('dest') ? ' fechada' : ''}" aria-label="Abrir ou fechar" aria-expanded="${_cdpSecFch('dest') ? 'false' : 'true'}"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 10.5L8 6l4.5 4.5"/></svg></button></div>
     <div class="txt-hint" style="margin-bottom:10px">Busque e marque um ou mais itens (até 8). Eles aparecem no topo da página de pedidos, com foto, preço e botão de adicionar, e <strong>passam sozinhos</strong> um após o outro. Com um só, ele fica fixo. Dica: escolha itens que tenham foto.</div>
     <div class="cmd-chips" id="cdp-dest-chips" style="max-height:none;margin:0 0 10px">${_cdpDestChipsHtml()}</div>
     <div class="cdp-toolbar" style="margin-bottom:8px"><input type="search" id="cdp-dest-busca" placeholder="🔎 Buscar item para destacar…" value="${escapeAttr(_cdpDestBusca)}" oninput="cdpDestaqueBuscar()" autocomplete="off"></div>
@@ -21319,6 +21739,7 @@ function _cdpNorm(t) { return String(t == null ? '' : t).normalize('NFD').replac
 function cdpFiltrar() {
   _cdpBusca = (document.getElementById('cdp-busca').value || '').trim();
   _cdpCatFiltro = document.getElementById('cdp-filtro-cat').value || '';
+  if ((_cdpBusca || _cdpCatFiltro) && _cdpSecFch('itens')) cdpSecFechar('itens'); // filtrando: abre o bloco de itens
   _cdpAjustarBarra();
   _cdpRenderLista();
   // a lista fica abaixo do formulário: ao filtrar, leva a tela até os resultados
@@ -21330,6 +21751,19 @@ function cdpFiltrar() {
 
 /* Categorias recolhidas na lista do cardápio (lembra neste aparelho) */
 let _cdpCatFechadas = (() => { try { return JSON.parse(localStorage.getItem('cdpCatFechadas') || '{}') || {}; } catch (e) { return {}; } })();
+/* Seções do topo do Cardápio (Categorias / Novo item / Destaques): abrir e fechar (lembra neste aparelho) */
+let _cdpSecFechadas = (() => { try { return JSON.parse(localStorage.getItem('cdpSecFechadas') || '{}') || {}; } catch (e) { return {}; } })();
+function _cdpSecFch(k) { return !!_cdpSecFechadas[k]; }
+function cdpSecFechar(k) {
+  if (_cdpSecFechadas[k]) delete _cdpSecFechadas[k]; else _cdpSecFechadas[k] = true;
+  try { localStorage.setItem('cdpSecFechadas', JSON.stringify(_cdpSecFechadas)); } catch (e) {}
+  const card = document.getElementById('cdp-sec-' + k); if (!card) return;
+  const f = !!_cdpSecFechadas[k];
+  card.classList.toggle('fechada', f);
+  const b = card.querySelector('.cdp-sec-tit .cdp-cat-fch');
+  if (b) { b.classList.toggle('fechada', f); b.setAttribute('aria-expanded', f ? 'false' : 'true'); }
+  const t = card.querySelector('.cdp-sec-tit'); if (t) t.title = f ? 'Abrir' : 'Fechar';
+}
 function cdpCatFechar(idx) {
   const cat = _cdpCats()[idx]; if (cat === undefined) return;
   if (_cdpCatFechadas[cat]) delete _cdpCatFechadas[cat]; else _cdpCatFechadas[cat] = true;
@@ -21936,7 +22370,8 @@ function _cmdHtmlModalComanda(c) {
     }).join('') : `<span style="font-size:13px;color:var(--text3)">Cardápio vazio — cadastre em Cadastros › Cardápio ou lance um item avulso abaixo.</span>`;
     const pills = cardapio.length ? `<div class="cmd-tabs" id="cmd-cat-pills" style="margin:8px 0 0">
         <button class="${_cmdCatFiltro ? '' : 'active'}" onclick="cmdCatFiltrar('')">Todas</button>${catsUsadas.map(cat => `<button class="${_cmdCatFiltro === cat ? 'active' : ''}" onclick="cmdCatFiltrar(this.getAttribute('data-cat'))" data-cat="${escapeAttr(cat)}">${escapeHtml(cat)}</button>`).join('')}</div>` : '';
-    menuHtml = `<div class="cmd-sec-titulo">Adicionar item</div>
+    menuHtml = `<button type="button" class="btn btn-secondary cmd-voltar cmd-voltar-col" onclick="cmdFecharModal()" title="Voltar para Mesas / QRcode">← Voltar para Mesas / QRcode</button>
+      <div class="cmd-sec-titulo">Adicionar item</div>
       ${cardapio.length ? `<input type="text" id="cmd-busca" placeholder="Buscar no cardápio…" oninput="cmdFiltrar(this.value)" style="width:100%">` : ''}
       ${pills}
       <div id="cmd-chips" style="max-height:280px;overflow-y:auto">${chips}</div>`;
@@ -21971,9 +22406,10 @@ function _cmdHtmlModalComanda(c) {
        <button class="btn btn-secondary" onclick="cmdReabrir('${c.id}')">Reabrir comanda</button>`;
 
   return `<div class="cmd-modal-head">
+      <div class="cmd-head-esq"><button type="button" class="btn btn-secondary cmd-voltar" onclick="cmdFecharModal()" title="Voltar para Mesas / QRcode">← Mesas / QRcode</button>
       <div><div style="font-size:20px;font-weight:800">${escapeHtml(_cmdRotulo(c))}${status}</div>
         <div>${_cmdIdentHtml(c)}</div>
-        <div style="font-size:12px;color:var(--text3);margin-top:3px">${c.pessoas ? escapeHtml(c.pessoas) + ' pessoa(s) · ' : ''}${c.garcom ? escapeHtml(c.garcom) + ' · ' : ''}aberta às ${_cmdHora(c.abertaEm)}</div></div>
+        <div style="font-size:12px;color:var(--text3);margin-top:3px">${c.pessoas ? escapeHtml(c.pessoas) + ' pessoa(s) · ' : ''}${c.garcom ? escapeHtml(c.garcom) + ' · ' : ''}aberta às ${_cmdHora(c.abertaEm)}</div></div></div>
       <button class="cmd-x" onclick="cmdFecharModal()" title="Fechar">×</button></div>
     ${aberta ? `<div class="cmd-modal-body cmd-split">
       <div class="cmd-col cmd-col-menu">${menuHtml}</div>
@@ -21982,6 +22418,7 @@ function _cmdHtmlModalComanda(c) {
         <table class="cmd-itens"><thead><tr><th>Item</th><th>Qtd</th><th class="num">Unit.</th><th class="num">Subtotal</th><th></th></tr></thead><tbody>${linhas}</tbody></table>
         ${avulsoHtml}
         <div class="cmd-totais">${totais}</div>
+        <button type="button" class="btn btn-primary cmd-fechar-conta" onclick="cmdIrPagar()">💳 Fechar conta e receber pagamento</button>
       </div>
     </div>` : `<div class="cmd-modal-body">
       <table class="cmd-itens"><thead><tr><th>Item</th><th>Qtd</th><th class="num">Unit.</th><th class="num">Subtotal</th><th></th></tr></thead><tbody>${linhas}</tbody></table>
@@ -22086,7 +22523,7 @@ function cmdIrPagar() {
   const seguir = () => { _cmdModal = { modo: 'pagar', id: c.id }; _cmdAtualizarModal(true); };
   if (pend.length) {
     showModal('Pedidos da mesa ainda não aceitos',
-      'A mesa <strong>' + escapeHtml(_cmdRotulo(c)) + '</strong> tem ' + pend.length + ' pedido(s) pelo QR Code aguardando aceite (' + pend.map(p => '#' + escapeHtml(p.codigo || '')).join(', ') + '). Eles <strong>não entram</strong> nesta conta.<br><br>Aceite-os em <em>Pedidos online</em> antes de fechar, ou feche assim mesmo.',
+      'A mesa <strong>' + escapeHtml(_cmdRotulo(c)) + '</strong> tem ' + pend.length + ' pedido(s) pelo QR Code aguardando aceite (' + pend.map(p => '#' + escapeHtml(p.codigo || '')).join(', ') + '). Eles <strong>não entram</strong> nesta conta.<br><br>Aceite-os em <em>Pedidos QR Code</em> (no topo desta tela) antes de fechar, ou feche assim mesmo.',
       [{ label: 'Fechar mesmo assim', style: 'primary', action: seguir }, { label: 'Voltar', style: 'secondary' }]);
     return;
   }
