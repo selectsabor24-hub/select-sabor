@@ -251,6 +251,13 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
 .top-cart b:empty { display: none; }
 .cats button { background: #fff; border-color: #E9DDC2; }
 #menu-lista { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr)); gap: 12px; align-content: start; }
+/* celular: aviso (Aberto/Fechado) e horário lado a lado, numa linha só, abaixo do logo */
+@media (max-width: 600px) {
+  .top > .wrap:last-child { gap: 8px; align-items: stretch; }
+  .top > .wrap:last-child > .chip-st { position: static; transform: none; flex: 0 1 46%; display: flex; align-items: center; justify-content: center; margin: 12px 0 0; max-width: none; white-space: normal; text-align: center; font-size: 11px; line-height: 1.25; padding: 4px 8px; border-radius: 14px; box-shadow: none; }
+  .top > .wrap:last-child > .info-bar { flex: 1 1 0; }
+}
+@media (min-width: 601px) { #install, #banner-andamento { max-width: min(640px, 100%); } }
 #menu-lista .cat-titulo { grid-column: 1 / -1; margin: 18px 0 0; padding: 9px 14px; text-align: center; text-transform: uppercase; letter-spacing: .6px; font-size: 16px; line-height: 1.2; color: #fff; background: linear-gradient(135deg, var(--verde2), var(--verde)); border-radius: 14px; box-shadow: 0 3px 10px rgba(47,82,51,.28); }
 .item { position: relative; flex-direction: column; align-items: stretch; gap: 0; padding: 0 0 12px; margin: 0; overflow: hidden; border-color: #EADFC6; box-shadow: 0 3px 10px rgba(80,60,20,.08); }
 .item .ft { flex: none; width: 100%; height: auto; aspect-ratio: 4 / 3; border-radius: 0; }
@@ -2054,5 +2061,14 @@ img, svg, canvas, video { max-width: 100%; }
 @media (min-width: 601px) { #install, #banner-andamento { max-width: min(640px, 100%); } }
 </style>
 
+<script>
+/* celular: leva o aviso Aberto/Fechado para a mesma linha do horário; no computador volta para o cabeçalho */
+(function () {
+  var chip = document.getElementById('loja-chip'); if (!chip || !window.matchMedia) return;
+  var casa = chip.parentNode, w2 = document.querySelector('header.top > .wrap:last-child'), mq = window.matchMedia('(max-width: 600px)');
+  function pos() { if (!w2) return; if (mq.matches) w2.insertBefore(chip, w2.firstChild); else casa.appendChild(chip); }
+  pos(); if (mq.addEventListener) mq.addEventListener('change', pos); else if (mq.addListener) mq.addListener(pos);
+})();
+</script>
 </body>
 </html>
