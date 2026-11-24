@@ -243,6 +243,32 @@
                 ".validate": "false"
               }
             }
+          },
+          "lojaRazao": {
+            ".validate": "newData.isString() && newData.val().length <= 80"
+          },
+          "lojaCnpj": {
+            ".validate": "newData.isString() && newData.val().length <= 18"
+          },
+          "lojaIe": {
+            ".validate": "newData.isString() && newData.val().length <= 20"
+          },
+          "feriadoOn": {
+            ".validate": "newData.isBoolean()"
+          },
+          "feriadosTrab": {
+            "$ymd": {
+              ".validate": "$ymd.matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/) && newData.hasChildren(['abre','fecha'])",
+              "abre": {
+                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1440"
+              },
+              "fecha": {
+                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1440"
+              },
+              "$outro": {
+                ".validate": "false"
+              }
+            }
           }
         }
       },
@@ -419,6 +445,15 @@
             },
             "mesa": {
               ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 20"
+            },
+            "pago": {
+              ".validate": "(auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true)) && newData.isBoolean()"
+            },
+            "pagoForma": {
+              ".validate": "(auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true)) && (newData.val() === 'dinheiro' || newData.val() === 'pix' || newData.val() === 'cartao')"
+            },
+            "pagoEm": {
+              ".validate": "(auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true)) && newData.isNumber()"
             }
           },
           ".read": "(auth != null && (auth.token.email == 'selectsabor24@gmail.com' || root.child('caixa/usuarios/' + auth.uid + '/ativo').val() == true)) || (auth != null && root.child('caixa/motoqueirosUid/' + auth.uid + '/ativo').val() === true && root.child('caixa/motoqueirosUid/' + auth.uid + '/lojaId').val() === $lojaId && query.limitToLast <= 1000 && ((query.orderByChild === 'status' && (query.equalTo === 'pronto' || query.equalTo === 'preparo')) || (query.orderByChild === 'motoqueiro' && query.equalTo === root.child('caixa/motoqueirosUid/' + auth.uid + '/nome').val())))"
