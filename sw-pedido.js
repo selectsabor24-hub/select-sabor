@@ -3,7 +3,7 @@
 // Estratégia: ABRE NA HORA — responde do cache e confere a versão nova em segundo plano
 // (stale-while-revalidate). Se a página mudou, avisa o app, que se recarrega sozinho
 // (quando o cliente não está digitando). Firebase e demais domínios externos nunca passam pelo cache.
-const CACHE_NAME = 'pedido-v25'; // abre na hora (cache) + confere versão nova em segundo plano; ajuste automático de tela
+const CACHE_NAME = 'pedido-v26'; // abre na hora (cache) + confere versão nova em segundo plano; ajuste automático de tela
 const PAGINA = './pedido.html';
 const BASICO = [PAGINA, './manifest-pedido.json', './img/logo.png', './img/icon-192.png', './img/icon-180.png'];
 

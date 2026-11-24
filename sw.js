@@ -16,7 +16,7 @@
 // isso não é mais um problema para ele. Ainda assim, a cada atualização
 // grande, é boa prática mudar o número abaixo (ex.: v1 → v2) para
 // forçar a limpeza dos caches antigos no 'activate'.
-const CACHE_NAME = 'caixa-v46'; // v1.14: complementos (Tudo incluso, salvamento automático), complementos na comanda, ordem dos itens, perfil Atendimento sem valores → limpa os caches antigos
+const CACHE_NAME = 'caixa-v47'; // v1.15: complementos (regras em linha própria, Máx. escolhas, Não repetir), excluir mesa aberta → limpa os caches antigos
 
 // Recursos do shell que devem ser cacheados na instalação
 const SHELL_URLS = [
