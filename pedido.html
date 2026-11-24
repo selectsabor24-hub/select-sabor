@@ -128,6 +128,8 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
 .item .ft img { width: 100%; height: 100%; object-fit: cover; display: block; }
 @keyframes ftbrilho { 50% { opacity: .55; } }
 .item .nome { font-weight: 700; overflow-wrap: anywhere; }
+.item .inclui { margin-top: 3px; font-size: 12px; font-weight: 600; color: #15803d; line-height: 1.35; overflow-wrap: anywhere; }
+.opc-inclui { margin: 0 0 10px; padding: 9px 11px; border-radius: 10px; background: rgba(22,163,74,.10); border-left: 3px solid #16a34a; font-size: 13px; line-height: 1.4; color: var(--txt); }
 .item .desc { margin-top: 3px; font-size: 13px; color: var(--mut); line-height: 1.35; overflow-wrap: anywhere; }
 .item .preco { margin-top: 2px; color: var(--laranja); font-weight: 800; }
 .item .hr-dentro { margin-top: 3px; font-size: 12px; font-weight: 700; color: var(--verde); }
@@ -910,10 +912,18 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
      Na sacola, item com complementos vira uma linha própria: chave = idDoItem + '~' + 'g:o,g:o'. */
   function listaDe(v) { return !v ? [] : (Array.isArray(v) ? v : Object.keys(v).map(function (k) { return v[k]; })); }
   function gruposDe(i) {
-    return listaDe(i && i.grupos).filter(function (g) { return g && g.id && g.nome; }).map(function (g) {
+    return listaDe(i && i.grupos).filter(function (g) { return g && g.id && g.nome && g.incl !== true; }).map(function (g) {
       return { id: String(g.id), nome: String(g.nome), obrig: g.obrig === true, max: (parseInt(g.max, 10) === 0 ? 999 : Math.max(1, parseInt(g.max, 10) || 1)), sem: parseInt(g.max, 10) === 0, rep: g.rep !== false, unid: g.unid !== false,
         opcoes: listaDe(g.opcoes).filter(function (o) { return o && o.id && o.nome; }) };
     }).filter(function (g) { return g.opcoes.length; });
+  }
+  /* Grupos marcados "tudo incluso no produto" (incl): o cliente não escolhe, só vê o que acompanha o item. */
+  function inclusosDe(i) {
+    var nomes = [];
+    listaDe(i && i.grupos).forEach(function (g) {
+      if (g && g.incl === true) listaDe(g.opcoes).forEach(function (o) { if (o && o.nome && o.ativo !== false) nomes.push(String(o.nome)); });
+    });
+    return nomes;
   }
   function baseId(k) { return String(k).split('~')[0]; }
   function itemDe(id) { return cardapio.find(function (x) { return x.id === id; }); }
@@ -953,11 +963,6 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     var q = cart[key]; delete cart[key];
     if (temQtd) { var nk = base[0] + '~' + resto.sort().join(','); cart[nk] = Math.min(99, (cart[nk] || 0) + q); }
     salvarCart(); desenharMenu(); desenharAviso(); desenharBarra(); desenharCheckout();
-  }
-  function resumoExtrasLinhas(ex) {
-    var ord = [], cont = {};
-    ex.forEach(function (e) { if (!cont[e.o]) { cont[e.o] = 0; ord.push(e); } cont[e.o]++; });
-    return ord.map(function (e) { return (cont[e.o] > 1 ? cont[e.o] + '× ' : '') + e.on; });
   }
   function resumoExtras(ex) {
     var ord = [], cont = {};
@@ -1168,16 +1173,20 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
   function opcTotal() {
     var ex = 0, un = 0;
     opc.gs.forEach(function (g) { (opc.sel[g.id] || []).forEach(function (oid) { var o = g.opcoes.find(function (x) { return x.id === oid; }); if (o) { ex += Number(o.preco) || 0; if (g.max > 1 && g.rep && g.unid) un++; } }); });
+    /* Item cobrado por unidade escolhida (ex.: Refrigerante 200ml): sem nenhuma escolha ainda, o total mostra R$ 0,00 (não o preço de 1 unidade) */
+    var temUnid = opc.gs.some(function (g) { return g.max > 1 && g.rep && g.unid; });
+    if (temUnid && un === 0) return round2(ex * opc.q);
     return round2((precoVenda(opc.it) * unidadesCobradas(un) + ex) * opc.q);
   }
   function opcDesenhar(erroId) {
     var box = $('#opc'); if (!box) return;
     var corpo = box.querySelector('.opc-corpo'), topo = corpo ? corpo.scrollTop : 0;
-    var h = '<div class="opc-box"><div class="opc-head"><div class="t"><b>' + esc(opc.it.nome) + '</b><small>' + (emPromo(opc.it) ? '<s style="opacity:.6">' + brl(opc.it.preco) + '</s> ' : '') + brl(precoVenda(opc.it)) + (opc.it.desc ? ' · ' + esc(opc.it.desc) : '') + '</small></div><button type="button" class="opc-x" data-opc="x" aria-label="Fechar">×</button></div><div class="opc-corpo">';
+    var h = '<div class="opc-box"><div class="opc-head"><div class="t"><b>' + esc(opc.it.nome) + '</b><small>' + (emPromo(opc.it) ? '<s style="opacity:.6">' + brl(opc.it.preco) + '</s> ' : '') + brl(precoVenda(opc.it)) + (opc.it.desc ? ' · ' + esc(opc.it.desc) : '') + '</small></div><button type="button" class="opc-x" data-opc="x" aria-label="Fechar">×</button></div><div class="opc-corpo">' +
+      (inclusosDe(opc.it).length ? '<div class="opc-inclui">✅ <b>Inclui:</b> ' + esc(inclusosDe(opc.it).join(', ')) + '</div>' : '');
     opc.gs.forEach(function (g) {
       var sel = opc.sel[g.id] || [], quad = g.max > 1, rp = quad && g.rep;
       h += '<div class="opc-g' + (erroId === g.id ? ' erro' : '') + '" id="opc-g-' + esc(g.id) + '"><div class="opc-gt">' + esc(g.nome) + (g.obrig ? '<span class="opc-tag ob">Obrigatório</span>' : '<span class="opc-tag">Opcional</span>') +
-        '<small>' + (quad ? (g.sem ? 'Escolha quantos quiser' : 'Escolha até ' + g.max) + (rp ? ', pode repetir' : '') + ' (' + (g.sem ? sel.length : sel.length + '/' + g.max) + ')' : (g.obrig ? 'Escolha 1' : 'Escolha até 1')) + '</small></div>';
+        '<small>' + (quad ? (g.sem ? (g.obrig ? 'Escolha pelo menos 1, quantos quiser' : 'Escolha quantos quiser') : 'Escolha até ' + g.max) + (rp ? ', pode repetir' : '') + ' (' + (g.sem ? sel.length : sel.length + '/' + g.max) + ')' : (g.obrig ? 'Escolha 1' : 'Escolha até 1')) + '</small></div>';
       g.opcoes.forEach(function (o) {
         var off = o.ativo === false, on = sel.indexOf(o.id) >= 0, pr = Number(o.preco) || 0;
         if (rp) {
@@ -1371,10 +1380,10 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     cats.forEach(function (c, ix) {
       if (catAtiva && c !== catAtiva) return;
       h += '<h2 class="cat-titulo" id="cat-' + ix + '">' + esc(c) + '</h2>';
-      porCat[c].sort(function (a, b) { return String(a.nome).localeCompare(String(b.nome), 'pt-BR'); }).forEach(function (i) {
+      porCat[c].sort(function (a, b) { var oa = (a.ord != null && isFinite(+a.ord)) ? +a.ord : Infinity, ob = (b.ord != null && isFinite(+b.ord)) ? +b.ord : Infinity; if (oa !== ob) return oa < ob ? -1 : 1; return String(a.nome).localeCompare(String(b.nome), 'pt-BR'); }).forEach(function (i) {
         var q = qtdItem(i.id);
         var ft = i.fotoV ? '<div class="ft' + (FOTOS[i.id] ? '' : ' sk') + '" data-f="' + esc(i.id) + '">' + (FOTOS[i.id] ? '<img src="' + fotoUrl(i.id, FOTOS[i.id]) + '" alt="" width="84" height="84" decoding="async" loading="lazy">' : '') + '</div>' : '';
-        h += '<div class="item">' + ft + '<div class="info"><div class="nome">' + esc(i.nome) + '</div>' + (i.desc ? '<div class="desc">' + esc(i.desc) + '</div>' : '') + '<div class="preco">' + precoHtml(i) + '</div>' + (temHorario(i) ? '<div class="hr-dentro">🕒 Disponível ' + esc(rotuloHorario(i)) + '</div>' : '') + '</div>' +
+        h += '<div class="item">' + ft + '<div class="info"><div class="nome">' + esc(i.nome) + '</div>' + (i.desc ? '<div class="desc">' + esc(i.desc) + '</div>' : '') + (inclusosDe(i).length ? '<div class="inclui">✅ Inclui: ' + esc(inclusosDe(i).join(', ')) + '</div>' : '') + '<div class="preco">' + precoHtml(i) + '</div>' + (temHorario(i) ? '<div class="hr-dentro">🕒 Disponível ' + esc(rotuloHorario(i)) + '</div>' : '') + '</div>' +
           (q > 0
             ? '<div class="stepper"><button type="button" data-m="-1" data-id="' + esc(i.id) + '" aria-label="Diminuir">−</button><span>' + q + '</span><button type="button" data-m="1" data-id="' + esc(i.id) + '" aria-label="Aumentar">+</button></div>'
             : '<button type="button" class="add" data-m="1" data-id="' + esc(i.id) + '"' + (aberta() ? '' : ' disabled') + ' aria-label="Adicionar ' + esc(i.nome) + '">+</button>') +
@@ -2070,5 +2079,16 @@ img, svg, canvas, video { max-width: 100%; }
   pos(); if (mq.addEventListener) mq.addEventListener('change', pos); else if (mq.addListener) mq.addListener(pos);
 })();
 </script>
+<style id="select-sabor-ds-v1">
+/* Acessibilidade e celular — mesma base do sistema novo, com as cores do Select Sabor */
+:root { --fx-focus: var(--verde); --fx-tap: 44px; }
+:where(a, button, [role="button"], summary, [tabindex]:not([tabindex="-1"])):focus-visible { outline: 2px solid var(--fx-focus); outline-offset: 2px; }
+input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px solid var(--fx-focus); outline-offset: 1px; }
+html { scroll-padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+}
+@media (pointer: coarse) { .navbar button { min-height: var(--fx-tap); } }
+</style>
 </body>
 </html>
