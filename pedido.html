@@ -116,6 +116,11 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
 .cats { position: sticky; top: var(--top-h, 0px); z-index: 20; background: var(--bg); border-bottom: 1px solid var(--borda); padding: calc(8px + 0px) 0; }
 .cats .scroll { display: flex; gap: 8px; overflow-x: auto; padding: 2px 14px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
 .cats .scroll::-webkit-scrollbar { display: none; }
+@media (hover: hover) and (pointer: fine) {
+  .cats .scroll { cursor: grab; }
+  .cats .scroll.arrastando { cursor: grabbing; user-select: none; -webkit-user-select: none; }
+  .cats .scroll.arrastando button { pointer-events: none; }
+}
 .cats button { flex: 0 0 auto; border: 1px solid var(--borda); background: #fff; border-radius: 99px; padding: 8px 14px; font-size: 14px; font-weight: 600; color: var(--txt); }
 .cats button.on { background: var(--verde); color: #fff; border-color: var(--verde); }
 
@@ -323,6 +328,17 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
 #menu-lista { grid-template-columns: repeat(auto-fill, minmax(min(100%, clamp(150px, 13vw, 300px)), 1fr)); gap: clamp(12px, 1.4vw, 24px); }
 #v-menu .aviso.destaque .aviso-foto { height: clamp(240px, 26vw, 560px); }
 #v-menu .barra button { max-width: none; }
+/* PC / notebook / TV: cartões do cardápio um pouco menores (cabem mais itens por linha). Celular e tablet não mudam. */
+@media (min-width: 1024px) {
+  #menu-lista { grid-template-columns: repeat(auto-fill, minmax(min(100%, clamp(150px, 10vw, 230px)), 1fr)); gap: clamp(10px, 1.1vw, 20px); }
+  #menu-lista .cat-titulo { font-size: 14px; padding: 7px 14px; margin-top: 14px; }
+  .item .info { padding: 8px 10px 0; }
+  .item .nome { font-size: 13px; }
+  .item .desc { font-size: 11px; }
+  .item .preco { font-size: 14px; min-height: 36px; padding-right: 42px; }
+  .item .add { width: 34px; height: 34px; font-size: 22px; right: 8px; bottom: 8px; }
+  .item .stepper button { width: 30px; height: 34px; font-size: 18px; }
+}
 
 /* Complementos (escolha de sabor/opções do item) */
 .opc-fundo { position: fixed; inset: 0; z-index: 80; background: rgba(0,0,0,.45); display: flex; align-items: flex-end; justify-content: center; }
@@ -1188,11 +1204,14 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     var h = '<div class="opc-box"><div class="opc-head"><div class="t"><b>' + esc(opc.it.nome) + '</b><small>' + (emPromo(opc.it) ? '<s style="opacity:.6">' + brl(opc.it.preco) + '</s> ' : '') + brl(precoVenda(opc.it)) + (opc.it.desc ? ' · ' + esc(opc.it.desc) : '') + '</small></div><button type="button" class="opc-x" data-opc="x" aria-label="Fechar">×</button></div><div class="opc-corpo">' +
       (inclusosDe(opc.it).length ? '<div class="opc-inclui">✅ <b>Inclui:</b> ' + esc(inclusosDe(opc.it).join(', ')) + '</div>' : '');
     opc.gs.forEach(function (g) {
+      /* Opção indisponível (sem estoque) não aparece para o cliente; volta sozinha quando o dono reativar */
+      if (!g.opcoes.some(function (o) { return o.ativo !== false; })) return;
       var sel = opc.sel[g.id] || [], quad = g.max > 1, rp = quad && g.rep;
       h += '<div class="opc-g' + (erroId === g.id ? ' erro' : '') + '" id="opc-g-' + esc(g.id) + '"><div class="opc-gt">' + esc(g.nome) + (g.obrig ? '<span class="opc-tag ob">Obrigatório</span>' : '<span class="opc-tag">Opcional</span>') +
         '<small>' + (quad ? (g.sem ? (g.obrig ? 'Escolha pelo menos 1, quantos quiser' : 'Escolha quantos quiser') : 'Escolha até ' + g.max) + (rp ? ', pode repetir' : '') + ' (' + (g.sem ? sel.length : sel.length + '/' + g.max) + ')' : (g.obrig ? 'Escolha 1' : 'Escolha até 1')) + '</small></div>';
       g.opcoes.forEach(function (o) {
-        var off = o.ativo === false, on = sel.indexOf(o.id) >= 0, pr = Number(o.preco) || 0;
+        if (o.ativo === false) return;
+        var off = false, on = sel.indexOf(o.id) >= 0, pr = Number(o.preco) || 0;
         if (rp) {
           var qn = sel.filter(function (x) { return x === o.id; }).length, dd = ' data-g="' + esc(g.id) + '" data-o="' + esc(o.id) + '"';
           h += '<div class="opc-o rep' + (qn ? ' on' : '') + '"><span class="nm">' + esc(o.nome) + (pr > 0 ? '<small class="pr2">+ ' + brl(pr) + '</small>' : '') + '</span>' +
@@ -2032,6 +2051,29 @@ input, textarea, select { font: inherit; font-size: 16px; max-width: 100%; }
     if (!(igual && iniciar.feito)) iniciar();
     ccSalvar();
   }, function () { cardPronto = true; cardapio = []; iniciar(); });
+})();
+</script>
+<script>
+/* PC: arrastar as categorias para o lado com o mouse (segurar e puxar). Celular continua com o dedo. */
+(function () {
+  var sc = document.getElementById('cats-scroll'); if (!sc) return;
+  var down = false, moveu = false, x0 = 0, s0 = 0;
+  sc.addEventListener('mousedown', function (e) {
+    if (e.button !== 0) return;
+    down = true; moveu = false; x0 = e.clientX; s0 = sc.scrollLeft;
+  });
+  window.addEventListener('mousemove', function (e) {
+    if (!down) return;
+    var dx = e.clientX - x0;
+    if (!moveu && Math.abs(dx) > 5) { moveu = true; sc.classList.add('arrastando'); }
+    if (moveu) { sc.scrollLeft = s0 - dx; e.preventDefault(); }
+  });
+  function soltar() { if (!down) return; down = false; sc.classList.remove('arrastando'); }
+  window.addEventListener('mouseup', soltar);
+  window.addEventListener('blur', soltar);
+  /* se arrastou, o "soltar" não pode contar como clique numa categoria */
+  sc.addEventListener('click', function (e) { if (moveu) { e.stopPropagation(); e.preventDefault(); moveu = false; } }, true);
+  sc.addEventListener('dragstart', function (e) { e.preventDefault(); });
 })();
 </script>
 <script>
